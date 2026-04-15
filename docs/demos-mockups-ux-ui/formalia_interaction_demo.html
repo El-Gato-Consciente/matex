@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formalia — Demo interactivo</title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+<!-- MathLive (ES module — registra <math-field> globalmente) -->
+<script type="module">import 'https://cdn.jsdelivr.net/npm/mathlive/+esm';</script>
+
+<!-- Fuentes -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ── TOKENS ──────────────────────────────────────── */
+:root {
+  --paper:   #fefcf8; --parch:  #f0ebe0; --warm:   #f5f0e8; --warm2:  #ece6da;
+  --ink:     #1c1812; --ink2:   #4a4538; --ink3:   #9c9488; --ink4:   #c5bfb2;
+  --brd:     #e0d9ce; --brd-s:  #ede8de;
+  --blue:    #1e3a5f; --blue-m: #2a5299; --blue-f: #f0f5fb; --blue-p: #dce8f5;
+  --acc:     #7b68c8; --acc-l:  #f3f0ff; --acc-bd: rgba(123,104,200,.28);
+  --f-bg:    rgba(123,104,200,.06); --f-bd: rgba(123,104,200,.22);
+  --f-hbg:   rgba(123,104,200,.11); --f-hbd: rgba(123,104,200,.4);
+  --f-abg:   rgba(123,104,200,.15); --f-abd: #7b68c8;
+  --f-glow:  0 0 0 3px rgba(123,104,200,.15);
+  --green:   #2d5e3a; --green-bg: #edf7f0; --green-bd: #b0d9bc;
+  --amber:   #7a5c28; --amber-bg: #fdf5e8; --amber-bd: #e8d5a8;
+  --fd: 'Source Serif 4', Georgia, serif;
+  --fu: 'DM Sans', system-ui, sans-serif;
+  --fm: 'JetBrains Mono', monospace;
+  --r: 6px; --rl: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--fu); background: var(--parch); color: var(--ink);
+       display: flex; flex-direction: column; font-size: 13.5px; }
+
+/* ── TOPBAR ───────────────────────────────────────── */
+#top { height: 38px; flex-shrink: 0; background: var(--paper);
+       border-bottom: 1px solid var(--brd);
+       display: flex; align-items: center; padding: 0 14px; gap: 0; z-index: 10; }
+.tl  { font-family: var(--fd); font-size: 14px; font-weight: 700; color: var(--blue);
+       display: flex; align-items: center; gap: 6px; }
+.tlm { width: 19px; height: 19px; border: 2px solid var(--blue); border-radius: 3px;
+       display: flex; align-items: center; justify-content: center;
+       font-size: 9px; font-weight: 700; }
+.tsep { width: 1px; height: 14px; background: var(--brd); margin: 0 10px; }
+.tsp  { flex: 1; }
+#doc-name { font-size: 12px; color: var(--ink2); font-weight: 500; }
+.top-btn { height: 26px; padding: 0 12px; border: 1px solid var(--brd);
+           background: var(--warm); color: var(--ink2); border-radius: var(--r);
+           font-family: var(--fu); font-size: 11px; cursor: pointer; transition: all .12s; }
+.top-btn:hover { background: var(--paper); border-color: var(--brd); color: var(--ink); }
+.top-btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.top-btn.primary:hover { background: #163050; }
+
+/* ── FORMULA PANEL ────────────────────────────────── */
+#fp { position: absolute; top: 0; left: 0; right: 0; z-index: 30;
+      background: #f8f6ff; border-bottom: 1.5px solid #d8d0f0;
+      box-shadow: 0 4px 18px rgba(123,104,200,.13);
+      transform: translateY(-100%); transition: transform .2s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column; }
+#fp.open { transform: translateY(0); }
+
+#fp-row { display: flex; align-items: stretch; height: 60px; }
+#fp-meta { width: 130px; flex-shrink: 0; border-right: 1px solid #e0d8f5;
+           display: flex; flex-direction: column; justify-content: center; padding: 0 12px; gap: 4px; }
+#fp-type { font-size: 8px; font-weight: 700; text-transform: uppercase;
+           letter-spacing: .1em; color: var(--acc); }
+#fp-modes { display: flex; gap: 3px; }
+.fp-mode { height: 19px; padding: 0 7px; border-radius: 3px; border: 1px solid #d0c8f0;
+           background: transparent; font-family: var(--fu); font-size: 9.5px;
+           color: #8070c0; cursor: pointer; transition: all .1s; }
+.fp-mode.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+.fp-mode:hover:not(.on) { background: #ede8ff; }
+
+#fp-edit { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 7px 10px; gap: 4px; }
+#fp-textarea { width: 100%; padding: 5px 9px; border: 1.5px solid transparent;
+               border-radius: var(--r); background: rgba(255,255,255,.6);
+               font-family: var(--fm); font-size: 12px; color: var(--ink);
+               outline: none; resize: none; height: 36px; line-height: 1.5;
+               transition: border-color .15s, background .15s, box-shadow .15s;
+               caret-color: var(--acc); }
+#fp-textarea:focus { border-color: var(--f-abd); background: #fff;
+                     box-shadow: 0 0 0 3px rgba(123,104,200,.10); }
+#fp-latex-echo { font-family: var(--fm); font-size: 9.5px; color: #8070c0;
+                 display: none; padding: 0 3px; opacity: .7; white-space: nowrap;
+                 overflow: hidden; text-overflow: ellipsis; }
+
+/* MathLive field en el panel */
+#fp-mf-wrap { display: none; padding: 7px 10px; border-top: 1px solid #e8e0f8; }
+math-field#global-mf {
+  width: 100%; min-height: 34px;
+  border: 1.5px solid var(--f-abd); border-radius: var(--r);
+  padding: 4px 8px; background: #fff; font-size: 18px;
+  --caret-color: var(--acc);
+}
+
+#fp-acts { width: 90px; flex-shrink: 0; border-left: 1px solid #e0d8f5;
+           display: flex; flex-direction: column; justify-content: center;
+           gap: 5px; padding: 0 10px; }
+.fpa { height: 22px; border-radius: 4px; border: 1px solid var(--brd);
+       background: transparent; font-family: var(--fu); font-size: 9.5px;
+       color: var(--ink3); cursor: pointer; transition: all .1s; }
+.fpa:hover { background: var(--warm); color: var(--ink); }
+.fpa.apply { background: var(--acc); color: #fff; border-color: var(--acc); }
+.fpa.apply:hover { background: #6355b0; }
+
+/* normalizer badge en el panel */
+#fp-norm-hint { display: none; padding: 4px 12px; background: var(--amber-bg);
+                border-top: 1px solid var(--amber-bd); font-size: 9px;
+                color: var(--amber); display: none; align-items: center; gap: 6px; }
+#fp-norm-hint.show { display: flex; }
+#fp-norm-hint strong { font-weight: 600; }
+
+/* ── LAYOUT PRINCIPAL ─────────────────────────────── */
+#app { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+/* ── DOCUMENTO ────────────────────────────────────── */
+#ds { flex: 1; overflow-y: auto; background: var(--parch);
+      transition: padding-top .2s cubic-bezier(.4,0,.2,1); }
+#ds.fp-open { padding-top: 60px; }
+#ds.fp-open.fp-visual { padding-top: 110px; }
+#ds::-webkit-scrollbar { width: 7px; }
+#ds::-webkit-scrollbar-thumb { background: var(--brd); border-radius: 4px; }
+
+#dp { max-width: 620px; margin: 32px auto 100px; background: var(--paper);
+      padding: 44px 52px 52px; border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04),
+                  inset 0 0 0 1px rgba(0,0,0,.03); }
+
+/* ── BLOQUES ──────────────────────────────────────── */
+.blk { position: relative; margin: 0; }
+.blk-handle { position: absolute; left: -38px; top: 50%;
+              transform: translateY(-50%); display: flex; align-items: center;
+              gap: 2px; opacity: 0; transition: opacity .12s; pointer-events: none; }
+.blk:hover .blk-handle { opacity: 1; pointer-events: all; }
+.blk-plus { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--brd);
+            background: var(--paper); color: var(--ink4); font-size: 15px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all .1s; line-height: 1; font-weight: 300; }
+.blk-plus:hover { background: var(--blue-f); border-color: var(--blue-m); color: var(--blue-m); }
+
+/* Tipografía del documento */
+.bh1 { font-family: var(--fd); font-size: 1.45rem; font-weight: 700; line-height: 1.22;
+        color: var(--ink); padding-bottom: 10px; border-bottom: 1.5px solid var(--brd);
+        margin-bottom: 16px; }
+.bh2 { font-family: var(--fd); font-size: 1.08rem; font-weight: 600; color: var(--ink);
+        padding-top: .5em; margin-bottom: 6px; }
+.bh1::before { content: '§ '; color: var(--ink4); font-weight: 300;
+               font-size: .6em; vertical-align: .2em; }
+.bh2::before { content: '§§ '; color: var(--ink4); font-weight: 300;
+               font-size: .65em; vertical-align: .15em; }
+.bp { font-family: var(--fd); font-size: .96rem; line-height: 1.9;
+      color: var(--ink); margin-bottom: 8px; }
+
+/* Math chips (inline) */
+.mc { display: inline-flex; align-items: center;
+      background: var(--f-bg); border: 1px solid var(--f-bd);
+      border-radius: 4px; padding: 1px 5px 2px; cursor: pointer;
+      user-select: none; transition: background .12s, border-color .12s, box-shadow .12s;
+      vertical-align: middle; }
+.mc:hover { background: var(--f-hbg); border-color: var(--f-hbd); }
+.mc.active { background: var(--f-abg); border-color: var(--f-abd); box-shadow: var(--f-glow); }
+.mc .katex { font-size: .9em; }
+
+/* Math display */
+.mdisp { display: flex; justify-content: center; align-items: center;
+         padding: 18px 24px; margin: .5rem 0;
+         background: var(--f-bg); border: 1px solid var(--f-bd);
+         border-radius: var(--rl); cursor: pointer; position: relative;
+         transition: background .12s, border-color .12s, box-shadow .12s; }
+.mdisp:hover { background: var(--f-hbg); border-color: var(--f-hbd); }
+.mdisp.active { background: var(--f-abg); border-color: var(--f-abd); box-shadow: var(--f-glow); }
+.mdisp .type-hint { position: absolute; top: 5px; right: 9px; font-size: 8px;
+                    color: var(--f-bd); font-family: var(--fu); opacity: 0;
+                    transition: opacity .14s; pointer-events: none; }
+.mdisp:hover .type-hint { opacity: 1; }
+.katex-display { margin: 0 !important; }
+
+/* Theorem environments */
+.bthm { margin: .4rem 0; padding: 10px 14px 11px 13px;
+        border-left: 3px solid; border-radius: 0 var(--r) var(--r) 0; }
+.thm-lbl { font-family: var(--fu); font-size: 8.5px; font-weight: 700;
+           text-transform: uppercase; letter-spacing: .12em;
+           margin-bottom: 5px; user-select: none; }
+.thm-body { font-family: var(--fd); font-size: .94rem; line-height: 1.82; }
+.env-theorem  { border-color: #3a6091; background: #f0f5fb; }
+.env-theorem .thm-lbl  { color: #1e3a5f; }
+.env-proof    { border-color: #aaa; background: #f7f5f2; }
+.env-proof .thm-lbl    { color: #555; font-style: italic; }
+.env-definition { border-color: #2d6a45; background: #edf7f0; }
+.env-definition .thm-lbl { color: #1a4a2e; }
+.env-lemma    { border-color: #7b68c8; background: #f6f0ff; }
+.env-lemma .thm-lbl    { color: #4a3a9c; }
+.env-exercise { border-color: #a06820; background: #fdf5e6; }
+.env-exercise .thm-lbl { color: #7a5c28; }
+
+/* ── COACH PANEL ──────────────────────────────────── */
+#coach { width: 0; flex-shrink: 0; background: #fdfcf9;
+         border-left: 1px solid var(--brd); overflow: hidden;
+         transition: width .2s cubic-bezier(.4,0,.2,1); }
+#coach.open { width: 214px; }
+#coach-inner { width: 214px; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+#coach-hd { height: 32px; display: flex; align-items: center;
+            padding: 0 10px; border-bottom: 1px solid var(--brd-s);
+            flex-shrink: 0; gap: 6px; }
+.coach-title { font-size: 7.5px; font-weight: 700; text-transform: uppercase;
+               letter-spacing: .1em; color: var(--ink4); flex: 1; }
+#coach-close { width: 18px; height: 18px; border: none; background: none;
+               cursor: pointer; color: var(--ink4); font-size: 11px;
+               border-radius: 3px; display: flex; align-items: center; justify-content: center; }
+#coach-close:hover { background: var(--warm2); }
+#coach-body { flex: 1; overflow-y: auto; padding: 6px 8px; display: flex;
+              flex-direction: column; gap: 5px; }
+#coach-body::-webkit-scrollbar { width: 3px; }
+#coach-body::-webkit-scrollbar-thumb { background: var(--brd); }
+#coach-empty { padding: 18px 10px; text-align: center; font-size: 9.5px;
+               color: var(--ink4); line-height: 1.6; }
+
+/* Coach cards */
+.chcard { border-radius: var(--r); border: 1px solid; overflow: hidden;
+          animation: cardIn .2s ease; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.chcard.warn { border-color: var(--amber-bd); }
+.chcard-hd { display: flex; align-items: center; gap: 5px; padding: 5px 8px;
+             font-size: 9.5px; font-weight: 600; }
+.chcard.warn .chcard-hd { background: var(--amber-bg); color: var(--amber); }
+.chbadge { font-size: 7px; font-weight: 700; text-transform: uppercase;
+           letter-spacing: .06em; padding: 1px 4px; border-radius: 2px; }
+.chcard.warn .chbadge { background: rgba(122,92,40,.15); color: var(--amber); }
+.chbd { padding: 6px 8px 7px; background: #fff; }
+.chjust { font-size: 9px; color: var(--ink2); line-height: 1.5; margin-bottom: 5px; }
+.chcode { font-family: var(--fm); font-size: 8.5px; line-height: 1.6;
+          background: #fafaf8; border: 1px solid var(--brd-s);
+          border-radius: 3px; padding: 4px 7px; margin-bottom: 5px; }
+.cbbefore { color: #b03030; opacity: .75; text-decoration: line-through; }
+.cbafter  { color: var(--green); }
+.chacts { display: flex; gap: 3px; }
+.cha { height: 20px; padding: 0 7px; border-radius: 3px; border: 1px solid var(--brd);
+       background: transparent; font-family: var(--fu); font-size: 8.5px;
+       color: var(--ink3); cursor: pointer; transition: all .1s; }
+.cha:hover { background: var(--warm); color: var(--ink); }
+.cha.ok { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+.cha.ok:hover { background: #d5eddb; }
+
+/* ── SLASH MENU ───────────────────────────────────── */
+#smenu { position: fixed; z-index: 60; display: none; background: var(--paper);
+         border: 1px solid var(--brd); border-radius: var(--rl);
+         width: 232px; box-shadow: 0 4px 24px rgba(0,0,0,.12);
+         overflow: hidden; animation: slideUp .14s ease; }
+#smenu.show { display: block; }
+@keyframes slideUp { from { opacity:0; transform: translateY(5px) } to { opacity:1; transform: none } }
+#smenu-list { padding: 4px; max-height: 300px; overflow-y: auto; }
+.sm-sec { font-size: 7.5px; font-weight: 600; text-transform: uppercase;
+          letter-spacing: .1em; color: var(--ink4); padding: 7px 9px 3px; }
+.sm-row { display: flex; align-items: center; gap: 9px; padding: 7px 9px;
+          border-radius: 6px; cursor: pointer; transition: background .08s; }
+.sm-row:hover, .sm-row.focused { background: var(--blue-f); }
+.sm-ico { width: 28px; height: 28px; border-radius: 5px; background: var(--warm);
+          border: 1px solid var(--brd); display: flex; align-items: center;
+          justify-content: center; font-size: 11px; font-family: var(--fm);
+          font-weight: 600; color: var(--ink3); flex-shrink: 0; }
+.sm-name { font-size: 12px; font-weight: 500; color: var(--ink); }
+.sm-desc { font-size: 9.5px; color: var(--ink4); }
+
+/* ── TOOLTIP DE AYUDA (bottom) ────────────────────── */
+#hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+        background: rgba(28,24,18,.82); color: rgba(255,255,255,.88);
+        font-size: 10px; padding: 5px 13px; border-radius: 20px;
+        backdrop-filter: blur(4px); pointer-events: none;
+        transition: opacity .3s; opacity: 1; white-space: nowrap; z-index: 100; }
+#hint.hide { opacity: 0; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="top">
+  <div class="tl"><span class="tlm">F</span>Formalia</div>
+  <div class="tsep"></div>
+  <span id="doc-name">Análisis II — TP 1</span>
+  <div class="tsp"></div>
+  <button class="top-btn">Coach ⟩</button>
+  <span style="width:6px"></span>
+  <button class="top-btn primary">Exportar .tex ↓</button>
+</div>
+
+<div id="app">
+
+  <!-- FORMULA PANEL (fuera del canvas de Tiptap — ver system-design.md) -->
+  <div id="fp">
+    <div id="fp-row">
+      <div id="fp-meta">
+        <div id="fp-type">✎ Fórmula inline</div>
+        <div id="fp-modes">
+          <button class="fp-mode on" id="btn-codex" onclick="setMode('codex')">Codex</button>
+          <button class="fp-mode" id="btn-visual" onclick="setMode('visual')">Visual ✦</button>
+        </div>
+      </div>
+      <div id="fp-edit">
+        <textarea id="fp-textarea" rows="1" spellcheck="false"
+          placeholder="LaTeX aquí… (prueba: \int f(x) dx)"></textarea>
+        <div id="fp-latex-echo"></div>
+      </div>
+      <div id="fp-acts">
+        <button class="fpa apply" onclick="applyFormula()">✓ Aplicar</button>
+        <button class="fpa" onclick="cancelFormula()">✕ Cancelar</button>
+      </div>
+    </div>
+    <!-- MathLive — solo visible en modo Visual -->
+    <div id="fp-mf-wrap">
+      <math-field id="global-mf" virtual-keyboard-mode="onfocus"></math-field>
+    </div>
+    <!-- Hint del normalizer en el panel -->
+    <div id="fp-norm-hint">
+      <span>⚡</span><span id="fp-norm-txt"></span>
+    </div>
+  </div>
+
+  <!-- DOCUMENTO -->
+  <div id="ds">
+    <div id="dp"><!-- bloques generados por JS --></div>
+  </div>
+
+  <!-- COACH PANEL -->
+  <div id="coach">
+    <div id="coach-inner">
+      <div id="coach-hd">
+        <span class="coach-title">Coach · Normalizer</span>
+        <button id="coach-close" onclick="closeCoach()">✕</button>
+      </div>
+      <div id="coach-body">
+        <div id="coach-empty">Edita una fórmula para ver sugerencias tipográficas.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- SLASH MENU -->
+<div id="smenu"><div id="smenu-list"></div></div>
+
+<!-- HINT FLOTANTE -->
+<div id="hint">Haz click en cualquier fórmula para editarla</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════
+   MODELO DE DOCUMENTO
+   ══════════════════════════════════════════════════ */
+let _uid = 100;
+const uid = () => 'b' + (_uid++);
+
+// Bloques del documento (simulan el .ltxj)
+let BLOCKS = [
+  { id:'b1', type:'h1', text:'Continuidad y Diferenciabilidad' },
+
+  { id:'b2', type:'p', nodes:[
+    {k:'t', v:'Sea '},
+    {k:'m', v:'f: U \\subset \\mathbb{R}^n \\to \\mathbb{R}'},
+    {k:'t', v:' una función definida en un abierto '},
+    {k:'m', v:'U'},
+    {k:'t', v:'. Decimos que '},
+    {k:'m', v:'f'},
+    {k:'t', v:' es diferenciable en '},
+    {k:'m', v:'a \\in U'},
+    {k:'t', v:' si existe una transformación lineal '},
+    {k:'m', v:'T: \\mathbb{R}^n \\to \\mathbb{R}'},
+    {k:'t', v:' tal que:'},
+  ]},
+
+  { id:'b3', type:'md', latex:'\\lim_{h\\to 0}\\frac{f(a+h)-f(a)-T(h)}{\\|h\\|}=0' },
+
+  { id:'b4', type:'p', nodes:[
+    {k:'t', v:'En ese caso escribimos '},
+    {k:'m', v:'Df(a)=T'},
+    {k:'t', v:' y la matriz jacobiana es '},
+    {k:'m', v:'J_f(a) \\in \\mathbb{R}^{m \\times n}'},
+    {k:'t', v:'.'},
+  ]},
+
+  { id:'b5', type:'h2', text:'Regla de la Cadena' },
+
+  { id:'b6', type:'thm', env:'theorem', label:'Teorema 2.1 (Regla de la Cadena)',
+    nodes:[
+      {k:'t', v:'Si '},
+      {k:'m', v:'f: \\mathbb{R}^n \\to \\mathbb{R}^m'},
+      {k:'t', v:' y '},
+      {k:'m', v:'g: \\mathbb{R}^m \\to \\mathbb{R}^p'},
+      {k:'t', v:' son diferenciables, entonces '},
+      {k:'m', v:'g \\circ f'},
+      {k:'t', v:' es diferenciable y:'},
+  ]},
+
+  { id:'b7', type:'md', latex:'D(g \\circ f)(a) = Dg(f(a)) \\circ Df(a)' },
+
+  { id:'b8', type:'thm', env:'proof', label:'Demostración',
+    nodes:[
+      {k:'t', v:'Sea '},
+      {k:'m', v:'\\varepsilon > 0'},
+      {k:'t', v:'. Como '},
+      {k:'m', v:'f'},
+      {k:'t', v:' es diferenciable en '},
+      {k:'m', v:'a'},
+      {k:'t', v:', existe '},
+      {k:'m', v:'\\delta_1 > 0'},
+      {k:'t', v:' tal que la condición de diferenciabilidad se cumple. Aplicando el mismo argumento a '},
+      {k:'m', v:'g'},
+      {k:'t', v:' en '},
+      {k:'m', v:'f(a)'},
+      {k:'t', v:' se obtiene el resultado. ∎'},
+  ]},
+
+  { id:'b9', type:'thm', env:'exercise', label:'Ejercicio 2.1',
+    nodes:[
+      {k:'t', v:'Calcule la derivada de '},
+      {k:'m', v:'h(t) = \\sin(t^2 + \\cos t)'},
+      {k:'t', v:' usando la regla de la cadena. Verifique que el resultado coincide con '},
+      {k:'m', v:"h'(t) = (2t - \\sin t)\\cos(t^2 + \\cos t)"},
+      {k:'t', v:'.'},
+  ]},
+];
+
+/* ══════════════════════════════════════════════════
+   ESTADO DE LA FÓRMULA ACTIVA
+   ══════════════════════════════════════════════════ */
+let activeId   = null;   // id del bloque activo
+let activeIdx  = null;   // índice del chip inline (-1 = display)
+let mode       = 'codex'; // 'codex' | 'visual'
+let syncSrc    = null;   // null | 'text' | 'mathlive'  (patrón syncSrc del data-lifecycle)
+let normTimer  = null;
+
+const fp       = document.getElementById('fp');
+const ds       = document.getElementById('ds');
+const textarea = document.getElementById('fp-textarea');
+const fpType   = document.getElementById('fp-type');
+const latexEcho= document.getElementById('fp-latex-echo');
+const mfWrap   = document.getElementById('fp-mf-wrap');
+let   mf       = null; // <math-field>, se resuelve cuando el custom element está listo
+
+/* ══════════════════════════════════════════════════
+   RENDER DEL DOCUMENTO
+   ══════════════════════════════════════════════════ */
+function renderAll() {
+  const dp = document.getElementById('dp');
+  dp.innerHTML = '';
+  BLOCKS.forEach(b => dp.appendChild(mkBlock(b)));
+}
+
+function mkBlock(b) {
+  const wrap = document.createElement('div');
+  wrap.className = 'blk';
+  wrap.dataset.id = b.id;
+
+  // Handle: drag + plus
+  const handle = document.createElement('div');
+  handle.className = 'blk-handle';
+  const plus = document.createElement('button');
+  plus.className = 'blk-plus';
+  plus.textContent = '+';
+  plus.title = 'Insertar bloque';
+  plus.addEventListener('mousedown', e => { e.preventDefault(); showSlashMenu(e, b.id); });
+  handle.appendChild(plus);
+  wrap.appendChild(handle);
+
+  // Contenido
+  const inner = document.createElement('div');
+
+  if (b.type === 'h1') {
+    inner.className = 'bh1';
+    inner.textContent = b.text;
+  } else if (b.type === 'h2') {
+    inner.className = 'bh2';
+    inner.textContent = b.text;
+  } else if (b.type === 'p') {
+    inner.className = 'bp';
+    renderParagraphInto(inner, b);
+  } else if (b.type === 'md') {
+    inner.className = 'mdisp';
+    inner.dataset.bid = b.id;
+    const hint = document.createElement('span');
+    hint.className = 'type-hint';
+    hint.textContent = '∑ display';
+    inner.appendChild(hint);
+    const kEl = document.createElement('span');
+    renderKatex(b.latex, kEl, true);
+    inner.appendChild(kEl);
+    inner.addEventListener('click', () => activateDisplay(b.id));
+  } else if (b.type === 'thm') {
+    inner.className = `bthm env-${b.env}`;
+    const lbl = document.createElement('div');
+    lbl.className = 'thm-lbl';
+    lbl.textContent = b.label || b.env.charAt(0).toUpperCase() + b.env.slice(1);
+    inner.appendChild(lbl);
+    const body = document.createElement('div');
+    body.className = 'thm-body bp';
+    renderParagraphInto(body, b);
+    inner.appendChild(body);
+  }
+
+  wrap.appendChild(inner);
+  return wrap;
+}
+
+function renderParagraphInto(container, block) {
+  (block.nodes || []).forEach((node, idx) => {
+    if (node.k === 't') {
+      container.appendChild(document.createTextNode(node.v));
+    } else if (node.k === 'em') {
+      const em = document.createElement('em');
+      em.textContent = node.v;
+      container.appendChild(em);
+    } else if (node.k === 'm') {
+      const chip = document.createElement('span');
+      chip.className = 'mc';
+      chip.dataset.bid = block.id;
+      chip.dataset.idx = idx;
+      renderKatex(node.v, chip, false);
+      chip.addEventListener('click', () => activateInline(block.id, idx));
+      container.appendChild(chip);
+    }
+  });
+}
+
+function renderKatex(latex, el, display) {
+  try {
+    katex.render(latex, el, {
+      throwOnError: false,
+      displayMode: display,
+      output: 'html'
+    });
+  } catch(e) {
+    el.textContent = latex;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   ACTIVAR FÓRMULA
+   ══════════════════════════════════════════════════ */
+function activateInline(blockId, nodeIdx) {
+  const block = BLOCKS.find(b => b.id === blockId);
+  const latex = block.nodes[nodeIdx].v;
+
+  activeId  = blockId;
+  activeIdx = nodeIdx;
+
+  fpType.textContent = '✎ Fórmula inline';
+  textarea.value = latex;
+  openPanel();
+  textarea.focus();
+  textarea.select();
+  runNormalizerCheck(latex);
+  markActive(blockId, nodeIdx);
+  setHint('Edita el LaTeX · Enter para aplicar · Toggle "Visual ✦" para MathLive');
+}
+
+function activateDisplay(blockId) {
+  const block = BLOCKS.find(b => b.id === blockId);
+
+  activeId  = blockId;
+  activeIdx = -1;
+
+  fpType.textContent = '✎ Fórmula display';
+  textarea.value = block.latex;
+  openPanel();
+  textarea.focus();
+  textarea.select();
+  runNormalizerCheck(block.latex);
+  markActive(blockId, -1);
+  setHint('Fórmula display activa · Edita el LaTeX · Toggle "Visual ✦" para MathLive');
+}
+
+function markActive(blockId, nodeIdx) {
+  // Quitar activos previos
+  document.querySelectorAll('.mc.active, .mdisp.active').forEach(el => el.classList.remove('active'));
+  if (nodeIdx === -1) {
+    const el = document.querySelector(`.mdisp[data-bid="${blockId}"]`);
+    if (el) el.classList.add('active');
+  } else {
+    const el = document.querySelector(`.mc[data-bid="${blockId}"][data-idx="${nodeIdx}"]`);
+    if (el) el.classList.add('active');
+  }
+}
+
+function openPanel() {
+  fp.classList.add('open');
+  ds.classList.add('fp-open');
+}
+
+function closePanelVisuals() {
+  fp.classList.remove('open');
+  ds.classList.remove('fp-open');
+  ds.classList.remove('fp-visual');
+  document.querySelectorAll('.mc.active, .mdisp.active').forEach(el => el.classList.remove('active'));
+  activeId  = null;
+  activeIdx = null;
+  clearCoachCards();
+  document.getElementById('fp-norm-hint').classList.remove('show');
+}
+
+/* ══════════════════════════════════════════════════
+   APLICAR / CANCELAR
+   ══════════════════════════════════════════════════ */
+function applyFormula() {
+  if (activeId === null) return;
+  const latex = mode === 'visual' ? getMfValue() : textarea.value.trim();
+  if (!latex) return;
+
+  const block = BLOCKS.find(b => b.id === activeId);
+  if (activeIdx === -1) {
+    block.latex = latex;
+  } else {
+    block.nodes[activeIdx].v = latex;
+  }
+
+  closePanelVisuals();
+  if (mode === 'visual') setMode('codex', true);
+  renderAll();
+  setHint('Fórmula actualizada ✓');
+  setTimeout(() => setHint('Haz click en cualquier fórmula para editarla'), 2500);
+}
+
+function cancelFormula() {
+  if (mode === 'visual') setMode('codex', true);
+  closePanelVisuals();
+  setHint('Haz click en cualquier fórmula para editarla');
+}
+
+/* ══════════════════════════════════════════════════
+   MODO CODEX / VISUAL (MathLive)
+   ══════════════════════════════════════════════════ */
+function setMode(newMode, silent) {
+  mode = newMode;
+  document.getElementById('btn-codex').classList.toggle('on', mode === 'codex');
+  document.getElementById('btn-visual').classList.toggle('on', mode === 'visual');
+
+  if (mode === 'visual') {
+    textarea.style.display = 'none';
+    latexEcho.style.display = 'block';
+    mfWrap.style.display = 'block';
+    ds.classList.add('fp-visual');
+    // Pasar valor al campo MathLive
+    if (mf) {
+      syncSrc = 'text';
+      mf.value = textarea.value;
+      requestAnimationFrame(() => { syncSrc = null; });
+      setTimeout(() => mf.focus(), 80);
+    }
+    if (!silent) setHint('Modo Visual activo — MathLive sincroniza con el LaTeX en tiempo real');
+  } else {
+    textarea.style.display = '';
+    latexEcho.style.display = 'none';
+    mfWrap.style.display = 'none';
+    ds.classList.remove('fp-visual');
+    if (!silent) { textarea.focus(); setHint('Modo Codex — escribe LaTeX directamente'); }
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   SYNC TEXTAREA ↔ MATHLIVE  (patrón syncSrc)
+   ══════════════════════════════════════════════════ */
+textarea.addEventListener('input', () => {
+  if (syncSrc === 'mathlive') return;
+  const latex = textarea.value;
+  // Actualizar vista en documento en tiempo real
+  livePreview(latex);
+  // Si modo visual: sync → MathLive
+  if (mode === 'visual' && mf) {
+    syncSrc = 'text';
+    mf.value = latex;
+    requestAnimationFrame(() => { syncSrc = null; });
+  }
+  // Normalizer con debounce
+  clearTimeout(normTimer);
+  normTimer = setTimeout(() => runNormalizerCheck(latex), 400);
+});
+
+textarea.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); applyFormula(); }
+  if (e.key === 'Escape') cancelFormula();
+});
+
+function setupMathLiveSync() {
+  mf = document.getElementById('global-mf');
+  if (!mf) return;
+
+  mf.addEventListener('input', () => {
+    if (syncSrc === 'text') return;
+    const latex = mf.value;
+    syncSrc = 'mathlive';
+    textarea.value = latex;
+    latexEcho.textContent = latex;
+    requestAnimationFrame(() => { syncSrc = null; });
+    livePreview(latex);
+    clearTimeout(normTimer);
+    normTimer = setTimeout(() => runNormalizerCheck(latex), 400);
+  });
+}
+
+function getMfValue() {
+  return mf ? mf.value : textarea.value;
+}
+
+/* ══════════════════════════════════════════════════
+   PREVIEW EN TIEMPO REAL (mientras se edita)
+   ══════════════════════════════════════════════════ */
+function livePreview(latex) {
+  if (activeId === null) return;
+  if (activeIdx === -1) {
+    const el = document.querySelector(`.mdisp[data-bid="${activeId}"] span:last-child`);
+    if (el) renderKatex(latex, el, true);
+  } else {
+    const el = document.querySelector(`.mc[data-bid="${activeId}"][data-idx="${activeIdx}"]`);
+    if (el) renderKatex(latex, el, false);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   NORMALIZER (simulado)
+   Reglas reales del spec: AutoDelimiters, DxSpacing, MacroExpansion
+   ══════════════════════════════════════════════════ */
+const RULES = [
+  {
+    id: 'DxSpacing',
+    severity: 'required',
+    label: 'Espaciado diferencial',
+    check: latex => /\\(?:int|iint|iiint|oint)[^}]*[^\s,\\]d[a-zA-Z]/.test(latex),
+    before: m => m,
+    after:  m => m.replace(/([^\s,\\])(d[a-zA-Z])/g, '$1\\,$2'),
+    just:   'Convenio tipográfico: espacio fino (\\,) antes del diferencial en integrales.',
+  },
+  {
+    id: 'AutoDelimiters',
+    severity: 'required',
+    label: 'Delimitadores escalables',
+    check: latex => /\(\\(?:frac|dfrac|sum_|prod_|int_)/.test(latex),
+    before: m => m,
+    after:  m => m
+      .replace(/\(\\frac/g, '\\left(\\frac')
+      .replace(/\\frac([^}]*})([^)]*)\)/g, (_, a, b) => `\\frac${a}${b}\\right)`),
+    just:   'Los delimitadores deben escalar para ajustarse a la altura del contenido (\\left…\\right).',
+  },
+  {
+    id: 'MacroExpansion',
+    severity: 'required',
+    label: 'Macro de conjunto numérico',
+    check: latex => /\\mathbb\{[RZNQCK]\}/.test(latex),
+    before: m => m,
+    after:  m => m
+      .replace(/\\mathbb\{R\}/g, '\\R')
+      .replace(/\\mathbb\{Z\}/g, '\\Z')
+      .replace(/\\mathbb\{N\}/g, '\\N')
+      .replace(/\\mathbb\{Q\}/g, '\\Q')
+      .replace(/\\mathbb\{C\}/g, '\\C')
+      .replace(/\\mathbb\{K\}/g, '\\K'),
+    just:   'El perfil article-pro registra \\R, \\Z, \\N, \\Q, \\C, \\K. Usar la macro corta garantiza consistencia.',
+  },
+];
+
+let activeSuggestions = [];
+
+function runNormalizerCheck(latex) {
+  activeSuggestions = RULES
+    .filter(r => r.check(latex))
+    .map(r => ({
+      ...r,
+      latexBefore: r.before(latex),
+      latexAfter:  r.after(latex),
+    }));
+
+  renderCoach(activeSuggestions, latex);
+
+  // Hint en el panel
+  const hint = document.getElementById('fp-norm-hint');
+  const txt  = document.getElementById('fp-norm-txt');
+  if (activeSuggestions.length > 0) {
+    txt.innerHTML = `<strong>${activeSuggestions.length} sugerencia${activeSuggestions.length > 1 ? 's' : ''}</strong> del normalizer — ver Coach →`;
+    hint.classList.add('show');
+  } else {
+    hint.classList.remove('show');
+  }
+}
+
+function renderCoach(suggestions, currentLatex) {
+  const body  = document.getElementById('coach-body');
+  const empty = document.getElementById('coach-empty');
+
+  if (suggestions.length === 0) {
+    empty.style.display = '';
+    // Quitar tarjetas pero mantener empty
+    document.querySelectorAll('.chcard').forEach(c => c.remove());
+    return;
+  }
+
+  empty.style.display = 'none';
+  document.querySelectorAll('.chcard').forEach(c => c.remove());
+
+  // Abrir coach si no está abierto
+  document.getElementById('coach').classList.add('open');
+
+  suggestions.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'chcard warn';
+    card.dataset.ruleId = s.id;
+
+    const hd = document.createElement('div');
+    hd.className = 'chcard-hd';
+    const badge = document.createElement('span');
+    badge.className = 'chbadge';
+    badge.textContent = s.severity;
+    hd.innerHTML = `<span>${s.label}</span>`;
+    hd.prepend(badge);
+    card.appendChild(hd);
+
+    const bd = document.createElement('div');
+    bd.className = 'chbd';
+
+    const just = document.createElement('div');
+    just.className = 'chjust';
+    just.textContent = s.just;
+    bd.appendChild(just);
+
+    const code = document.createElement('div');
+    code.className = 'chcode';
+    const before = document.createElement('div');
+    before.className = 'cbbefore';
+    before.textContent = trimLatex(s.latexBefore);
+    const after = document.createElement('div');
+    after.className = 'cbafter';
+    after.textContent = trimLatex(s.latexAfter);
+    code.appendChild(before);
+    code.appendChild(after);
+    bd.appendChild(code);
+
+    const acts = document.createElement('div');
+    acts.className = 'chacts';
+    const btnOk = document.createElement('button');
+    btnOk.className = 'cha ok';
+    btnOk.textContent = '✓ Aceptar';
+    btnOk.addEventListener('click', () => acceptSuggestion(s, card));
+    const btnSkip = document.createElement('button');
+    btnSkip.className = 'cha';
+    btnSkip.textContent = 'Ignorar';
+    btnSkip.addEventListener('click', () => {
+      card.style.opacity = '.35';
+      setTimeout(() => card.remove(), 300);
+    });
+    acts.appendChild(btnOk);
+    acts.appendChild(btnSkip);
+    bd.appendChild(acts);
+
+    card.appendChild(bd);
+    body.appendChild(card);
+  });
+}
+
+function acceptSuggestion(s, card) {
+  const newLatex = s.latexAfter;
+  textarea.value = newLatex;
+  if (mode === 'visual' && mf) { mf.value = newLatex; }
+  livePreview(newLatex);
+  // Quitar esta sugerencia
+  card.style.transition = 'opacity .25s, transform .25s';
+  card.style.opacity = '0';
+  card.style.transform = 'translateX(8px)';
+  setTimeout(() => { card.remove(); checkCoachEmpty(); }, 280);
+  activeSuggestions = activeSuggestions.filter(x => x.id !== s.id);
+  if (activeSuggestions.length === 0) {
+    document.getElementById('fp-norm-hint').classList.remove('show');
+  }
+}
+
+function checkCoachEmpty() {
+  const body = document.getElementById('coach-body');
+  if (!body.querySelector('.chcard')) {
+    document.getElementById('coach-empty').style.display = '';
+    document.getElementById('coach-empty').textContent = '✓ Fórmula tipográficamente correcta.';
+  }
+}
+
+function clearCoachCards() {
+  document.querySelectorAll('.chcard').forEach(c => c.remove());
+  document.getElementById('coach-empty').style.display = '';
+  document.getElementById('coach-empty').textContent = 'Edita una fórmula para ver sugerencias.';
+  document.getElementById('fp-norm-hint').classList.remove('show');
+}
+
+function closeCoach() {
+  document.getElementById('coach').classList.remove('open');
+}
+
+function trimLatex(s) {
+  return s.length > 52 ? s.slice(0, 50) + '…' : s;
+}
+
+/* ══════════════════════════════════════════════════
+   SLASH MENU — insertar bloques
+   ══════════════════════════════════════════════════ */
+const BLOCK_TYPES = [
+  { section: 'Texto' },
+  { id:'p',   icon:'¶',  name:'Párrafo',          desc:'Texto con fórmulas inline' },
+  { id:'h1',  icon:'H1', name:'Encabezado',        desc:'Sección principal' },
+  { id:'h2',  icon:'H2', name:'Subsección',        desc:'Sección secundaria' },
+  { section: 'Matemática' },
+  { id:'md',  icon:'∑',  name:'Fórmula display',   desc:'Ecuación centrada destacada' },
+  { section: 'Entornos' },
+  { id:'thm', env:'theorem',   icon:'Thm', name:'Teorema',    desc:'Enunciado formal' },
+  { id:'thm', env:'definition',icon:'Def', name:'Definición', desc:'Definición formal' },
+  { id:'thm', env:'lemma',     icon:'Lem', name:'Lema',       desc:'Resultado auxiliar' },
+  { id:'thm', env:'proof',     icon:'∎',   name:'Demostración',desc:'Prueba de un teorema' },
+  { id:'thm', env:'exercise',  icon:'Ex',  name:'Ejercicio',  desc:'Problema propuesto' },
+];
+
+let slashAfterId = null;
+
+function showSlashMenu(e, afterBlockId) {
+  slashAfterId = afterBlockId;
+  const menu = document.getElementById('smenu');
+  const list = document.getElementById('smenu-list');
+  list.innerHTML = '';
+
+  BLOCK_TYPES.forEach(item => {
+    if (item.section) {
+      const sec = document.createElement('div');
+      sec.className = 'sm-sec';
+      sec.textContent = item.section;
+      list.appendChild(sec);
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'sm-row';
+    row.innerHTML = `
+      <div class="sm-ico">${item.icon}</div>
+      <div><div class="sm-name">${item.name}</div><div class="sm-desc">${item.desc}</div></div>`;
+    row.addEventListener('click', () => {
+      insertBlock(item, slashAfterId);
+      hideSlashMenu();
+    });
+    list.appendChild(row);
+  });
+
+  // Posicionar cerca del botón +
+  const rect = e.target.getBoundingClientRect();
+  menu.style.top  = (rect.bottom + 6) + 'px';
+  menu.style.left = (rect.left - 10) + 'px';
+  menu.classList.add('show');
+  e.stopPropagation();
+}
+
+function hideSlashMenu() {
+  document.getElementById('smenu').classList.remove('show');
+}
+
+document.addEventListener('click', hideSlashMenu);
+
+function insertBlock(item, afterId) {
+  const idx = BLOCKS.findIndex(b => b.id === afterId);
+  const newBlock = buildNewBlock(item);
+  BLOCKS.splice(idx + 1, 0, newBlock);
+  renderAll();
+  setHint(`Bloque "${item.name}" insertado — click en él para editar`);
+  setTimeout(() => setHint('Haz click en cualquier fórmula para editarla'), 3000);
+}
+
+function buildNewBlock(item) {
+  const id = uid();
+  if (item.id === 'h1') return { id, type:'h1', text:'Nueva sección' };
+  if (item.id === 'h2') return { id, type:'h2', text:'Nueva subsección' };
+  if (item.id === 'p')  return { id, type:'p',  nodes:[{k:'t', v:'Texto nuevo. Prueba insertar una fórmula con '},{k:'m', v:'f(x)'},{k:'t', v:'.'}] };
+  if (item.id === 'md') return { id, type:'md', latex:'\\int_a^b f(x) dx' };
+  if (item.id === 'thm') {
+    const labels = {
+      theorem:'Nuevo Teorema', definition:'Nueva Definición', lemma:'Nuevo Lema',
+      proof:'Demostración', exercise:'Nuevo Ejercicio'
+    };
+    return { id, type:'thm', env: item.env, label: labels[item.env],
+             nodes:[{k:'t', v:'Enunciado del '},{k:'t', v:item.name.toLowerCase()},{k:'t', v:'.'}] };
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   HINT FLOTANTE
+   ══════════════════════════════════════════════════ */
+let hintTimer = null;
+function setHint(msg) {
+  const el = document.getElementById('hint');
+  el.textContent = msg;
+  el.classList.remove('hide');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => el.classList.add('hide'), 4000);
+}
+
+/* ══════════════════════════════════════════════════
+   BOTÓN COACH EN TOPBAR
+   ══════════════════════════════════════════════════ */
+document.querySelector('.top-btn:not(.primary)').addEventListener('click', () => {
+  document.getElementById('coach').classList.toggle('open');
+});
+
+/* ══════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════ */
+// Esperar a que KaTeX y MathLive estén listos
+window.addEventListener('load', () => {
+  renderAll();
+  // MathLive: esperar a que el custom element esté definido
+  customElements.whenDefined('math-field').then(() => {
+    setupMathLiveSync();
+    console.log('[Formalia demo] MathLive listo');
+  });
+  setTimeout(() => setHint('Haz click en cualquier fórmula para editarla'), 600);
+});
+</script>
+</body>
+</html>
