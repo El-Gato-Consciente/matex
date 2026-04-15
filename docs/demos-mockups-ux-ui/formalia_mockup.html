@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formalia — Mockup v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+<style>
+/* ══════════════════════════════════════
+   TOKENS
+   ══════════════════════════════════════ */
+:root {
+  --paper:       #fefcf8;
+  --parchment:   #f0ebe0;
+  --warm-ui:     #f5f0e8;
+  --warm-ui-2:   #ece6da;
+  --ink:         #1c1812;
+  --ink-2:       #4a4540;
+  --ink-3:       #9c9488;
+  --ink-4:       #c5bfb3;
+  --border:      #e0d9ce;
+  --border-s:    #ede8de;
+  --blue:        #1e3a5f;
+  --blue-mid:    #2a5299;
+  --blue-pale:   #dce8f5;
+  --blue-faint:  #f0f5fb;
+  --fml-bg:      rgba(110,90,180,.055);
+  --fml-bd:      rgba(110,90,180,.22);
+  --fml-h-bg:    rgba(110,90,180,.11);
+  --fml-h-bd:    rgba(110,90,180,.38);
+  --fml-a-bg:    rgba(110,90,180,.15);
+  --fml-a-bd:    #7b68c8;
+  --fml-glow:    0 0 0 3px rgba(110,90,180,.14);
+  --green:       #2d5e3a;
+  --green-bg:    #edf7f0;
+  --amber:       #7a5c28;
+  --amber-bg:    #fdf5e8;
+  --amber-bd:    #e8d5a8;
+  --font-doc:    'Source Serif 4', Georgia, serif;
+  --font-ui:     'DM Sans', system-ui, sans-serif;
+  --font-mono:   'JetBrains Mono', monospace;
+  --r:           6px;
+  --r-lg:        10px;
+  --sidebar-w:   220px;
+  --coach-w:     228px;
+  --toolbar-h:   43px;
+  --meta-h-open: 76px;
+  --meta-h-coll: 30px;
+  --fml-h:       68px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-ui); background: var(--parchment); color: var(--ink); display: flex; flex-direction: column; font-size: 13.5px; }
+
+/* ══════════════════════════════════════
+   TOOLBAR
+   ══════════════════════════════════════ */
+#toolbar {
+  height: var(--toolbar-h); flex-shrink: 0;
+  background: var(--paper); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 12px; gap: 0; z-index: 60;
+}
+.tb-logo {
+  font-family: var(--font-doc); font-size: 14.5px; font-weight: 700;
+  color: var(--blue); letter-spacing: -.02em;
+  margin-right: 16px; display: flex; align-items: center; gap: 7px;
+  flex-shrink: 0;
+}
+.logo-mark {
+  width: 21px; height: 21px; border: 2px solid var(--blue); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--blue); font-family: var(--font-doc);
+}
+.tb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 7px; }
+.tb-group { display: flex; align-items: center; gap: 1px; }
+.tb-spacer { flex: 1; }
+.tb-btn {
+  height: 26px; min-width: 26px; padding: 0 6px;
+  border: none; border-radius: var(--r); cursor: pointer;
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500;
+  color: var(--ink-3); background: transparent;
+  transition: background .11s, color .11s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+}
+.tb-btn:hover { background: var(--warm-ui); color: var(--ink-2); }
+.tb-btn.active { background: var(--blue-faint); color: var(--blue-mid); }
+.tb-btn.math { font-family: var(--font-doc); font-size: 13px; letter-spacing: -.04em; }
+.tb-btn.env  { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.tb-label { font-size: 9px; color: var(--ink-4); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; padding: 0 3px; }
+.tb-mode {
+  font-size: 11px; font-weight: 600; color: var(--blue-mid);
+  background: var(--blue-faint); padding: 0 9px; border-radius: var(--r);
+  border: 1px solid rgba(29,58,95,.15); height: 26px; cursor: pointer;
+  transition: all .12s;
+}
+.tb-mode:hover { background: #e3ecf7; }
+.tb-export {
+  background: var(--blue); color: #fff; padding: 0 13px;
+  font-weight: 600; font-size: 11.5px; border-radius: var(--r);
+  height: 26px; border: none; cursor: pointer; transition: background .12s;
+}
+.tb-export:hover { background: #163050; }
+
+/* ══════════════════════════════════════
+   META PANEL (collapsible)
+   ══════════════════════════════════════ */
+#meta-panel {
+  flex-shrink: 0; background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden; z-index: 55;
+  transition: height .22s cubic-bezier(.4,0,.2,1);
+  height: var(--meta-h-open);
+}
+#meta-panel.collapsed { height: var(--meta-h-coll); }
+
+/* Collapsed strip */
+#meta-strip {
+  height: var(--meta-h-coll); display: flex; align-items: center;
+  padding: 0 14px; gap: 10px; cursor: pointer; user-select: none;
+  transition: background .12s;
+}
+#meta-strip:hover { background: var(--warm-ui); }
+.strip-title {
+  font-family: var(--font-doc); font-size: 13px; font-weight: 600;
+  color: var(--ink-2); flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.strip-sub { font-size: 11px; color: var(--ink-4); flex-shrink: 0; }
+.strip-toggle {
+  font-size: 10px; color: var(--ink-4);
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  transition: transform .22s;
+}
+#meta-panel:not(.collapsed) .strip-toggle { transform: rotate(180deg); }
+
+/* Expanded fields */
+#meta-fields {
+  padding: 8px 14px 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.meta-field-group { display: flex; flex-direction: column; gap: 3px; }
+.meta-field-group.grow { flex: 1; min-width: 0; }
+.meta-field-group.w140 { width: 140px; flex-shrink: 0; }
+.meta-field-group.w100 { width: 100px; flex-shrink: 0; }
+.meta-label {
+  font-size: 8.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .10em; color: var(--ink-4);
+}
+.meta-input {
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 5px 9px; font-size: 12.5px;
+  font-family: var(--font-ui); background: #faf8f3; color: var(--ink);
+  outline: none; transition: border-color .14s, background .14s, box-shadow .14s;
+  width: 100%;
+}
+.meta-input.title-input { font-family: var(--font-doc); font-size: 13px; font-weight: 600; }
+.meta-input:focus {
+  border-color: var(--fml-a-bd); background: #fff;
+  box-shadow: 0 0 0 2.5px rgba(110,90,180,.12);
+}
+.meta-input select { appearance: none; }
+
+/* ══════════════════════════════════════
+   FORMULA PANEL
+   ══════════════════════════════════════ */
+#formula-panel {
+  flex-shrink: 0; background: #f9f7ff;
+  border-bottom: 1px solid #e0d9f5; z-index: 50;
+  display: flex; align-items: stretch;
+  height: var(--fml-h); overflow: hidden;
+  transition: height .2s ease, opacity .2s ease;
+}
+#formula-panel.hidden { height: 0; opacity: 0; pointer-events: none; }
+
+#fpanel-label {
+  width: 118px; flex-shrink: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 12px; border-right: 1px solid var(--border-s);
+}
+.fpanel-title { font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .11em; color: var(--ink-4); margin-bottom: 4px; }
+.fpanel-status { font-size: 11px; color: var(--ink-3); font-style: italic; }
+.fpanel-status.on { color: var(--blue-mid); font-style: normal; font-weight: 500; }
+
+#fpanel-input {
+  flex: 1; padding: 9px 12px; display: flex; align-items: center;
+}
+#formula-textarea {
+  width: 100%; height: 100%; padding: 5px 10px;
+  border: 1.5px solid transparent; border-radius: var(--r);
+  background: rgba(255,255,255,.55); font-family: var(--font-mono); font-size: 12px;
+  color: var(--ink); outline: none; resize: none;
+  transition: border-color .16s, background .16s, box-shadow .16s;
+  caret-color: var(--fml-a-bd); line-height: 1.5;
+}
+#formula-textarea::placeholder { color: var(--ink-4); font-style: italic; }
+#formula-textarea:focus, #formula-textarea.on {
+  border-color: var(--fml-a-bd); background: #fff;
+  box-shadow: 0 0 0 3px rgba(110,90,180,.10);
+}
+#fpanel-actions {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 10px; gap: 5px; border-left: 1px solid var(--border-s); width: 90px;
+}
+.fpanel-btn {
+  height: 22px; border-radius: var(--r); border: 1px solid var(--border);
+  background: transparent; font-family: var(--font-ui); font-size: 10px;
+  color: var(--ink-3); cursor: pointer; transition: all .11s;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+}
+.fpanel-btn:hover { background: var(--warm-ui); color: var(--ink); }
+.fpanel-btn.save { background: var(--blue); color: #fff; border-color: var(--blue); }
+.fpanel-btn.save:hover { background: #163050; }
+
+/* ══════════════════════════════════════
+   MAIN BODY
+   ══════════════════════════════════════ */
+#main { flex: 1; display: flex; overflow: hidden; }
+
+/* ══════════════════════════════════════
+   LEFT SIDEBAR
+   ══════════════════════════════════════ */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--warm-ui); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* Sidebar tabs */
+#sidebar-tabs {
+  display: flex; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--warm-ui-2);
+}
+.stab {
+  flex: 1; height: 32px; border: none; background: none;
+  font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-4); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.stab:hover { color: var(--ink-2); }
+.stab.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--warm-ui); }
+
+/* Sidebar panels */
+.spanel { flex: 1; overflow-y: auto; display: none; padding-bottom: 16px; }
+.spanel.active { display: block; }
+.spanel::-webkit-scrollbar { width: 3px; }
+.spanel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Docs panel ─────────────────────── */
+#new-doc-btn {
+  margin: 10px 10px 8px;
+  width: calc(100% - 20px);
+  height: 32px; border: 1.5px dashed var(--blue-mid);
+  border-radius: var(--r); background: transparent;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+  color: var(--blue-mid); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background .12s;
+}
+#new-doc-btn:hover { background: var(--blue-faint); }
+
+.sidebar-section-title {
+  font-size: 8.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .11em; color: var(--ink-4);
+  padding: 10px 12px 6px;
+}
+
+/* Template cards — compact 2-col grid */
+.tmpl-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+  padding: 0 10px;
+}
+.tmpl-card {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 8px 7px;
+  cursor: pointer; transition: border-color .12s, background .12s, transform .1s;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.tmpl-card:hover { border-color: var(--blue-mid); background: var(--blue-faint); transform: translateY(-1px); }
+.tmpl-card.active { border-color: var(--fml-a-bd); background: #f3f0ff; }
+.tmpl-icon { font-size: 16px; line-height: 1; }
+.tmpl-name { font-size: 10px; font-weight: 600; color: var(--ink); line-height: 1.2; }
+.tmpl-desc { font-size: 9px; color: var(--ink-3); line-height: 1.3; }
+
+/* Recent docs list */
+.recent-doc {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 7px 12px; cursor: pointer;
+  border-bottom: 1px solid var(--border-s);
+  transition: background .11s;
+}
+.recent-doc:hover { background: var(--warm-ui-2); }
+.recent-doc:last-child { border-bottom: none; }
+.doc-icon { width: 24px; height: 28px; background: var(--paper); border: 1px solid var(--border); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; color: var(--ink-3); margin-top: 1px; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 11px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-meta { font-size: 9.5px; color: var(--ink-4); margin-top: 1px; }
+
+/* ── Symbols panel ─────────────────── */
+.sym-section { padding: 8px 10px 10px; }
+.sym-section + .sym-section { border-top: 1px solid var(--border-s); }
+.sym-sec-title {
+  font-size: 8.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .11em; color: var(--ink-4); margin-bottom: 6px; padding: 0 2px;
+}
+.sym-grid { display: flex; flex-wrap: wrap; gap: 3px; }
+.sym-btn {
+  width: 32px; height: 27px; padding: 2px;
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: 5px; cursor: pointer; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; transition: background .1s, border-color .1s, transform .08s;
+}
+.sym-btn:hover { background: #fff; border-color: var(--fml-h-bd); transform: translateY(-1px); }
+.sym-btn:active { transform: scale(.93); }
+.sym-btn .katex { font-size: .68em; }
+.sym-lbl { font-size: 6px; color: var(--ink-4); font-family: var(--font-ui); line-height: 1; }
+
+/* ══════════════════════════════════════
+   DOCUMENT CANVAS
+   ══════════════════════════════════════ */
+#doc-scroll {
+  flex: 1; overflow-y: auto; padding: 36px 0 80px;
+  background: var(--parchment);
+}
+#doc-scroll::-webkit-scrollbar { width: 7px; }
+#doc-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+#doc-paper {
+  max-width: 620px; margin: 0 auto;
+  background: var(--paper);
+  box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04), inset 0 0 0 1px rgba(0,0,0,.03);
+  border-radius: 2px; padding: 48px 58px 60px; min-height: 680px;
+}
+.doc-h1 {
+  font-family: var(--font-doc); font-size: 1.5rem; font-weight: 700;
+  line-height: 1.2; letter-spacing: -.01em; color: var(--ink);
+  margin-bottom: 1.2rem; padding-bottom: 11px;
+  border-bottom: 1.5px solid var(--border);
+}
+.doc-h1::before { content: '§ '; color: var(--ink-4); font-weight: 300; font-size: .62em; vertical-align: .2em; }
+.doc-h2 {
+  font-family: var(--font-doc); font-size: 1.12rem; font-weight: 600;
+  margin-top: 1.5rem; margin-bottom: .45rem; color: var(--ink);
+}
+.doc-h2::before { content: '§§ '; color: var(--ink-4); font-weight: 300; font-size: .65em; vertical-align: .15em; }
+.doc-p {
+  font-family: var(--font-doc); font-size: .97rem; line-height: 1.85;
+  color: var(--ink); margin-bottom: .85rem; text-align: justify; hyphens: auto;
+}
+.thm-env {
+  margin: 1.3rem 0; padding: 12px 16px 12px 14px;
+  border-left: 3px solid; border-radius: 0 var(--r) var(--r) 0;
+}
+.thm-label { font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .13em; display: block; margin-bottom: 6px; }
+.thm-body { font-family: var(--font-doc); font-size: .95rem; line-height: 1.8; text-align: justify; hyphens: auto; }
+.thm-env.theorem    { border-color: #3a6091; background: #f0f5fb; }
+.thm-env.theorem .thm-label    { color: #1e3a5f; }
+.thm-env.proof      { border-color: #aaa;    background: #f7f5f2; }
+.thm-env.proof .thm-label      { color: #555; font-style: italic; }
+.thm-env.exercise   { border-color: #a06820; background: #fdf5e6; }
+.thm-env.exercise .thm-label   { color: #7a5c28; }
+
+/* Math chips */
+.math-chip {
+  display: inline-flex; align-items: center;
+  background: var(--fml-bg); border: 1px solid var(--fml-bd);
+  border-radius: 4px; padding: 1px 5px 2px;
+  cursor: pointer; vertical-align: baseline;
+  transition: background .12s, border-color .12s, box-shadow .12s;
+}
+.math-chip:hover { background: var(--fml-h-bg); border-color: var(--fml-h-bd); }
+.math-chip.active { background: var(--fml-a-bg); border-color: var(--fml-a-bd); box-shadow: var(--fml-glow); }
+.math-chip .katex { font-size: .94em; }
+
+.math-display {
+  display: flex; justify-content: center; align-items: center;
+  margin: 1.3rem 0; padding: 20px 28px;
+  background: var(--fml-bg); border: 1px solid var(--fml-bd);
+  border-radius: var(--r-lg); cursor: pointer; position: relative;
+  transition: background .12s, border-color .12s, box-shadow .12s;
+}
+.math-display:hover { background: var(--fml-h-bg); border-color: var(--fml-h-bd); }
+.math-display.active { background: var(--fml-a-bg); border-color: var(--fml-a-bd); box-shadow: var(--fml-glow); }
+.math-display .edit-hint {
+  position: absolute; top: 6px; right: 10px;
+  font-size: 8.5px; color: var(--fml-bd);
+  font-family: var(--font-ui); opacity: 0; transition: opacity .14s;
+}
+.math-display:hover .edit-hint { opacity: 1; }
+.katex-display { margin: 0 !important; }
+
+/* ══════════════════════════════════════
+   COACH PANEL
+   ══════════════════════════════════════ */
+#coach {
+  width: var(--coach-w); flex-shrink: 0;
+  background: #fdfcf9; border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: width .22s ease;
+}
+#coach.slim { width: 40px; }
+#coach-head {
+  height: 32px; display: flex; align-items: center;
+  padding: 0 10px; border-bottom: 1px solid var(--border-s);
+  gap: 6px; flex-shrink: 0;
+}
+#coach.slim #coach-head { padding: 0; justify-content: center; }
+.coach-title { font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .10em; color: var(--ink-4); flex: 1; white-space: nowrap; }
+#coach.slim .coach-title { display: none; }
+.coach-tog { width: 20px; height: 20px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ink-4); border-radius: 4px; font-size: 10px; flex-shrink: 0; }
+.coach-tog:hover { background: var(--warm-ui-2); }
+#coach-body { flex: 1; overflow-y: auto; padding: 8px 8px 20px; }
+#coach-body::-webkit-scrollbar { width: 3px; }
+#coach.slim #coach-body { display: none; }
+
+.coach-empty {
+  padding: 20px 10px; text-align: center;
+  font-size: 10.5px; color: var(--ink-4); line-height: 1.6;
+}
+
+.coach-hint {
+  font-size: 10px; color: var(--ink-3); line-height: 1.55;
+  padding: 8px 8px 9px; border-bottom: 1px solid var(--border-s); margin-bottom: 6px;
+}
+.coach-hint strong { color: var(--ink-2); }
+.env-pill {
+  display: inline-flex; align-items: center;
+  font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em;
+  background: var(--warm-ui-2); border: 1px solid var(--border);
+  color: var(--ink-3); border-radius: 20px; padding: 2px 6px; margin-bottom: 7px;
+}
+.coach-card { margin-bottom: 6px; border-radius: var(--r); border: 1px solid; overflow: hidden; transition: opacity .18s, transform .18s; }
+.coach-card.warn { border-color: var(--amber-bd); }
+.coach-card.info { border-color: var(--border-s); }
+.coach-card-hd {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 8px 4px; font-size: 10px; font-weight: 600;
+}
+.coach-card.warn .coach-card-hd { background: var(--amber-bg); color: var(--amber); }
+.coach-card.info .coach-card-hd { background: var(--warm-ui); color: var(--ink-3); }
+.cbadge {
+  font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+  padding: 1px 4px; border-radius: 3px;
+}
+.coach-card.warn .cbadge { background: rgba(122,92,40,.15); color: var(--amber); }
+.coach-card.info .cbadge { background: rgba(0,0,0,.07); color: var(--ink-3); }
+.coach-card-bd { padding: 6px 8px 7px; background: #fff; }
+.coach-just { font-size: 9.5px; color: var(--ink-2); line-height: 1.5; margin-bottom: 6px; }
+.coach-code {
+  font-family: var(--font-mono); font-size: 9px; line-height: 1.65;
+  background: #fafaf8; border: 1px solid var(--border-s); border-radius: 4px;
+  padding: 4px 7px; margin-bottom: 6px;
+}
+.cbefore { color: #b03030; opacity: .75; text-decoration: line-through; }
+.cafter  { color: #2d6a45; }
+.carrow  { color: var(--ink-4); }
+.coach-acts { display: flex; gap: 4px; }
+.cact {
+  height: 20px; padding: 0 7px; border-radius: 4px;
+  border: 1px solid var(--border); background: transparent;
+  font-family: var(--font-ui); font-size: 9.5px; color: var(--ink-3);
+  cursor: pointer; transition: all .11s;
+}
+.cact:hover { background: var(--warm-ui); color: var(--ink); }
+.cact.ok { background: var(--green-bg); border-color: #a8d4b8; color: var(--green); }
+.cact.ok:hover { background: #daeee3; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ TOOLBAR -->
+<div id="toolbar">
+  <div class="tb-logo">
+    <span class="logo-mark">F</span> Formalia
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <span class="tb-label">Texto</span>
+    <button class="tb-btn"><b>B</b></button>
+    <button class="tb-btn"><i>I</i></button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <span class="tb-label">§</span>
+    <button class="tb-btn">1</button>
+    <button class="tb-btn active">2</button>
+    <button class="tb-btn">3</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <span class="tb-label">Math</span>
+    <button class="tb-btn math">$</button>
+    <button class="tb-btn math">[ ]</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <span class="tb-label">Env</span>
+    <button class="tb-btn env">Thm</button>
+    <button class="tb-btn env">Def</button>
+    <button class="tb-btn env">Prf</button>
+    <button class="tb-btn env">Ej</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <button class="tb-btn">↩</button>
+    <button class="tb-btn">↪</button>
+  </div>
+  <div class="tb-sep"></div>
+  <button class="tb-mode" id="mode-btn" onclick="toggleMode()">⬡ Visual</button>
+  <div class="tb-spacer"></div>
+  <button class="tb-export">Exportar .tex ↓</button>
+</div>
+
+<!-- ══════════ META PANEL -->
+<div id="meta-panel">
+  <div id="meta-strip" onclick="toggleMeta()">
+    <span class="strip-title" id="strip-title">Análisis Matemático — Trabajo Práctico 1</span>
+    <span class="strip-sub">García, J. · Análisis II</span>
+    <button class="strip-toggle" id="meta-arrow" onclick="event.stopPropagation(); toggleMeta()">▲</button>
+  </div>
+  <div id="meta-fields">
+    <div class="meta-field-group grow">
+      <div class="meta-label">Título</div>
+      <input class="meta-input title-input" id="m-title" type="text"
+        value="Análisis Matemático — Trabajo Práctico 1"
+        oninput="document.getElementById('strip-title').textContent=this.value">
+    </div>
+    <div class="meta-field-group w140">
+      <div class="meta-label">Autor</div>
+      <input class="meta-input" id="m-author" type="text" value="García, Juan · Leg. 98765">
+    </div>
+    <div class="meta-field-group w140">
+      <div class="meta-label">Materia / Cátedra</div>
+      <input class="meta-input" id="m-subject" type="text" value="Análisis II — Cátedra Pérez">
+    </div>
+    <div class="meta-field-group w100">
+      <div class="meta-label">Fecha</div>
+      <input class="meta-input" id="m-date" type="text" value="\today">
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ FORMULA PANEL -->
+<div id="formula-panel" class="hidden">
+  <div id="fpanel-label">
+    <div class="fpanel-title">✎ Fórmula</div>
+    <div class="fpanel-status" id="fpanel-status">—</div>
+  </div>
+  <div id="fpanel-input">
+    <textarea id="formula-textarea" spellcheck="false"
+      placeholder="Seleccioná una fórmula…"></textarea>
+  </div>
+  <div id="fpanel-actions">
+    <button class="fpanel-btn save" onclick="confirmFml()">✓ Guardar</button>
+    <button class="fpanel-btn"      onclick="cancelFml()">✕ Cancelar</button>
+  </div>
+</div>
+
+<!-- ══════════ MAIN -->
+<div id="main">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-tabs">
+      <button class="stab active" id="stab-docs" onclick="switchSTab('docs')">📄 Docs</button>
+      <button class="stab" id="stab-sym"  onclick="switchSTab('sym')">∑ Símbolos</button>
+    </div>
+
+    <!-- DOCS panel -->
+    <div class="spanel active" id="spanel-docs">
+      <button id="new-doc-btn" onclick="showNewDoc()">＋ Nuevo documento</button>
+
+      <div class="sidebar-section-title">Templates</div>
+      <div class="tmpl-grid" id="tmpl-grid">
+        <!-- filled by JS -->
+      </div>
+
+      <div class="sidebar-section-title" style="margin-top:4px;">Recientes</div>
+      <div id="recent-list">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- SYMBOLS panel -->
+    <div class="spanel" id="spanel-sym">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- DOCUMENT CANVAS -->
+  <div id="doc-scroll">
+    <div id="doc-paper">
+      <h1 class="doc-h1">Cálculo Diferencial e Integral</h1>
+
+      <p class="doc-p">
+        Sea <span class="math-chip" data-latex="f:[a,b]\to\mathbb{R}" data-id="i1" onclick="activateFml(this)"></span>
+        una función continua en <span class="math-chip" data-latex="[a,b]" data-id="i2" onclick="activateFml(this)"></span>.
+        El concepto de integral definida se basa en sumas de Riemann:
+      </p>
+
+      <div class="math-display" data-latex="\int_a^b f(x)\,dx = F(b) - F(a)" data-id="d1" onclick="activateFml(this)">
+        <span class="edit-hint">✎ clic para editar</span>
+      </div>
+
+      <p class="doc-p">
+        La norma en <span class="math-chip" data-latex="L^2([a,b])" data-id="i3" onclick="activateFml(this)"></span>
+        se define como
+        <span class="math-chip" data-latex="\|f\|_2 = \left(\int_a^b |f(x)|^2\,dx\right)^{1/2}" data-id="i4" onclick="activateFml(this)"></span>.
+      </p>
+
+      <h2 class="doc-h2">Teorema de Bolzano</h2>
+
+      <div class="thm-env theorem">
+        <span class="thm-label">Teorema 2.1 (Bolzano)</span>
+        <div class="thm-body">
+          Si <span class="math-chip" data-latex="f \in C([a,b])" data-id="i5" onclick="activateFml(this)"></span>
+          y <span class="math-chip" data-latex="f(a)\cdot f(b) < 0" data-id="i6" onclick="activateFml(this)"></span>,
+          entonces existe <span class="math-chip" data-latex="c \in (a,b)" data-id="i7" onclick="activateFml(this)"></span>
+          tal que <span class="math-chip" data-latex="f(c)=0" data-id="i8" onclick="activateFml(this)"></span>.
+        </div>
+      </div>
+
+      <div class="thm-env proof">
+        <span class="thm-label">Demostración</span>
+        <div class="thm-body">
+          Por el teorema del valor intermedio aplicado a
+          <span class="math-chip" data-latex="f" data-id="i9" onclick="activateFml(this)"></span>
+          en <span class="math-chip" data-latex="[a,b]" data-id="i10" onclick="activateFml(this)"></span>. ∎
+        </div>
+      </div>
+
+      <div class="thm-env exercise">
+        <span class="thm-label">Ejercicio 2.1</span>
+        <div class="thm-body">
+          Demuestre que <span class="math-chip" data-latex="f(x)=x^3-3x+1" data-id="i11" onclick="activateFml(this)"></span>
+          tiene al menos tres raíces reales usando el Teorema de Bolzano.
+        </div>
+        <div class="math-display" data-latex="\left(\int_a^b \frac{f(x)}{1+e^{f(x)}}\,dx\right)^{1/2}" data-id="d2" onclick="activateFml(this)" style="margin-top:11px;margin-bottom:0">
+          <span class="edit-hint">✎ clic para editar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COACH PANEL -->
+  <div id="coach" class="slim">
+    <div id="coach-head">
+      <span class="coach-title">Coach</span>
+      <button class="coach-tog" onclick="toggleCoach()" id="coach-tog-btn">›</button>
+    </div>
+    <div id="coach-body">
+      <div class="coach-empty" id="coach-empty-msg">
+        Seleccioná una fórmula para ver sugerencias tipográficas.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ NEW DOC OVERLAY -->
+<div id="new-doc-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,24,18,.55);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--paper);border-radius:12px;width:min(760px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.28);">
+    <div style="padding:22px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--font-doc);font-size:18px;font-weight:700;color:var(--ink);">Nuevo documento</div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">Elegí una plantilla o empezá desde cero</div>
+      </div>
+      <button onclick="document.getElementById('new-doc-overlay').style.display='none'" style="border:none;background:none;font-size:20px;color:var(--ink-3);cursor:pointer;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='var(--warm-ui)'" onmouseout="this.style.background='none'">×</button>
+    </div>
+    <div style="padding:20px 28px 28px;">
+      <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.11em;color:var(--ink-4);margin-bottom:12px;">Plantillas</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;" id="overlay-tmpl-grid"></div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-s);">
+        <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.11em;color:var(--ink-4);margin-bottom:10px;">Recientes</div>
+        <div id="overlay-recent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── Templates data ──────────────────────────── */
+const TEMPLATES = [
+  { icon:'📝', name:'Trabajo Práctico', desc:'Ejercicios numerados', tags:['art'], color:'#f0f5fb', border:'#3a6091' },
+  { icon:'📖', name:'Apuntes de Clase', desc:'Defs, teoremas, ejemplos', tags:['art'], color:'#f0fef5', border:'#2d6a45' },
+  { icon:'📄', name:'Artículo', desc:'Abstract y secciones formales', tags:['art'], color:'#fdf5e6', border:'#a06820' },
+  { icon:'✏️', name:'Derivación', desc:'Pasos con align*', tags:['art'], color:'#f6f0ff', border:'#6a3aaa' },
+  { icon:'🎓', name:'Tesis', desc:'Capítulos y bibliografía', tags:['rep'], color:'#fff0f5', border:'#aa3060' },
+  { icon:'○', name:'En blanco', desc:'Empezar desde cero', tags:[], color:'#f7f5f2', border:'#aaa' },
+];
+
+const RECENT = [
+  { name:'Análisis II — TP1', meta:'Trabajo Práctico · hace 2 días', active:true },
+  { name:'Topología — Apuntes', meta:'Apuntes de Clase · hace 1 semana', active:false },
+  { name:'Álgebra Lineal — TP3', meta:'Trabajo Práctico · hace 2 semanas', active:false },
+];
+
+/* Render template cards in sidebar */
+const tmplGrid = document.getElementById('tmpl-grid');
+TEMPLATES.forEach((t, i) => {
+  const card = document.createElement('div');
+  card.className = 'tmpl-card' + (i === 0 ? ' active' : '');
+  card.innerHTML = `<div class="tmpl-icon">${t.icon}</div><div class="tmpl-name">${t.name}</div><div class="tmpl-desc">${t.desc}</div>`;
+  card.style.cssText = `border-left: 2.5px solid ${t.border};`;
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.tmpl-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+  });
+  tmplGrid.appendChild(card);
+});
+
+/* Render recent docs in sidebar */
+const recentList = document.getElementById('recent-list');
+RECENT.forEach(r => {
+  const el = document.createElement('div');
+  el.className = 'recent-doc';
+  el.innerHTML = `<div class="doc-icon">tex</div><div class="doc-info"><div class="doc-name">${r.name}</div><div class="doc-meta">${r.meta}</div></div>`;
+  if (r.active) el.style.background = 'var(--blue-faint)';
+  recentList.appendChild(el);
+});
+
+/* Render overlay templates */
+const overlayGrid = document.getElementById('overlay-tmpl-grid');
+TEMPLATES.forEach(t => {
+  const card = document.createElement('div');
+  card.style.cssText = `background:${t.color};border:1px solid ${t.border};border-radius:8px;padding:14px 16px;cursor:pointer;transition:box-shadow .12s,transform .12s;`;
+  card.innerHTML = `<div style="font-size:22px;margin-bottom:7px;">${t.icon}</div><div style="font-size:13px;font-weight:600;color:var(--ink);font-family:var(--font-doc);margin-bottom:3px;">${t.name}</div><div style="font-size:10.5px;color:var(--ink-3);">${t.desc}</div>`;
+  card.addEventListener('mouseenter', () => { card.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'; card.style.transform='translateY(-2px)'; });
+  card.addEventListener('mouseleave', () => { card.style.boxShadow=''; card.style.transform=''; });
+  card.addEventListener('click', () => { document.getElementById('new-doc-overlay').style.display='none'; });
+  overlayGrid.appendChild(card);
+});
+
+/* Render overlay recent */
+const overlayRecent = document.getElementById('overlay-recent');
+RECENT.forEach(r => {
+  const el = document.createElement('div');
+  el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:background .11s;';
+  el.innerHTML = `<div style="width:28px;height:32px;background:var(--warm-ui);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-3);flex-shrink:0;">tex</div><div><div style="font-size:12px;font-weight:500;color:var(--ink);">${r.name}</div><div style="font-size:10px;color:var(--ink-4);margin-top:1px;">${r.meta}</div></div>`;
+  el.addEventListener('mouseenter', () => el.style.background = 'var(--warm-ui)');
+  el.addEventListener('mouseleave', () => el.style.background = '');
+  el.addEventListener('click', () => { document.getElementById('new-doc-overlay').style.display='none'; });
+  overlayRecent.appendChild(el);
+});
+
+/* ── Symbol palette ──────────────────────────── */
+const PALETTE = [
+  { title: 'Griegas', items: [['\\alpha','α'],['\\beta','β'],['\\gamma','γ'],['\\delta','δ'],['\\varepsilon','ε'],['\\lambda','λ'],['\\mu','μ'],['\\pi','π'],['\\sigma','σ'],['\\varphi','φ'],['\\omega','ω'],['\\Gamma','Γ'],['\\Delta','Δ'],['\\Sigma','Σ'],['\\Omega','Ω']] },
+  { title: 'Operadores', items: [['\\pm','±'],['\\times','×'],['\\cdot','·'],['\\leq','≤'],['\\geq','≥'],['\\neq','≠'],['\\approx','≈'],['\\in','∈'],['\\notin','∉'],['\\subset','⊂'],['\\cup','∪'],['\\cap','∩'],['\\forall','∀'],['\\exists','∃'],['\\to','→']] },
+  { title: 'Estructuras', items: [['\\frac{a}{b}','a/b'],['\\sqrt{x}','√x'],['x^{n}','^n'],['x_{n}','_n'],['\\sum','∑'],['\\prod','∏'],['\\int','∫'],['\\lim','lim'],['\\left(\\right)','(·)'],['\\left[\\right]','[·]'],['\\begin{pmatrix}\\end{pmatrix}','mat'],['\\begin{cases}\\end{cases}','⌈⌉']] },
+  { title: 'Símbolos', items: [['\\infty','∞'],['\\partial','∂'],['\\nabla','∇'],['\\mathbb{R}','ℝ'],['\\mathbb{Z}','ℤ'],['\\mathbb{N}','ℕ'],['\\mathbb{C}','ℂ'],['\\cdots','⋯'],['\\vdots','⋮'],['\\emptyset','∅'],['\\square','□']] },
+];
+
+const symPanel = document.getElementById('spanel-sym');
+PALETTE.forEach(({ title, items }) => {
+  const sec = document.createElement('div'); sec.className = 'sym-section';
+  const hd  = document.createElement('div'); hd.className = 'sym-sec-title'; hd.textContent = title;
+  const grid = document.createElement('div'); grid.className = 'sym-grid';
+  items.forEach(([latex, label]) => {
+    const btn = document.createElement('button'); btn.className = 'sym-btn'; btn.title = latex;
+    const icon = document.createElement('span');
+    try { icon.innerHTML = katex.renderToString(label.length <= 4 ? label : label.slice(0,4), { throwOnError: false }); }
+    catch { icon.textContent = label; }
+    const lbl = document.createElement('span'); lbl.className = 'sym-lbl'; lbl.textContent = latex.replace(/\\/,'').slice(0,6);
+    btn.appendChild(icon); btn.appendChild(lbl);
+    btn.addEventListener('mousedown', e => e.preventDefault());
+    btn.addEventListener('click', () => insertSnippet(latex));
+    grid.appendChild(btn);
+  });
+  sec.appendChild(hd); sec.appendChild(grid); symPanel.appendChild(sec);
+});
+
+/* ── Render KaTeX ────────────────────────────── */
+document.querySelectorAll('.math-chip').forEach(el => {
+  try { katex.render(el.dataset.latex, el, { throwOnError: false, displayMode: false }); }
+  catch { el.textContent = '$' + el.dataset.latex + '$'; }
+});
+document.querySelectorAll('.math-display').forEach(el => {
+  const hint = el.querySelector('.edit-hint');
+  try { katex.render(el.dataset.latex, el, { throwOnError: false, displayMode: true }); }
+  catch { el.textContent = el.dataset.latex; }
+  if (hint) el.appendChild(hint);
+});
+
+/* ── Formula activation ──────────────────────── */
+let activeEl = null;
+const fmlPanel   = document.getElementById('formula-panel');
+const fmlTA      = document.getElementById('formula-textarea');
+const fmlStatus  = document.getElementById('fpanel-status');
+
+function activateFml(el) {
+  if (activeEl) activeEl.classList.remove('active');
+  activeEl = el;
+  el.classList.add('active');
+  const latex    = el.dataset.latex;
+  const isDisp   = el.classList.contains('math-display');
+  fmlPanel.classList.remove('hidden');
+  fmlTA.value = latex;
+  fmlTA.classList.add('on');
+  fmlStatus.textContent = isDisp ? 'Ecuación display' : 'Fórmula inline';
+  fmlStatus.classList.add('on');
+  fmlTA.focus();
+  showCoach(latex, isDisp, el);
+  // Auto-switch sidebar to symbols
+  switchSTab('sym');
+}
+
+function confirmFml() { deactivate(); }
+function cancelFml()  { deactivate(); }
+
+function deactivate() {
+  if (activeEl) { activeEl.classList.remove('active'); activeEl = null; }
+  fmlPanel.classList.add('hidden');
+  fmlTA.value = ''; fmlTA.classList.remove('on');
+  fmlStatus.textContent = '—'; fmlStatus.classList.remove('on');
+  clearCoach();
+}
+
+document.getElementById('doc-scroll').addEventListener('click', e => {
+  if (!e.target.closest('.math-chip') && !e.target.closest('.math-display')) deactivate();
+});
+
+fmlTA.addEventListener('input', () => {
+  if (!activeEl) return;
+  const latex = fmlTA.value;
+  const isDisp = activeEl.classList.contains('math-display');
+  const hint = activeEl.querySelector?.('.edit-hint');
+  try {
+    katex.render(latex, activeEl, { throwOnError: false, displayMode: isDisp });
+  } catch {}
+  if (hint) activeEl.appendChild(hint);
+  activeEl.dataset.latex = latex;
+  analyzeLatex(latex, isDisp);
+});
+
+function insertSnippet(latex) {
+  if (!activeEl) return;
+  const s = fmlTA.selectionStart, e = fmlTA.selectionEnd;
+  const v = fmlTA.value;
+  fmlTA.value = v.slice(0,s) + latex + v.slice(e);
+  fmlTA.selectionStart = fmlTA.selectionEnd = s + latex.length;
+  fmlTA.dispatchEvent(new Event('input'));
+  fmlTA.focus();
+}
+
+/* ── Coach ───────────────────────────────────── */
+let coachOpen = false;
+const coachEl    = document.getElementById('coach');
+const coachBody  = document.getElementById('coach-body');
+const coachTogBtn = document.getElementById('coach-tog-btn');
+
+function toggleCoach() {
+  coachOpen = !coachOpen;
+  coachEl.classList.toggle('slim', !coachOpen);
+  coachTogBtn.style.transform = coachOpen ? 'rotate(180deg)' : '';
+}
+
+function clearCoach() {
+  coachBody.innerHTML = '<div class="coach-empty" id="coach-empty-msg">Seleccioná una fórmula para ver sugerencias tipográficas.</div>';
+  if (!coachOpen) coachEl.classList.add('slim');
+}
+
+function showCoach(latex, isDisp, el) {
+  const changes = analyzeLatex(latex, isDisp, el);
+  buildCoachCards(latex, isDisp, el, changes);
+}
+
+function analyzeLatex(latex, isDisp, el) {
+  const changes = [];
+  if (/\(\\frac|\\sum_|\(\int/.test(latex) && !latex.includes('\\left('))
+    changes.push({ type:'warn', badge:'AUTO', title:'Delimitadores ajustados', desc:'Los paréntesis sin \\left/\\right no escalan con el contenido interior.', before:latex, after:latex.replace(/\(/g,'\\left(').replace(/\)/g,'\\right)') });
+  if (/\\int.*[^,\s]d[xyztu]\b/.test(latex))
+    changes.push({ type:'warn', badge:'AUTO', title:'Espacio fino antes del diferencial', desc:'Convención: \\, antes de dx, dy, etc. mejora el espaciado visual.', before:latex, after:latex.replace(/([^\s,\\])(\s*)(d[xyztu]\b)/g,'$1\\,$3') });
+  if (latex.includes('\\mathbb{R}'))
+    changes.push({ type:'info', badge:'MACRO', title:'Usar macro \\R', desc:'El manifiesto define \\R. Consistencia en todo el documento.', before:'\\mathbb{R}', after:'\\R' });
+  if (isDisp && (latex.match(/=/g)||[]).length >= 2)
+    changes.push({ type:'info', badge:'SUGERENCIA', title:'Considerar align*', desc:'Múltiples = detectados. align* con & mejora la legibilidad de derivaciones.', before:null, after:null });
+  if (changes.length > 0 && !coachOpen) {
+    coachEl.classList.remove('slim');
+    coachOpen = true;
+    coachTogBtn.style.transform = 'rotate(180deg)';
+  }
+  return changes;
+}
+
+function buildCoachCards(latex, isDisp, el, changes) {
+  coachBody.innerHTML = '';
+  const envCtx  = el?.closest?.('.thm-env');
+  const envType = envCtx ? [...envCtx.classList].find(c => ['theorem','proof','exercise','definition'].includes(c)) : null;
+  if (envType) {
+    const hints = {
+      proof:    '<strong>Proof</strong> — Para pasos alineados usá <strong>align*</strong> con &amp;= al inicio de cada línea.',
+      exercise: '<strong>Ejercicio</strong> — Si necesitás referenciar la ecuación activá <strong>Numerada</strong> y agregá un label.',
+      theorem:  '<strong>Teorema</strong> — Si la ecuación se referencia en la prueba, agregá <strong>\\label{eq:…}</strong>.',
+    };
+    if (hints[envType]) {
+      const hint = document.createElement('div'); hint.className = 'coach-hint';
+      const pill = document.createElement('div'); pill.className = 'env-pill'; pill.textContent = envType.charAt(0).toUpperCase() + envType.slice(1);
+      hint.appendChild(pill);
+      const txt = document.createElement('div'); txt.innerHTML = hints[envType];
+      hint.appendChild(txt); coachBody.appendChild(hint);
+    }
+  }
+  if (changes.length === 0) {
+    const empty = document.createElement('div'); empty.className = 'coach-empty'; empty.textContent = '✓ Sin sugerencias para esta fórmula.';
+    coachBody.appendChild(empty); return;
+  }
+  changes.forEach(c => {
+    const card = document.createElement('div'); card.className = `coach-card ${c.type}`;
+    const hd = document.createElement('div'); hd.className = 'coach-card-hd';
+    hd.innerHTML = `<span class="cbadge">${c.badge}</span> ${c.title}`;
+    card.appendChild(hd);
+    const bd = document.createElement('div'); bd.className = 'coach-card-bd';
+    const just = document.createElement('div'); just.className = 'coach-just'; just.textContent = c.desc;
+    bd.appendChild(just);
+    if (c.before && c.after) {
+      const code = document.createElement('div'); code.className = 'coach-code';
+      const short = s => s.length > 35 ? s.slice(0,35) + '…' : s;
+      code.innerHTML = `<div class="cbefore">${esc(short(c.before))}</div><div class="carrow">↓</div><div class="cafter">${esc(short(c.after))}</div>`;
+      bd.appendChild(code);
+    }
+    const acts = document.createElement('div'); acts.className = 'coach-acts';
+    const ok = document.createElement('button'); ok.className = 'cact ok'; ok.textContent = '✓ Aplicar';
+    ok.addEventListener('click', () => {
+      if (c.after) { fmlTA.value = c.after; fmlTA.dispatchEvent(new Event('input')); }
+      card.style.opacity='0'; card.style.transform='translateX(6px)';
+      setTimeout(() => card.remove(), 180);
+    });
+    const ig = document.createElement('button'); ig.className = 'cact'; ig.textContent = 'Ignorar';
+    ig.addEventListener('click', () => { card.style.opacity='0'; setTimeout(()=>card.remove(),180); });
+    acts.appendChild(ok); acts.appendChild(ig); bd.appendChild(acts); card.appendChild(bd);
+    coachBody.appendChild(card);
+  });
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Meta panel toggle ───────────────────────── */
+const metaPanel = document.getElementById('meta-panel');
+function toggleMeta() { metaPanel.classList.toggle('collapsed'); }
+metaPanel.classList.add('collapsed'); // start collapsed
+
+/* ── New doc overlay ─────────────────────────── */
+function showNewDoc() {
+  document.getElementById('new-doc-overlay').style.display = 'flex';
+}
+
+/* ── Sidebar tabs ────────────────────────────── */
+function switchSTab(id) {
+  document.querySelectorAll('.stab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.spanel').forEach(p => p.classList.remove('active'));
+  document.getElementById('stab-' + id).classList.add('active');
+  document.getElementById('spanel-' + id).classList.add('active');
+}
+
+/* ── Mode toggle ─────────────────────────────── */
+let isVisual = false;
+function toggleMode() {
+  isVisual = !isVisual;
+  const btn = document.getElementById('mode-btn');
+  btn.textContent = isVisual ? '⌨ LaTeX' : '⬡ Visual';
+  btn.style.cssText = isVisual ? 'color:#2d5e3a;background:#edf7f0;border-color:#a8d4b8' : '';
+}
+
+/* ── Init ────────────────────────────────────── */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const d1 = document.querySelector('[data-id="d1"]');
+    if (d1) activateFml(d1);
+  }, 500);
+});
+</script>
+</body>
+</html>

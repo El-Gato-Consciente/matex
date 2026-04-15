@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formalia — Selector de documentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+
+/* ══════════════════════════ TOKENS */
+:root {
+  --paper:     #fefcf8;
+  --parchment: #f0ebe0;
+  --warm:      #f5f0e8;
+  --warm-2:    #ece6da;
+  --ink:       #1c1812;
+  --ink-2:     #4a4538;
+  --ink-3:     #9c9488;
+  --ink-4:     #c5bfb2;
+  --border:    #e0d9ce;
+  --border-s:  #ede8de;
+  --blue:      #1e3a5f;
+  --blue-m:    #2a5299;
+  --blue-pale: #dce8f5;
+  --blue-f:    #f0f5fb;
+  --accent:    #7b68c8;
+  --accent-l:  #f3f0ff;
+  --accent-bd: rgba(123,104,200,.28);
+  --green:     #2d5e3a;
+  --green-bg:  #edf7f0;
+  --red:       #7a2828;
+  --red-bg:    #fef0f0;
+  --font-doc:  'Source Serif 4', Georgia, serif;
+  --font-ui:   'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --r:  7px;
+  --rl: 12px;
+  --rx: 18px;
+  --toolbar-h: 42px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-ui); background: var(--parchment); color: var(--ink); display: flex; flex-direction: column; font-size: 13.5px; }
+
+/* ══════════════════════════ EDITOR SHELL (background) */
+#toolbar {
+  height: var(--toolbar-h); flex-shrink: 0;
+  background: var(--paper); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 0; z-index: 1;
+  filter: blur(0); transition: filter .2s;
+}
+body.palette-open #toolbar { filter: blur(2px); }
+
+.tb-logo { font-family: var(--font-doc); font-size: 14px; font-weight: 700; color: var(--blue); display: flex; align-items: center; gap: 7px; margin-right: 14px; }
+.logo-m  { width: 20px; height: 20px; border: 2px solid var(--blue); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+.tb-sep  { width: 1px; height: 15px; background: var(--border); margin: 0 7px; }
+.tb-btn  { height: 25px; min-width: 25px; padding: 0 6px; border: none; border-radius: 5px; cursor: pointer; font-family: var(--font-ui); font-size: 11px; font-weight: 500; color: var(--ink-3); background: transparent; transition: background .1s, color .1s; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.tb-btn:hover { background: var(--warm); color: var(--ink-2); }
+.tb-spacer { flex: 1; }
+.tb-export { background: var(--blue); color: #fff; padding: 0 12px; font-weight: 600; font-size: 11px; border-radius: 5px; height: 25px; border: none; cursor: pointer; }
+
+/* Current doc pill in toolbar */
+.tb-doc-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 10px; height: 25px; border-radius: 5px;
+  background: var(--warm); border: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 500; color: var(--ink-2);
+  cursor: pointer; transition: all .12s; max-width: 220px;
+  overflow: hidden;
+}
+.tb-doc-pill:hover { background: var(--warm-2); border-color: var(--ink-4); }
+.tb-doc-pill .pill-icon { font-size: 11px; flex-shrink: 0; }
+.tb-doc-pill .pill-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tb-doc-pill .pill-kbd { font-size: 9px; color: var(--ink-4); background: rgba(0,0,0,.06); border-radius: 3px; padding: 1px 4px; flex-shrink: 0; font-family: var(--font-mono); }
+
+#editor-body {
+  flex: 1; display: flex; overflow: hidden;
+  filter: blur(0); transition: filter .2s;
+}
+body.palette-open #editor-body { filter: blur(2px); }
+
+#doc-scroll { flex: 1; overflow-y: auto; padding: 36px; background: var(--parchment); }
+#doc-paper { max-width: 580px; margin: 0 auto; background: var(--paper); border-radius: 2px; padding: 44px 52px 52px; min-height: 560px; box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.04), inset 0 0 0 1px rgba(0,0,0,.03); }
+.doc-h1 { font-family: var(--font-doc); font-size: 1.45rem; font-weight: 700; color: var(--ink); margin-bottom: 1.2rem; padding-bottom: 10px; border-bottom: 1.5px solid var(--border); }
+.doc-h1::before { content: '§ '; color: var(--ink-4); font-weight: 300; font-size: .62em; vertical-align: .2em; }
+.doc-p { font-family: var(--font-doc); font-size: .96rem; line-height: 1.85; color: var(--ink); margin-bottom: .85rem; text-align: justify; }
+.math-chip { display: inline-flex; align-items: center; background: rgba(123,104,200,.07); border: 1px solid rgba(123,104,200,.22); border-radius: 4px; padding: 1px 5px 2px; cursor: pointer; }
+.math-chip .katex { font-size: .93em; }
+.math-disp { display: flex; justify-content: center; padding: 18px 24px; margin: 1.2rem 0; background: rgba(123,104,200,.05); border: 1px solid rgba(123,104,200,.2); border-radius: var(--rl); }
+.katex-display { margin: 0 !important; }
+
+/* ══════════════════════════ OVERLAY BACKDROP */
+#palette-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(28,24,18,.48);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  animation: bdIn .18s ease;
+}
+#palette-backdrop.open { display: block; }
+@keyframes bdIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ══════════════════════════ PALETTE PANEL */
+#palette {
+  display: none; position: fixed;
+  top: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 101;
+  width: min(600px, 94vw);
+  background: var(--paper);
+  border-radius: var(--rx);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.06),
+    0 8px 32px rgba(0,0,0,.14),
+    0 24px 64px rgba(0,0,0,.10);
+  overflow: hidden;
+  animation: palIn .22s cubic-bezier(.34,1.2,.64,1);
+}
+#palette.open { display: block; }
+@keyframes palIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(.97); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);    }
+}
+
+/* Search row */
+#pal-search-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 12px; border-bottom: 1px solid var(--border);
+}
+.pal-search-icon { color: var(--ink-4); font-size: 15px; flex-shrink: 0; }
+#pal-search {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-family: var(--font-ui); font-size: 15px; color: var(--ink);
+  caret-color: var(--accent);
+}
+#pal-search::placeholder { color: var(--ink-4); }
+#pal-search-clear {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--warm-2); border: none; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  color: var(--ink-3); font-size: 11px; flex-shrink: 0;
+  transition: background .1s;
+}
+#pal-search-clear.show { display: flex; }
+#pal-search-clear:hover { background: var(--border); }
+
+/* Tabs inside palette */
+#pal-tabs {
+  display: flex; border-bottom: 1px solid var(--border-s);
+  background: var(--warm); padding: 0 8px;
+}
+.pal-tab {
+  height: 32px; padding: 0 12px; border: none; background: none;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-4); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s; white-space: nowrap;
+}
+.pal-tab:hover { color: var(--ink-2); }
+.pal-tab.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--paper); }
+
+/* Palette body */
+#pal-body { max-height: min(420px, 50vh); overflow-y: auto; }
+#pal-body::-webkit-scrollbar { width: 5px; }
+#pal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.pal-section { padding: 6px 0 4px; }
+.pal-section + .pal-section { border-top: 1px solid var(--border-s); }
+.pal-section-title { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .11em; color: var(--ink-4); padding: 6px 16px 4px; }
+
+/* Document rows */
+.pal-doc {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; cursor: pointer;
+  transition: background .1s; border-radius: 0;
+  position: relative;
+}
+.pal-doc:hover, .pal-doc.focused {
+  background: var(--blue-f);
+}
+.pal-doc.active-doc { background: var(--accent-l); }
+
+.doc-thumb {
+  width: 30px; height: 36px; flex-shrink: 0;
+  background: var(--warm); border: 1px solid var(--border);
+  border-radius: 4px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  overflow: hidden; position: relative;
+}
+.doc-thumb .thumb-lines { display: flex; flex-direction: column; gap: 2px; padding: 4px; width: 100%; }
+.doc-thumb .tl { height: 2px; border-radius: 1px; background: var(--border); }
+.doc-thumb .tl:first-child { width: 70%; background: var(--ink-3); }
+.doc-thumb .active-dot {
+  position: absolute; top: 3px; right: 3px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+}
+
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 13px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; }
+.doc-meta { font-size: 10.5px; color: var(--ink-4); display: flex; align-items: center; gap: 6px; }
+.doc-badge { font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; padding: 1px 5px; border-radius: 3px; background: var(--warm-2); color: var(--ink-3); border: 1px solid var(--border-s); }
+.doc-badge.tp  { background: #f0f5fb; color: #1e3a5f; border-color: #c5d8ee; }
+.doc-badge.notas { background: #edf7f0; color: #2d5e3a; border-color: #b0d9bc; }
+.doc-badge.art { background: #fdf5e6; color: #7a5c28; border-color: #e8d5a8; }
+.doc-badge.active-now { background: var(--accent-l); color: var(--accent); border-color: var(--accent-bd); }
+
+.doc-actions {
+  display: flex; gap: 3px; opacity: 0; transition: opacity .12s; flex-shrink: 0;
+}
+.pal-doc:hover .doc-actions { opacity: 1; }
+.dact {
+  width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--paper); color: var(--ink-3); font-size: 11px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .1s;
+}
+.dact:hover { background: var(--warm-2); color: var(--ink); }
+.dact.danger:hover { background: var(--red-bg); color: var(--red); border-color: #f0c0c0; }
+
+/* New doc row (special) */
+.pal-new {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; cursor: pointer; transition: background .1s;
+}
+.pal-new:hover, .pal-new.focused { background: var(--blue-f); }
+.new-icon-wrap {
+  width: 30px; height: 36px; flex-shrink: 0;
+  border: 1.5px dashed var(--blue-m); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue-m); font-size: 16px; font-weight: 300;
+  background: var(--blue-f);
+}
+.new-doc-name { font-size: 13px; font-weight: 600; color: var(--blue-m); }
+.new-doc-sub  { font-size: 10.5px; color: var(--ink-4); }
+
+/* Template rows */
+.pal-tmpl {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; cursor: pointer; transition: background .1s;
+}
+.pal-tmpl:hover, .pal-tmpl.focused { background: var(--warm); }
+.tmpl-icon-sm {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.tmpl-info { flex: 1; }
+.tmpl-nm   { font-size: 12.5px; font-weight: 500; color: var(--ink); }
+.tmpl-ds   { font-size: 10.5px; color: var(--ink-4); }
+.tmpl-cls  { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-4); margin-left: 4px; }
+
+/* Empty state */
+.pal-empty {
+  padding: 32px 20px; text-align: center;
+  font-size: 13px; color: var(--ink-4); line-height: 1.6;
+}
+.pal-empty .em-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+
+/* Palette footer */
+#pal-footer {
+  border-top: 1px solid var(--border-s);
+  padding: 8px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--warm);
+}
+.kbd-hint { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kh { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--ink-4); }
+.k  { background: var(--paper); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-3); }
+
+/* ══════════════════════════ NEW DOC MINI-FLOW
+   (slides in below palette for quick template pick) */
+#mini-new {
+  display: none; position: fixed;
+  top: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 102;
+  width: min(600px, 94vw);
+  background: var(--paper);
+  border-radius: var(--rx);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 8px 32px rgba(0,0,0,.14), 0 24px 64px rgba(0,0,0,.10);
+  overflow: hidden;
+  animation: palIn .22s cubic-bezier(.34,1.2,.64,1);
+}
+#mini-new.open { display: block; }
+
+#mini-new-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  background: var(--warm);
+}
+.mini-back {
+  width: 26px; height: 26px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--paper); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: var(--ink-3); font-size: 12px; flex-shrink: 0;
+  transition: all .1s;
+}
+.mini-back:hover { background: var(--warm-2); color: var(--ink); }
+.mini-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.mini-sub   { font-size: 11px; color: var(--ink-4); margin-left: auto; }
+
+.mini-tmpl-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  padding: 14px 14px;
+}
+.mini-tmpl-card {
+  background: var(--warm); border: 1.5px solid var(--border);
+  border-radius: var(--r); padding: 10px 10px 9px; cursor: pointer;
+  transition: all .13s; display: flex; flex-direction: column; gap: 4px;
+  position: relative;
+}
+.mini-tmpl-card:hover {
+  border-color: var(--blue-m);
+  background: var(--blue-f);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,.07);
+}
+.mini-tmpl-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-l);
+  box-shadow: 0 0 0 2px rgba(123,104,200,.18);
+}
+.mtc-icon { font-size: 16px; }
+.mtc-name { font-size: 11px; font-weight: 600; color: var(--ink); line-height: 1.2; }
+.mtc-cls  { font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-4); }
+
+.mini-footer {
+  padding: 10px 14px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border-s);
+}
+.mini-footer-hint { font-size: 11px; color: var(--ink-4); }
+.mini-footer-hint strong { color: var(--accent); }
+.create-btn {
+  height: 32px; padding: 0 20px;
+  background: var(--blue); color: #fff; border: none; border-radius: var(--r);
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .12s; opacity: .4; pointer-events: none;
+}
+.create-btn.enabled { opacity: 1; pointer-events: all; }
+.create-btn.enabled:hover { background: #163050; }
+</style>
+</head>
+<body>
+
+<!-- ══════ EDITOR SHELL (background) -->
+<div id="toolbar">
+  <div class="tb-logo"><span class="logo-m">F</span> Formalia</div>
+  <div class="tb-sep"></div>
+
+  <!-- Current doc pill — click to open palette -->
+  <div class="tb-doc-pill" onclick="openPalette()" id="doc-pill">
+    <span class="pill-icon">📝</span>
+    <span class="pill-name">Análisis II — TP1</span>
+    <span class="pill-kbd">⌘K</span>
+  </div>
+
+  <div class="tb-sep"></div>
+  <div style="display:flex;align-items:center;gap:1px;">
+    <button class="tb-btn"><b>B</b></button>
+    <button class="tb-btn"><i>I</i></button>
+    <button class="tb-btn" style="font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Thm</button>
+    <button class="tb-btn" style="font-family:'Source Serif 4';font-size:13px;letter-spacing:-.04em">$</button>
+  </div>
+  <div class="tb-spacer"></div>
+  <button class="tb-export">Exportar .tex ↓</button>
+</div>
+
+<div id="editor-body">
+  <div id="doc-scroll">
+    <div id="doc-paper">
+      <h1 class="doc-h1">Cálculo Diferencial e Integral</h1>
+      <p class="doc-p">
+        Sea <span class="math-chip" id="mc1"></span>
+        una función continua. La integral de Riemann satisface:
+      </p>
+      <div class="math-disp" id="md1"></div>
+      <p class="doc-p">
+        La norma en <span class="math-chip" id="mc2"></span>
+        es <span class="math-chip" id="mc3"></span>.
+        Este resultado sigue de la desigualdad de Cauchy-Schwarz aplicada al espacio
+        <span class="math-chip" id="mc4"></span>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ BACKDROP -->
+<div id="palette-backdrop" onclick="closePalette()"></div>
+
+<!-- ══════ PALETTE: main document switcher -->
+<div id="palette">
+
+  <div id="pal-search-row">
+    <span class="pal-search-icon">⌕</span>
+    <input id="pal-search" type="text" placeholder="Buscar documentos o elegir template…"
+      oninput="onSearch(this.value)" autocomplete="off" spellcheck="false">
+    <button id="pal-search-clear" onclick="clearSearch()">✕</button>
+  </div>
+
+  <div id="pal-tabs">
+    <button class="pal-tab active" id="tab-all"   onclick="switchTab('all')">Todos</button>
+    <button class="pal-tab" id="tab-recent" onclick="switchTab('recent')">Recientes</button>
+    <button class="pal-tab" id="tab-tmpl"   onclick="switchTab('tmpl')">Templates</button>
+  </div>
+
+  <div id="pal-body">
+    <!-- Filled by JS -->
+  </div>
+
+  <div id="pal-footer">
+    <div class="kbd-hint">
+      <span class="kh"><span class="k">↑↓</span> navegar</span>
+      <span class="kh"><span class="k">↵</span> abrir</span>
+      <span class="kh"><span class="k">Esc</span> cerrar</span>
+      <span class="kh"><span class="k">⌘K</span> paleta</span>
+    </div>
+    <div style="font-size:10px;color:var(--ink-4);">3 documentos guardados</div>
+  </div>
+</div>
+
+<!-- ══════ MINI NEW DOC FLOW -->
+<div id="mini-new">
+  <div id="mini-new-head">
+    <button class="mini-back" onclick="backToPalette()">←</button>
+    <span class="mini-title">Nuevo documento</span>
+    <span class="mini-sub">Elegí una plantilla para empezar</span>
+  </div>
+  <div class="mini-tmpl-grid" id="mini-tmpl-grid"></div>
+  <div class="mini-footer">
+    <div class="mini-footer-hint">
+      Template seleccionado: <strong id="mini-selected-name">ninguno</strong>
+    </div>
+    <button class="create-btn" id="create-btn" onclick="createDoc()">Crear documento →</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── KaTeX renders ──────────────── */
+const INLINE = [
+  ['mc1', 'f:[a,b]\\to\\R'],
+  ['mc2', 'L^2([a,b])'],
+  ['mc3', '\\|f\\|_2 = \\left(\\int_a^b|f|^2\\,dx\\right)^{1/2}'],
+  ['mc4', 'L^2'],
+];
+INLINE.forEach(([id, tex]) => {
+  const el = document.getElementById(id);
+  if (el) try { katex.render(tex, el, { throwOnError: false }); } catch {}
+});
+const md1 = document.getElementById('md1');
+if (md1) try { katex.render('\\int_a^b f(x)\\,dx = F(b) - F(a)', md1, { throwOnError: false, displayMode: true }); } catch {}
+
+/* ── Data ───────────────────────── */
+const DOCS = [
+  { id:'d1', name:'Análisis II — TP1',         type:'tp',    badge:'Trabajo Práctico',   date:'Hoy, 14:32',          active: true,  icon:'📝', pages:3 },
+  { id:'d2', name:'Topología — Apuntes Parcial', type:'notas', badge:'Apuntes de Clase',  date:'Ayer, 19:05',         active: false, icon:'📖', pages:7 },
+  { id:'d3', name:'Álgebra Lineal — TP3',       type:'tp',    badge:'Trabajo Práctico',   date:'Hace 3 días',         active: false, icon:'📝', pages:2 },
+  { id:'d4', name:'Variable Compleja — Resumen', type:'notas', badge:'Apuntes de Clase',  date:'Hace 1 semana',       active: false, icon:'📖', pages:5 },
+  { id:'d5', name:'Geometría Diferencial — TFG', type:'art',  badge:'Artículo',           date:'Hace 2 semanas',      active: false, icon:'📄', pages:18 },
+];
+
+const TEMPLATES = [
+  { id:'tp',    icon:'📝', name:'Trabajo Práctico',       cls:'article', color:'#f0f5fb', desc:'Ejercicios numerados' },
+  { id:'notas', icon:'📖', name:'Apuntes de Clase',        cls:'article', color:'#edf7f0', desc:'Defs, teoremas, ejemplos' },
+  { id:'art',   icon:'📄', name:'Artículo',                cls:'article', color:'#fdf5e6', desc:'Abstract y secciones formales' },
+  { id:'deriv', icon:'✏️', name:'Derivación Paso a Paso',  cls:'article', color:'#f6f0ff', desc:'Pasos con align*' },
+  { id:'tesis', icon:'🎓', name:'Tesis / TFG',              cls:'report',  color:'#fff0f5', desc:'Capítulos y bibliografía' },
+  { id:'blank', icon:'○',  name:'En blanco',               cls:'article', color:'#f7f5f2', desc:'Empezar desde cero' },
+];
+
+let currentTab   = 'all';
+let searchQuery  = '';
+let focusedIdx   = -1;
+let visibleItems = [];
+let selectedMiniTmpl = null;
+
+/* ── Palette open/close ─────────── */
+function openPalette() {
+  document.body.classList.add('palette-open');
+  document.getElementById('palette-backdrop').classList.add('open');
+  document.getElementById('palette').classList.add('open');
+  document.getElementById('mini-new').classList.remove('open');
+  renderPalette();
+  setTimeout(() => document.getElementById('pal-search').focus(), 60);
+}
+
+function closePalette() {
+  document.body.classList.remove('palette-open');
+  document.getElementById('palette-backdrop').classList.remove('open');
+  document.getElementById('palette').classList.remove('open');
+  document.getElementById('mini-new').classList.remove('open');
+  document.getElementById('pal-search').value = '';
+  searchQuery = '';
+  document.getElementById('pal-search-clear').classList.remove('show');
+  focusedIdx = -1;
+}
+
+/* ── Render palette ─────────────── */
+function renderPalette() {
+  const body = document.getElementById('pal-body');
+  body.innerHTML = '';
+  visibleItems = [];
+  const q = searchQuery.toLowerCase().trim();
+
+  if (currentTab === 'all' || currentTab === 'recent') {
+    // New doc row (only in 'all' tab without search)
+    if (!q && currentTab === 'all') {
+      const sec = document.createElement('div'); sec.className = 'pal-section';
+      const newRow = document.createElement('div');
+      newRow.className = 'pal-new'; newRow.setAttribute('data-action', 'new');
+      newRow.innerHTML = `
+        <div class="new-icon-wrap">+</div>
+        <div>
+          <div class="new-doc-name">Nuevo documento…</div>
+          <div class="new-doc-sub">Elegí un template para empezar</div>
+        </div>
+      `;
+      newRow.addEventListener('click', openMiniNew);
+      sec.appendChild(newRow); body.appendChild(sec);
+      visibleItems.push({ el: newRow, action: 'new' });
+    }
+
+    const docs = DOCS.filter(d => !q || d.name.toLowerCase().includes(q) || d.badge.toLowerCase().includes(q));
+    if (docs.length) {
+      const sec = document.createElement('div'); sec.className = 'pal-section';
+      if (!q) {
+        const title = document.createElement('div'); title.className = 'pal-section-title';
+        title.textContent = currentTab === 'recent' ? 'Documentos recientes' : 'Documentos guardados';
+        sec.appendChild(title);
+      }
+      docs.forEach(d => {
+        const row = makeDocRow(d); sec.appendChild(row);
+        visibleItems.push({ el: row, action: 'open', doc: d });
+      });
+      body.appendChild(sec);
+    }
+  }
+
+  if (currentTab === 'all' || currentTab === 'tmpl') {
+    const tmpls = TEMPLATES.filter(t => !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q));
+    if (tmpls.length) {
+      const sec = document.createElement('div'); sec.className = 'pal-section';
+      const title = document.createElement('div'); title.className = 'pal-section-title'; title.textContent = 'Templates';
+      sec.appendChild(title);
+      tmpls.forEach(t => {
+        const row = makeTmplRow(t); sec.appendChild(row);
+        visibleItems.push({ el: row, action: 'template', tmpl: t });
+      });
+      body.appendChild(sec);
+    }
+  }
+
+  if (!visibleItems.length) {
+    body.innerHTML = `<div class="pal-empty"><span class="em-icon">🔍</span>Sin resultados para "<strong>${escH(q)}</strong>"</div>`;
+  }
+}
+
+function makeDocRow(d) {
+  const row = document.createElement('div');
+  row.className = 'pal-doc' + (d.active ? ' active-doc' : '');
+  row.innerHTML = `
+    <div class="doc-thumb">
+      <div class="thumb-lines"><div class="tl"></div><div class="tl"></div><div class="tl"></div><div class="tl"></div></div>
+      ${d.active ? '<div class="active-dot"></div>' : ''}
+    </div>
+    <div class="doc-info">
+      <div class="doc-name">${escH(d.name)}</div>
+      <div class="doc-meta">
+        <span class="doc-badge ${d.type}">${d.badge}</span>
+        <span>${d.date}</span>
+        <span>·</span>
+        <span>${d.pages} pág.</span>
+        ${d.active ? '<span class="doc-badge active-now">Abierto ahora</span>' : ''}
+      </div>
+    </div>
+    <div class="doc-actions">
+      <button class="dact" title="Duplicar" onclick="event.stopPropagation();dupeDoc('${d.id}')">⧉</button>
+      ${!d.active ? `<button class="dact danger" title="Eliminar" onclick="event.stopPropagation();deleteDoc('${d.id}')">🗑</button>` : ''}
+    </div>
+  `;
+  row.addEventListener('click', () => openDoc(d));
+  return row;
+}
+
+function makeTmplRow(t) {
+  const row = document.createElement('div'); row.className = 'pal-tmpl';
+  row.innerHTML = `
+    <div class="tmpl-icon-sm" style="background:${t.color}">${t.icon}</div>
+    <div class="tmpl-info">
+      <div class="tmpl-nm">${t.name} <span class="tmpl-cls">\\documentclass{${t.cls}}</span></div>
+      <div class="tmpl-ds">${t.desc}</div>
+    </div>
+    <span style="color:var(--ink-4);font-size:11px;">→ nuevo</span>
+  `;
+  row.addEventListener('click', () => { selectedMiniTmpl = t; openMiniNew(t); });
+  return row;
+}
+
+/* ── Mini new doc ───────────────── */
+function openMiniNew(preSelected) {
+  document.getElementById('palette').classList.remove('open');
+  const mini = document.getElementById('mini-new');
+  mini.classList.add('open');
+  selectedMiniTmpl = preSelected?.id ? preSelected : null;
+  renderMiniGrid(selectedMiniTmpl);
+}
+
+function renderMiniGrid(preSelected) {
+  const grid = document.getElementById('mini-tmpl-grid');
+  grid.innerHTML = '';
+  TEMPLATES.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'mini-tmpl-card' + (preSelected?.id === t.id ? ' selected' : '');
+    card.innerHTML = `<div class="mtc-icon">${t.icon}</div><div class="mtc-name">${t.name}</div><div class="mtc-cls">\\documentclass{${t.cls}}</div>`;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.mini-tmpl-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedMiniTmpl = t;
+      document.getElementById('mini-selected-name').textContent = t.name;
+      const btn = document.getElementById('create-btn');
+      btn.classList.add('enabled');
+    });
+    grid.appendChild(card);
+  });
+  if (preSelected?.id) {
+    document.getElementById('mini-selected-name').textContent = preSelected.name;
+    document.getElementById('create-btn').classList.add('enabled');
+  }
+}
+
+function backToPalette() {
+  document.getElementById('mini-new').classList.remove('open');
+  document.getElementById('palette').classList.add('open');
+  document.getElementById('pal-search').focus();
+}
+
+function createDoc() {
+  const t = selectedMiniTmpl;
+  if (!t) return;
+  const pill = document.getElementById('doc-pill');
+  pill.querySelector('.pill-icon').textContent = t.icon;
+  pill.querySelector('.pill-name').textContent = 'Nuevo documento';
+  closePalette();
+  // Flash feedback
+  pill.style.background = 'var(--accent-l)';
+  pill.style.borderColor = 'var(--accent-bd)';
+  setTimeout(() => { pill.style.background = ''; pill.style.borderColor = ''; }, 900);
+}
+
+/* ── Doc actions ────────────────── */
+function openDoc(d) {
+  const pill = document.getElementById('doc-pill');
+  pill.querySelector('.pill-icon').textContent = d.icon;
+  pill.querySelector('.pill-name').textContent = d.name;
+  closePalette();
+  pill.style.background = 'var(--accent-l)';
+  setTimeout(() => { pill.style.background = ''; }, 700);
+}
+
+function dupeDoc(id) {
+  const d = DOCS.find(x => x.id === id);
+  if (!d) return;
+  const copy = { ...d, id: 'd'+Date.now(), name: d.name + ' (copia)', active: false, date: 'Justo ahora' };
+  DOCS.unshift(copy);
+  renderPalette();
+}
+
+function deleteDoc(id) {
+  const idx = DOCS.findIndex(x => x.id === id);
+  if (idx > -1) { DOCS.splice(idx, 1); renderPalette(); }
+}
+
+/* ── Search ─────────────────────── */
+function onSearch(v) {
+  searchQuery = v;
+  document.getElementById('pal-search-clear').classList.toggle('show', !!v);
+  focusedIdx = -1;
+  renderPalette();
+}
+
+function clearSearch() {
+  document.getElementById('pal-search').value = '';
+  onSearch('');
+  document.getElementById('pal-search').focus();
+}
+
+/* ── Tabs ───────────────────────── */
+function switchTab(id) {
+  currentTab = id;
+  ['all','recent','tmpl'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === id);
+  });
+  focusedIdx = -1;
+  renderPalette();
+}
+
+/* ── Keyboard nav ───────────────── */
+document.addEventListener('keydown', e => {
+  // Open with Cmd+K / Ctrl+K
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    if (document.getElementById('palette').classList.contains('open')) closePalette();
+    else openPalette();
+    return;
+  }
+  if (!document.getElementById('palette').classList.contains('open') &&
+      !document.getElementById('mini-new').classList.contains('open')) return;
+
+  if (e.key === 'Escape') { closePalette(); return; }
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!visibleItems.length) return;
+    visibleItems.forEach(i => i.el?.classList?.remove('focused'));
+    if (e.key === 'ArrowDown') focusedIdx = Math.min(focusedIdx + 1, visibleItems.length - 1);
+    else focusedIdx = Math.max(focusedIdx - 1, 0);
+    visibleItems[focusedIdx]?.el?.classList?.add('focused');
+    visibleItems[focusedIdx]?.el?.scrollIntoView({ block: 'nearest' });
+    return;
+  }
+
+  if (e.key === 'Enter' && focusedIdx >= 0 && visibleItems[focusedIdx]) {
+    const item = visibleItems[focusedIdx];
+    if (item.action === 'new') openMiniNew();
+    else if (item.action === 'open') openDoc(item.doc);
+    else if (item.action === 'template') { selectedMiniTmpl = item.tmpl; openMiniNew(item.tmpl); }
+  }
+});
+
+/* ── Helpers ────────────────────── */
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Demo hint ──────────────────── */
+// Auto-open after 400ms to show it off
+setTimeout(() => {
+  openPalette();
+  // Pre-select the search so user can type immediately
+}, 400);
+</script>
+</body>
+</html>
