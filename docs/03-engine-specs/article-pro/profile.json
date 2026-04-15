@@ -1,0 +1,89 @@
+{
+  "id": "article-pro",
+  "displayName": "Article — Professional",
+  "documentClass": "article",
+  "classOptions": ["12pt", "a4paper"],
+  "extends": "article-base",
+  "normalizerMode": "mixed",
+  "description": "University-level mathematical documents: homework, proofs, notes.",
+  "tags": ["mathematics", "university", "exercises", "proofs"],
+
+  "packages": {
+    "mandatory": [
+      "inputenc", "fontenc", "lmodern", "babel", "csquotes",
+      "amsmath", "amssymb", "amsthm", "mathtools",
+      "geometry", "microtype", "xurl", "hyperref", "bookmark", "cleveref"
+    ],
+    "optional": [
+      "fancyhdr", "enumitem", "booktabs", "xcolor", "graphicx", "tikz"
+    ],
+    "loadOrder": [
+      "inputenc", "fontenc", "lmodern", "babel", "csquotes",
+      "amsmath", "amssymb", "amsthm", "mathtools",
+      "geometry", "microtype",
+      "fancyhdr", "enumitem", "booktabs",
+      "xcolor", "graphicx", "tikz",
+      "xurl", "hyperref", "bookmark",
+      "cleveref"
+    ]
+  },
+
+  "macros": {
+    "\\R": "\\mathbb{R}",
+    "\\Q": "\\mathbb{Q}",
+    "\\Z": "\\mathbb{Z}",
+    "\\N": "\\mathbb{N}",
+    "\\C": "\\mathbb{C}",
+    "\\K": "\\mathbb{K}",
+    "\\abs": "\\left\\lvert #1 \\right\\rvert",
+    "\\norm": "\\left\\lVert #1 \\right\\rVert",
+    "\\inner": "\\left\\langle #1, #2 \\right\\rangle"
+  },
+
+  "mathOperators": {
+    "\\rk": "rk",
+    "\\tr": "tr",
+    "\\im": "Im",
+    "\\Ker": "Ker"
+  },
+
+  "environments": {
+    "definition":   { "style": "definition", "counter": "section" },
+    "theorem":      { "style": "plain",      "sharedCounter": "definition" },
+    "lemma":        { "style": "plain",      "sharedCounter": "definition" },
+    "proposition":  { "style": "plain",      "sharedCounter": "definition" },
+    "corollary":    { "style": "plain",      "sharedCounter": "definition" },
+    "remark":       { "style": "remark",     "sharedCounter": "definition" },
+    "example":      { "style": "remark",     "sharedCounter": "definition" },
+    "note":         { "style": "remark",     "sharedCounter": "definition" },
+    "exercise":     { "style": "definition", "counter": "section" }
+  },
+
+  "normalizerRules": {
+    "AutoDelimiters":   { "enabled": true, "severity": "required"   },
+    "DxSpacing":        { "enabled": true, "severity": "required"   },
+    "TextInMath":       { "enabled": true, "severity": "preferred"  },
+    "MacroExpansion":   { "enabled": true, "severity": "required"   },
+    "AlignedSteps":     { "enabled": true, "severity": "preferred"  },
+    "DisplayThreshold": { "enabled": true, "severity": "opinionated"},
+    "ForbiddenSyntax":  { "enabled": true, "severity": "required"   }
+  },
+
+  "geometry": {
+    "left": "2.5cm", "right": "2.5cm",
+    "top":  "2.5cm", "bottom": "2.5cm"
+  },
+
+  "cleveref": {
+    "en": {},
+    "es": {
+      "theorem":     { "singular": "Teorema",     "plural": "Teoremas"     },
+      "definition":  { "singular": "Definición",  "plural": "Definiciones" },
+      "lemma":       { "singular": "Lema",        "plural": "Lemas"        },
+      "proposition": { "singular": "Proposición", "plural": "Proposiciones"},
+      "corollary":   { "singular": "Corolario",   "plural": "Corolarios"   },
+      "exercise":    { "singular": "Ejercicio",   "plural": "Ejercicios"   },
+      "equation":    { "singular": "ecuación",    "plural": "ecuaciones"   }
+    }
+  }
+}
