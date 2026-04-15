@@ -14,7 +14,7 @@
     "ForbiddenSyntax": {
       "id": "ForbiddenSyntax",
       "severity": "required",
-      "blocksSerializaton": true,
+      "blocksSerialization": true,
       "description": "Blocks obsolete or forbidden LaTeX syntax",
       "triggers": ["$$", "{\\bf ", "{\\it ", "\\eqnarray", "\\begin{eqnarray}"],
       "replacements": {
@@ -23,12 +23,12 @@
         "{\\it ...}":   "\\textit{...}",
         "\\eqnarray":   "align*"
       },
-      "linterCode": "E001"
+      "linterCodes": ["E001", "E002", "E003"]
     },
     "MacroExpansion": {
       "id": "MacroExpansion",
       "severity": "required",
-      "blocksSerializaton": false,
+      "blocksSerialization": false,
       "description": "Replaces expanded forms with registered macro shorthands",
       "scope": ["mathInline", "mathDisplay"],
       "note": "Macro map is loaded from profile.json → macros at runtime"
@@ -36,35 +36,35 @@
     "AutoDelimiters": {
       "id": "AutoDelimiters",
       "severity": "required",
-      "blocksSerializaton": false,
+      "blocksSerialization": false,
       "description": "Scales delimiters around tall content",
       "triggerNodes": ["\\frac", "\\dfrac", "\\sum", "\\prod", "\\int"],
       "triggerCondition": "node has limits (subscript/superscript) for sum/prod/int",
       "wrappingPairs": {
-        "(": ["\\left(", "\\right)"],
-        "[": ["\\left[", "\\right]"],
-        "|": ["\\left|", "\\right|"],
+        "(":  ["\\left(", "\\right)"],
+        "[":  ["\\left[", "\\right]"],
+        "|":  ["\\left|", "\\right|"],
         "||": ["\\left\\|", "\\right\\|"]
       },
       "exception": "Do not override if \\big, \\Big, \\bigg, or \\Bigg already present",
       "exampleBefore": "(\\frac{a}{b})^2",
-      "exampleAfter": "\\left(\\frac{a}{b}\\right)^2"
+      "exampleAfter":  "\\left(\\frac{a}{b}\\right)^2"
     },
     "DxSpacing": {
       "id": "DxSpacing",
       "severity": "required",
-      "blocksSerializaton": false,
+      "blocksSerialization": false,
       "description": "Inserts thin space before integral differentials",
       "integralNodes": ["\\int", "\\iint", "\\iiint", "\\oint", "\\oiint"],
       "differentialPattern": "d followed by a variable token (x, y, z, t, \\mu, \\theta, \\omega, etc.)",
       "insertion": "\\,",
       "exampleBefore": "\\int f(x) dx",
-      "exampleAfter": "\\int f(x)\\,dx"
+      "exampleAfter":  "\\int f(x)\\,dx"
     },
     "TextInMath": {
       "id": "TextInMath",
       "severity": "preferred",
-      "blocksSerializaton": false,
+      "blocksSerialization": false,
       "description": "Wraps plain-text sequences in math mode with \\text{}",
       "trigger": "Two or more consecutive alphabetic characters that are not a known command, registered macro, or single-letter variable",
       "knownCommands": [
@@ -73,25 +73,23 @@
         "\\max", "\\min", "\\det", "\\dim", "\\ker", "\\gcd", "\\deg",
         "\\arcsin", "\\arccos", "\\arctan"
       ],
-      "falsePosistiveGuard": "Single letters are never wrapped — they are variables",
+      "falsePositiveGuard": "Single letters are never wrapped — they are variables",
       "exampleBefore": "f(x) = 0 \\quad para todo x",
-      "exampleAfter": "f(x) = 0 \\quad \\text{para todo } x"
+      "exampleAfter":  "f(x) = 0 \\quad \\text{para todo } x"
     },
     "AlignedSteps": {
       "id": "AlignedSteps",
-      "severity": "preferred",
-      "blocksSerializaton": false,
-      "autoApplyInMixed": false,
+      "severity": "opinionated",
+      "blocksSerialization": false,
       "description": "Suggests converting multi-step derivations to align*",
       "trigger": "mathDisplay node (non-aligned) with two or more = signs on separate lines",
-      "action": "suggestion only — never auto-applies in mixed mode",
+      "action": "suggestion only — never auto-applies in any mode except strict",
       "coachMessage": "Multiple equality signs detected. Consider align* for step-by-step derivations."
     },
     "DisplayThreshold": {
       "id": "DisplayThreshold",
       "severity": "opinionated",
-      "blocksSerializaton": false,
-      "autoApplyInMixed": false,
+      "blocksSerialization": false,
       "description": "Suggests promoting complex inline formulas to display mode",
       "triggers": [
         "mathInline with \\frac (with explicit num/denom)",

@@ -126,7 +126,7 @@ f: \mathbb{Z} \to \mathbb{N}   →  f: \Z \to \N
 
 ## Rule: `AlignedSteps`
 
-**Severity:** `preferred`
+**Severity:** `opinionated`
 
 **Trigger:** A `mathDisplay` node (non-aligned) whose LaTeX string contains two
 or more `=` signs on separate lines, indicating a multi-step derivation.
@@ -135,6 +135,9 @@ or more `=` signs on separate lines, indicating a multi-step derivation.
 each `=`.
 
 **Note:** Never auto-applies in `mixed` mode — always a Coach suggestion.
+This rule is `opinionated` (not `preferred`) precisely because it never auto-applies
+in `mixed` mode. The distinction matters: `preferred` rules auto-apply in `mixed`;
+`opinionated` rules only suggest.
 
 ```
 \[

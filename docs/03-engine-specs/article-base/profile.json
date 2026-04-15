@@ -1,0 +1,38 @@
+{
+  "id": "article-base",
+  "displayName": "Article — Base",
+  "documentClass": "article",
+  "classOptions": ["12pt", "a4paper"],
+  "extends": null,
+  "normalizerMode": "mixed",
+  "description": "Base profile for article-class documents. Defines the core node schema and default normalizer rules. Not intended for direct use — extend it.",
+
+  "supportedNodes": {
+    "block": [
+      "paragraph", "heading", "mathDisplay", "theoremEnv",
+      "bulletList", "orderedList", "blockquote", "rawLatex"
+    ],
+    "inline": [
+      "mathInline", "crossRef", "text", "hardBreak"
+    ]
+  },
+
+  "environments": {
+    "supportedTypes": [],
+    "sharedCounter": null,
+    "independentCounters": {}
+  },
+
+  "macros": {},
+  "mathOperators": {},
+
+  "normalizerRules": {
+    "ForbiddenSyntax":  { "enabled": true, "severity": "required"    },
+    "MacroExpansion":   { "enabled": true, "severity": "required"    },
+    "AutoDelimiters":   { "enabled": true, "severity": "required"    },
+    "DxSpacing":        { "enabled": true, "severity": "required"    },
+    "TextInMath":       { "enabled": true, "severity": "preferred"   },
+    "AlignedSteps":     { "enabled": true, "severity": "opinionated" },
+    "DisplayThreshold": { "enabled": true, "severity": "opinionated" }
+  }
+}

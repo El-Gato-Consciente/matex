@@ -1,88 +1,99 @@
 # Formalia Manifesto — `article-pro`
-## Machine Specification for ManifestEngine, Normalizer, and TexSerializer
+## Human-readable companion to `profile.json` and `manifest.json`
 
-> **Type:** System specification — not a human guide.  
-> **Audience:** `ManifestEngine`, `Normalizer`, `TexSerializer`, `SemanticLinter`.  
-> **Format governed:** `.ltxj` (Formalia AST) → `.tex` (LaTeX canonical output).  
-> **Corresponds to:** `profile.json` id `"article-pro"`.  
+> **Type:** System specification — not a user guide.
+> **Audience:** Developers implementing `ManifestEngine`, `Normalizer`, `TexSerializer`, `SemanticLinter`.
+> **Machine-readable equivalents:**
+>   - Schema + normalization policy → [`profile.json`](profile.json)
+>   - Serialization contract → [`manifest.json`](manifest.json)
 > **Version:** 1.0
 
 ---
 
-## 0. Document Contract
+## Conceptual Overview
 
-This manifesto is the authoritative contract between the Formalia editor and the
-LaTeX output pipeline. Every rule here has a deterministic implementation target.
-There is no ambiguity resolution layer — the AST is the ground truth.
+A document in Formalia has two distinct concerns encoded as two distinct artifacts:
 
 ```
-.ltxj document (AST)
-      ↓
-ManifestEngine.resolve("article-pro")
-      ↓
-Normalizer.apply(ast, manifest, mode)     ← §B
-      ↓
-TexSerializer.serialize(ast, manifest)    ← §C
-      ↓
-.tex (canonical, compilable, idiomatic)
+profile.json   — "what this document IS"
+                 Schema of valid nodes, environments, macros.
+                 Normalizer rules and mode.
+                 → Used by: ManifestEngine, Normalizer, SemanticLinter
+
+manifest.json  — "how this document BECOMES LaTeX"
+                 Package list, load order, geometry, cleveref config.
+                 Environment styles (\theoremstyle) for preamble generation.
+                 → Used by: ManifestEngine, TexSerializer
+```
+
+The `ManifestEngine` resolves both into a single `EffectiveConfig` object that
+the pipeline uses at runtime. Neither file is ever modified at runtime.
+
+```
+profile.json  ──┐
+                ├──  ManifestEngine.buildEffectiveConfig()  ──→  EffectiveConfig
+manifest.json ──┘                                                  │
+                                                      ┌────────────┴──────────────┐
+                                                      ▼                           ▼
+                                                  Normalizer               TexSerializer
 ```
 
 ---
 
-# PART A — Profile Definition
+# PART A — Profile Specification
 
-## A.1 Profile Metadata (`profile.json` schema)
+> Machine-readable: [`profile.json`](profile.json)
+
+## A.1 Profile Metadata
 
 ```json
 {
-  "id":            "article-pro",
-  "displayName":   "Article — Professional",
-  "documentClass": "article",
-  "classOptions":  ["12pt", "a4paper"],
-  "extends":       "article-base",
+  "id":             "article-pro",
+  "displayName":    "Article — Professional",
+  "documentClass":  "article",
+  "classOptions":   ["12pt", "a4paper"],
+  "extends":        "article-base",
   "normalizerMode": "mixed",
-  "description":   "University-level mathematical documents: homework, proofs, notes.",
-  "tags":          ["mathematics", "university", "exercises", "proofs"]
+  "description":    "University-level mathematical documents: homework, proofs, notes.",
+  "tags":           ["mathematics", "university", "exercises", "proofs"]
 }
 ```
 
 **Inheritance:** `article-pro` extends `article-base`. The `ManifestEngine` resolves
-the chain and returns a flat, merged manifest object. Fields in `article-pro`
-override `article-base` when they conflict.
+the chain and returns a flat `ResolvedProfile`. Fields in `article-pro` override
+`article-base` when they conflict.
 
 ## A.2 Supported Node Types
 
 The `ManifestEngine` validates every node in the `.ltxj` AST against this list.
-Unsupported nodes are wrapped in a `rawLatex` node (see §C.7) and passed through
-unchanged.
+Unsupported nodes are wrapped in a `rawLatex` node and passed through unchanged.
 
-### A.2.1 Block nodes (supported)
+### A.2.1 Block nodes
 
-| `.ltxj` type      | LaTeX output              | Notes |
+| `.ltxj` type  | LaTeX output                      | Notes |
 |---|---|---|
-| `paragraph`       | plain text paragraph      | |
-| `heading`         | `\section{}` etc.         | levels 1–3 only; level 3 rare |
-| `mathDisplay`     | `\[…\]` / `equation` / `align*` | see A.3 |
-| `theoremEnv`      | `\begin{theorem}…`        | see A.4 |
-| `bulletList`      | `\begin{itemize}…`        | |
-| `orderedList`     | `\begin{enumerate}…`      | |
-| `blockquote`      | `\begin{quote}…`          | |
-| `rawLatex`        | verbatim passthrough       | no normalization applied |
+| `paragraph`   | plain text paragraph              | |
+| `heading`     | `\section{}` etc.                 | levels 1–3 only |
+| `mathDisplay` | `\[…\]` / `equation` / `align*`  | see A.3 |
+| `theoremEnv`  | `\begin{theorem}…`                | see A.4 |
+| `bulletList`  | `\begin{itemize}…`                | |
+| `orderedList` | `\begin{enumerate}…`             | |
+| `blockquote`  | `\begin{quote}…`                  | |
+| `rawLatex`    | verbatim passthrough              | no normalization applied |
 
-### A.2.2 Inline nodes (supported)
+### A.2.2 Inline nodes
 
-| `.ltxj` type      | LaTeX output              | Notes |
+| `.ltxj` type | LaTeX output          | Notes |
 |---|---|---|
-| `mathInline`      | `$…$`                     | |
-| `crossRef`        | `\cref{}` / `\Cref{}`     | auto-case; see §C.6 |
-| `text`            | plain text                | marks: bold, italic, code |
-| `hardBreak`       | `\\`                      | |
+| `mathInline` | `$…$`                 | |
+| `crossRef`   | `\cref{}` / `\Cref{}` | auto-case; see §C.6 |
+| `text`       | plain text            | marks: bold, italic, code |
+| `hardBreak`  | `\\`                  | |
 
 ### A.2.3 Unsupported (→ `rawLatex`)
 
 `tikzFigure`, `table`, `figure`, `algorithm`, `listing`, `bibliography`, `citation`.
-These are valid LaTeX but outside this profile's scope. The serializer wraps them
-in a `rawLatex` node with a comment: `% [formalia:raw — unsupported node type]`.
+The serializer wraps them with a comment: `% [formalia:raw — unsupported node type]`.
 
 ## A.3 `mathDisplay` Node Schema
 
@@ -90,13 +101,11 @@ in a `rawLatex` node with a comment: `% [formalia:raw — unsupported node type]
 interface MathDisplayNode {
   type:     "mathDisplay"
   latex:    string       // canonical LaTeX (post-normalization)
-  numbered: boolean      // true → \begin{equation}
-  aligned:  boolean      // true → align* or align
+  numbered: boolean
+  aligned:  boolean
   label:    string       // "" if unnumbered; "eq:name" if numbered
 }
 ```
-
-**Serialization rules:**
 
 | `numbered` | `aligned` | Output environment |
 |---|---|---|
@@ -111,7 +120,7 @@ interface MathDisplayNode {
 interface TheoremEnvNode {
   type:     "theoremEnv"
   envType:  TheoremEnvType
-  envTitle: string   // optional; maps to \begin{theorem}[title]
+  envTitle: string   // optional; → \begin{theorem}[title]
   label:    string   // "" if unreferenced; "thm:name" if labelled
   content:  BlockNode[]
 }
@@ -138,139 +147,91 @@ type TheoremEnvType =
 }
 ```
 
-The `TexSerializer` generates the `\newtheorem` declarations in this exact order:
-`definition` first (establishes the base counter), then all `[definition]`
-members, then `exercise` with its own counter.
+`definition` establishes the base counter. All members share it. `exercise` has
+its own counter. This structure drives the `\newtheorem` declaration order in the
+serializer (see §C.5).
 
 ## A.6 Macro Registry
 
-These macros are **mandatory** in every document using this profile.
-The serializer injects them into the preamble unconditionally and uses them
-in the body — never the expanded form.
+The following macros are registered in `profile.json → macros`. They serve two roles:
+
+1. **Normalization:** The `MacroExpansion` rule scans for expanded forms (e.g. `\mathbb{R}`)
+   and replaces them with the shorthand (`\R`). This mapping is read from the profile.
+2. **Serialization:** The `TexSerializer` injects `\newcommand` definitions in the preamble
+   (see §C.4). The same map is used — no duplication between profile and manifest.
 
 ```json
 {
-  "macros": {
-    "\\R":     "\\mathbb{R}",
-    "\\Q":     "\\mathbb{Q}",
-    "\\Z":     "\\mathbb{Z}",
-    "\\N":     "\\mathbb{N}",
-    "\\C":     "\\mathbb{C}",
-    "\\K":     "\\mathbb{K}",
-    "\\abs":   "\\left\\lvert #1 \\right\\rvert",
-    "\\norm":  "\\left\\lVert #1 \\right\\rVert",
-    "\\inner": "\\left\\langle #1, #2 \\right\\rangle"
-  },
-  "mathOperators": {
-    "\\rk":     "rk",
-    "\\tr":     "tr",
-    "\\im":     "Im",
-    "\\Ker":    "Ker"
-  }
+  "\\R":     "\\mathbb{R}",
+  "\\Q":     "\\mathbb{Q}",
+  "\\Z":     "\\mathbb{Z}",
+  "\\N":     "\\mathbb{N}",
+  "\\C":     "\\mathbb{C}",
+  "\\K":     "\\mathbb{K}",
+  "\\abs":   "\\left\\lvert #1 \\right\\rvert",
+  "\\norm":  "\\left\\lVert #1 \\right\\rVert",
+  "\\inner": "\\left\\langle #1, #2 \\right\\rangle"
 }
 ```
 
-**Normalization contract:** if the AST contains `\mathbb{R}` in a `mathInline`
-or `mathDisplay` node, the `MacroExpansion` normalizer rule replaces it with `\R`
-before serialization. Same for all other registered macros.
+Math operators (`\rk`, `\tr`, `\im`, `\Ker`) are in `profile.json → mathOperators`.
 
 ---
 
 # PART B — Normalization Engine
 
-The `Normalizer` operates on the `MathAST` (derived from `mf.getValue('math-json')`)
-before serialization. Every rule has a defined `severity` that controls behavior
-under each global mode.
+> Full rule specification: [`../normalization.md`](../normalization.md)
+> Machine-readable: [`../normalization-rules.json`](../normalization-rules.json)
 
 ## B.1 Global Normalization Mode
 
-Configured per profile (default: `"mixed"`). User can override globally.
+Default for this profile: `"mixed"`. User can override globally or per export.
 
 | Mode | `required` rules | `preferred` rules | `opinionated` rules |
 |---|---|---|---|
-| `strict` | auto-apply | auto-apply | auto-apply |
-| `mixed` | auto-apply | auto-apply | suggest only |
+| `strict`     | auto-apply | auto-apply | auto-apply |
+| `mixed`      | auto-apply | auto-apply | suggest only |
 | `suggestion` | suggest only | suggest only | suggest only |
 
-## B.2 Rule: `AutoDelimiters`
+## B.2 Rule Execution Order
 
-| Property | Value |
-|---|---|
-| **Severity** | `required` |
-| **Trigger** | Delimiter `(`, `[`, `\|` directly wrapping a node that contains `\frac`, `\sum`, `\prod`, or `\int` with limits |
-| **Action** | Wrap with `\left(…\right)` / `\left[…\right]` / `\left\|…\right\|` |
-| **Example** | `(\frac{a}{b})^2` → `\left(\frac{a}{b}\right)^2` |
-| **Exception** | If a manual `\big`, `\Big`, `\bigg`, or `\Bigg` is already present → do not override |
-| **Coach message** | "Delimiters adjusted — parentheses scale to match the fraction height." |
+Rules run in this fixed order. `MacroExpansion` must precede `AutoDelimiters`
+so that `\mathbb{R}` is already `\R` when delimiter checking occurs.
 
-## B.3 Rule: `DxSpacing`
+```
+1. ForbiddenSyntax    required    — blocks pipeline if E001/E002/E003 found
+2. MacroExpansion     required    — \mathbb{R} → \R
+3. AutoDelimiters     required    — (\frac{}{}) → \left(\right)
+4. DxSpacing          required    — integral dx → \,dx
+5. TextInMath         preferred   — plain text in math → \text{}
+6. AlignedSteps       opinionated — suggest align* for multi-step derivations
+7. DisplayThreshold   opinionated — suggest display for complex inline formulas
+```
 
-| Property | Value |
-|---|---|
-| **Severity** | `required` |
-| **Trigger** | Integral node (`\int`, `\iint`, `\iiint`, `\oint`) where the differential `d` is not preceded by `\,` |
-| **Action** | Insert `\,` before `dx`, `dy`, `dz`, `dt`, `d\mu`, `d\theta`, and any `d` + variable combination |
-| **Example** | `\int f(x) dx` → `\int f(x)\,dx` |
-| **Coach message** | "Thin space added before differential (typographic convention)." |
+## B.3 Rule Summaries
 
-## B.4 Rule: `TextInMath`
+| Rule | Severity | Trigger | Example |
+|---|---|---|---|
+| `ForbiddenSyntax` | required | `$$`, `{\bf}`, `\eqnarray` | → linter errors E001–E003 |
+| `MacroExpansion` | required | `\mathbb{R}` when `\R` is registered | `\mathbb{R}` → `\R` |
+| `AutoDelimiters` | required | `(` around `\frac`, `\sum` with limits, etc. | `(\frac{a}{b})` → `\left(\frac{a}{b}\right)` |
+| `DxSpacing` | required | integral differential without `\,` | `\int f dx` → `\int f\,dx` |
+| `TextInMath` | preferred | multi-char alphabetic sequence in math | `para todo` → `\text{para todo}` |
+| `AlignedSteps` | opinionated | non-aligned display with multiple `=` lines | suggests `align*` |
+| `DisplayThreshold` | opinionated | inline `\int`/`\sum` with limits | suggests display mode |
 
-| Property | Value |
-|---|---|
-| **Severity** | `preferred` |
-| **Trigger** | Sequence of two or more alphabetic characters inside math mode that does not match a known command (`\sin`, `\cos`, `\log`, etc.), a registered macro, or a single-letter variable |
-| **Action** | Wrap with `\text{…}` |
-| **Example** | `f(x) \quad para\ todo\ x` → `f(x) \quad \text{para todo } x` |
-| **False-positive guard** | Single letters are variables, not text. `f`, `x`, `n` are never wrapped. |
-| **Coach message** | "Word detected in math mode — wrapped in \\text{} for correct font rendering." |
-
-## B.5 Rule: `MacroExpansion`
-
-| Property | Value |
-|---|---|
-| **Severity** | `required` |
-| **Trigger** | Any occurrence of an expanded form that has a registered macro (e.g. `\mathbb{R}` when `\R` is defined) |
-| **Action** | Replace with the macro shorthand |
-| **Scope** | Applied to all `mathInline` and `mathDisplay` nodes |
-| **Coach message** | "Macro \\R used instead of \\mathbb{R} for consistency (manifesto rule)." |
-
-## B.6 Rule: `AlignedSteps`
-
-| Property | Value |
-|---|---|
-| **Severity** | `preferred` |
-| **Trigger** | A `mathDisplay` node (unnumbered, non-aligned) whose LaTeX contains two or more `=` signs on separate lines, indicating a multi-step derivation |
-| **Action** | Suggest converting to `align*` with `&` alignment point before each `=` |
-| **Note** | Does not auto-apply in `mixed` mode — always a Coach suggestion |
-| **Coach message** | "Multiple equality signs detected. Consider align* for step-by-step derivations." |
-
-## B.7 Rule: `DisplayThreshold`
-
-| Property | Value |
-|---|---|
-| **Severity** | `opinionated` |
-| **Trigger** | A `mathInline` node whose LaTeX contains `\frac` with limits, `\sum` with limits, or `\int` with limits |
-| **Action** | Suggest promoting to `mathDisplay` |
-| **Coach message** | "Expression with fraction/integral may be hard to read inline. Consider display mode." |
-
-## B.8 Rule: `ForbiddenSyntax`
-
-| Property | Value |
-|---|---|
-| **Severity** | `required` — blocks serialization |
-| **Trigger** | Presence of `$$…$$`, `{\bf …}`, `{\it …}`, `\eqnarray`, `\begin{eqnarray}` anywhere in the AST |
-| **Action** | Linter error — document cannot be serialized until resolved |
-| **Replacements** | `$$…$$` → `\[…\]`; `{\bf …}` → `\textbf{…}`; `\eqnarray` → `align*` |
-| **Coach message** | "Obsolete syntax detected. See Formalia docs for canonical replacements." |
+Full spec for each rule: [`../normalization.md`](../normalization.md).
 
 ---
 
-# PART C — Output Serializer
+# PART C — Manifest / Serialization Contract
+
+> Machine-readable: [`manifest.json`](manifest.json)
 
 ## C.1 Package Load Order (mandatory, deterministic)
 
-The `TexSerializer` injects packages in this exact sequence. Deviating from this
-order causes known compilation failures (particularly with `cleveref`).
+Defined in `manifest.json → packages.loadOrder`. The `TexSerializer` follows this
+order exactly. Deviating causes known compilation failures.
 
 ```latex
 % ── Group 1: encoding & language ──────────────────────────────
@@ -315,7 +276,7 @@ order causes known compilation failures (particularly with `cleveref`).
   citecolor         = green!50!black,
   bookmarks         = true,
   bookmarksnumbered = true,
-  pdftitle          = {TITLE},      % from document metadata
+  pdftitle          = {TITLE},
   pdfauthor         = {AUTHOR},
   pdfsubject        = {SUBJECT},
   pdfkeywords       = {LaTeX, mathematics}
@@ -324,27 +285,30 @@ order causes known compilation failures (particularly with `cleveref`).
 
 ## C.3 `\geometry` Block
 
+Defined in `manifest.json → geometry`:
+
 ```latex
 \geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
 ```
 
+Override per-export via `ExportOverride.geometry`. See [`../export-override.md`](../export-override.md).
+
 ## C.4 Macro and Operator Injection
 
+Read from `profile.json → macros` and `profile.json → mathOperators`.
+The serializer reads these from the profile, not from the manifest.
+
 ```latex
-% ── Number set shortcuts ───────────────────────────────────────
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\Q}{\mathbb{Q}}
 \newcommand{\Z}{\mathbb{Z}}
 \newcommand{\N}{\mathbb{N}}
 \newcommand{\C}{\mathbb{C}}
 \newcommand{\K}{\mathbb{K}}
-
-% ── Delimited expressions ──────────────────────────────────────
 \newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
 \newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
 \newcommand{\inner}[2]{\left\langle #1, #2 \right\rangle}
 
-% ── Math operators ─────────────────────────────────────────────
 \DeclareMathOperator{\rk}{rk}
 \DeclareMathOperator{\tr}{tr}
 \DeclareMathOperator{\im}{Im}
@@ -353,12 +317,14 @@ order causes known compilation failures (particularly with `cleveref`).
 
 ## C.5 `\newtheorem` Injection (order-sensitive)
 
+Driven by `profile.json → environments` (counter config) and
+`manifest.json → environmentStyles` (LaTeX style per environment).
+`definition` must be declared first as the base counter.
+
 ```latex
-% ── Base counter (must be first) ───────────────────────────────
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 
-% ── Shared-counter group ───────────────────────────────────────
 \theoremstyle{plain}
 \newtheorem{theorem}[definition]{Theorem}
 \newtheorem{lemma}[definition]{Lemma}
@@ -370,7 +336,6 @@ order causes known compilation failures (particularly with `cleveref`).
 \newtheorem{example}[definition]{Example}
 \newtheorem{note}[definition]{Note}
 
-% ── Independent counter ────────────────────────────────────────
 \newtheorem{exercise}{Exercise}[section]
 
 % cleveref is loaded AFTER this block (see C.1)
@@ -378,31 +343,17 @@ order causes known compilation failures (particularly with `cleveref`).
 
 ## C.6 `crossRef` Node → LaTeX
 
-The `crossRef` node carries a `refId` and a `position` attribute. The serializer
-uses `position` to choose between `\cref{}` (mid-sentence) and `\Cref{}`
-(sentence-start) automatically. The user never writes `\cref` or `\Cref` manually.
-
-```typescript
-interface CrossRefNode {
-  type:      "crossRef"
-  refId:     string            // e.g. "thm:bolzano", "eq:euler"
-  position:  "mid" | "start"  // determined by parser from text context
-}
-```
-
-Serialization:
+The serializer chooses `\cref{}` or `\Cref{}` based on `position`:
 
 ```
 crossRef { refId: "thm:bolzano", position: "mid"   } → \cref{thm:bolzano}
 crossRef { refId: "thm:bolzano", position: "start" } → \Cref{thm:bolzano}
-crossRef { refId: "eq:euler",    position: "mid"   } → \cref{eq:euler}
 ```
 
 > **Why `\cref` for equations (not `\eqref`):** `cleveref` subsumes `\eqref`.
-> Using `\cref{eq:X}` produces "equation (3)" — equivalent output, single API.
-> `\eqref` is permitted in `rawLatex` nodes but never generated by the serializer.
+> `\cref{eq:X}` produces "equation (3)" — equivalent output, single API.
 
-**Spanish-locale `cleveref` configuration** (injected when `babel` lang is `spanish`):
+**Spanish-locale `cleveref` config** (injected when `babel` lang is `spanish`):
 
 ```latex
 \crefname{theorem}{Teorema}{Teoremas}
@@ -416,6 +367,8 @@ crossRef { refId: "eq:euler",    position: "mid"   } → \cref{eq:euler}
 \Crefname{equation}{Ecuación}{Ecuaciones}
 ```
 
+Locale config is defined in `manifest.json → cleveref`.
+
 ## C.7 AST Node → LaTeX Mapping
 
 ### Block nodes
@@ -424,7 +377,7 @@ crossRef { refId: "eq:euler",    position: "mid"   } → \cref{eq:euler}
 paragraph          → inline content + blank line
 heading level 1    → %==…==\n\section{CONTENT}\n%==…==
 heading level 2    → \subsection{CONTENT}
-heading level 3    → \subsubsection{CONTENT}   % (rare)
+heading level 3    → \subsubsection{CONTENT}   % rare
 mathDisplay        → see A.3 table
 theoremEnv         → \begin{ENV}[TITLE]\n  \label{LBL}\n  CONTENT\n\end{ENV}
 bulletList         → \begin{itemize}\n  \item …\n\end{itemize}
@@ -447,7 +400,7 @@ hardBreak          → \\
 
 ### Special content patterns
 
-**Piecewise function** (within `mathDisplay` with `\begin{cases}`):
+**Piecewise function** (within `mathDisplay`):
 ```latex
 f(x) = \begin{cases}
   \dfrac{\sin(x)}{x} & \text{if } x \neq 0 \\[0.3cm]
@@ -466,64 +419,38 @@ Rule: `\dfrac` (not `\frac`) inside `cases`. `\\[0.3cm]` between rows with fract
 ```
 Rule: no `\\` on the last line. `&&` for marginal justifications.
 
-**Matrix environments:**
-```latex
-\begin{pmatrix} a & b \\ c & d \end{pmatrix}   % round
-\begin{bmatrix} a & b \\ c & d \end{bmatrix}   % square
-\begin{vmatrix} a & b \\ c & d \end{vmatrix}   % determinant
-```
-
-**Augmented matrix** (linear systems):
-```latex
-\left(\begin{array}{ccc|c}
-  1 & 0 & 2 & 3 \\
-  0 & 1 & -1 & 5
-\end{array}\right)
-```
-
-**Row operations:**
-```latex
-\xrightarrow{R_2 \leftarrow R_2 - 3R_1}
-```
-
 ## C.8 Output Formatter Rules
-
-These rules govern the formatting of the `.tex` file itself (whitespace, indentation,
-comments). They do not affect the compiled PDF.
 
 1. **Indent** 2 spaces inside every `\begin{}`/`\end{}` pair.
 2. **Section separators:** inject `%==…==` comment blocks above every `\section{}`.
-3. **Blank line** before and after every display environment (`\[…\]`, `align*`,
-   `equation`).
+3. **Blank line** before and after every display environment.
 4. **No trailing `\\`** on the last line of `align*`, `cases`, or table rows.
-5. **Comment non-obvious decisions** with `% [formalia: reason]` annotations
-   (e.g. `% [formalia: \dfrac used — fraction inside cases]`).
+5. **Comment non-obvious decisions** with `% [formalia: reason]` annotations.
 
 ---
 
 # PART D — System Guarantees
 
-> These are not checklist items for a human to verify.
-> They are invariants that the system **enforces** before producing output.
+> Full spec: [`../semantic-linter.md`](../semantic-linter.md)
 
 ## D.1 Serializer Invariants (hard blocks)
 
-The `TexSerializer` refuses to produce output if any of these conditions hold.
-The `SemanticLinter` surfaces these as blocking errors in the UI.
+The `SemanticLinter` surfaces these as blocking errors. The `TexSerializer` refuses
+to produce output if any of them hold.
 
 | Invariant | Linter error |
 |---|---|
-| `$$…$$` present anywhere in AST math content | `E001: forbidden-display-syntax` |
-| `{\bf …}` or `{\it …}` present | `E002: obsolete-font-command` |
-| `\eqnarray` present | `E003: forbidden-environment` |
-| `crossRef` node whose `refId` has no matching `\label` in the document | `E004: orphan-cross-reference` |
-| `theoremEnv` of type `proof` directly after a `rawLatex` node with no preceding theorem | `E005: proof-without-theorem` |
+| `$$…$$` in AST math content | `E001: forbidden-display-syntax` |
+| `{\bf …}` or `{\it …}` | `E002: obsolete-font-command` |
+| `\eqnarray` | `E003: forbidden-environment` |
+| `crossRef` with no matching `\label` in document | `E004: orphan-cross-reference` |
+| `proof` with no preceding theorem in scope | `E005: proof-without-theorem` |
 
 ## D.2 Normalizer Guarantees (post-pipeline)
 
-After the `Normalizer` runs in any mode, the output AST is guaranteed to satisfy:
+After the Normalizer runs in any mode, the output AST is guaranteed to satisfy:
 
-| Guarantee | Enforced by rule |
+| Guarantee | Enforced by |
 |---|---|
 | All `\mathbb{X}` replaced by registered macros | `MacroExpansion` |
 | All integral differentials preceded by `\,` | `DxSpacing` |
@@ -532,23 +459,17 @@ After the `Normalizer` runs in any mode, the output AST is guaranteed to satisfy
 
 ## D.3 Warnings (non-blocking)
 
-These conditions produce Coach panel suggestions but do not block serialization.
-
 | Condition | Warning |
 |---|---|
-| Multi-word text sequence in math mode without `\text{}` | `W001: text-in-math` |
-| `mathDisplay` with multiple `=` signs on separate lines without `align*` | `W002: consider-align` |
-| `mathInline` containing `\int` or `\sum` with limits | `W003: consider-display` |
-| Heading level 3 (`\subsubsection`) used | `W004: deep-nesting` |
-| Document longer than 2 pages without `\tableofcontents` | `W005: missing-toc` |
+| Multi-word text in math without `\text{}` | `W001` |
+| `mathDisplay` with multiple `=` without `align*` | `W002` |
+| `mathInline` with `\int`/`\sum` with limits | `W003` |
+| Heading level 3 used | `W004` |
+| Document > 2 pages without `\tableofcontents` | `W005` |
 
 ---
 
 # APPENDIX — Reference Templates
-
-> These templates are **test fixtures** for the serializer and **reference output**
-> for debugging. They show what the `TexSerializer` should produce for a standard
-> document.
 
 ## E.1 Homework Template Output
 
@@ -638,7 +559,6 @@ Development\ldots
 
 % cleveref already loaded last in preamble (see C.1)
 
-% Usage in body:
 \begin{theorem}[Bolzano]
   \label{thm:bolzano}
   Let $f \in C([a,b])$ with $f(a) \cdot f(b) < 0$.
@@ -663,5 +583,7 @@ Development\ldots
 
 ---
 
-*This manifesto is the machine specification for `article-pro` in the Formalia
-system. Human-readable documentation is derived from this file — not the reverse.*
+*This manifesto is the human-readable companion to `profile.json` and `manifest.json`
+for the `article-pro` document family. If a detail here contradicts those JSON files,
+the JSON files are authoritative. If a detail is missing from both, add it to the JSON
+first, then update this document.*

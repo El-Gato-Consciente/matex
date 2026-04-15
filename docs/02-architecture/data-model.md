@@ -6,29 +6,61 @@
 
 ---
 
+## Core Nodes vs Domain Nodes
+
+The `.ltxj` vocabulary is split into two layers:
+
+**Core nodes** — domain-agnostic. Present in every profile, regardless of subject area.
+Any future document family (thesis, philosophy, literature) builds on these.
+
+**Domain nodes** — specific to a subject area. Added by a profile's `supportedNodes`
+declaration. The current math domain nodes (`mathInline`, `mathDisplay`, `theoremEnv`)
+are the first domain extension, not part of the universal core.
+
+```
+CORE (always available)
+  Block:  paragraph, heading, bulletList, orderedList, blockquote, rawLatex
+  Inline: text, hardBreak, crossRef
+
+MATH DOMAIN (article-pro and variants)
+  Block:  mathDisplay, theoremEnv
+  Inline: mathInline
+
+PLANNED — not yet implemented
+  Block:  footnote, figure, table
+  Inline: citation
+```
+
+This separation matters for two reasons:
+1. It keeps the core stable as new domains are added.
+2. It makes clear that LaTeX-specific semantics (`mathInline`, `theoremEnv`) are
+   domain choices, not intrinsic to the format.
+
+---
+
 ## Top-Level Structure
 
 ```typescript
 interface LtxjDocument {
   version:    string          // "1.0"
-  profile:    string          // manifest profile id, e.g. "article-pro"
+  profile:    string          // profile id, e.g. "article-pro"
   meta:       DocumentMeta
   content:    BlockNode[]     // the document body
 }
 
 interface DocumentMeta {
-  title:    string
-  author:   string
-  subject:  string            // course / subtitle
-  date:     string            // LaTeX date expression, e.g. "\\today"
-  lang:     "english" | "spanish"
+  title:      string
+  author:     string
+  subject:    string          // course / subtitle
+  date:       string          // e.g. "\\today" or "2025-04-15"
+  lang:       "english" | "spanish"
   includeToc: boolean
 }
 ```
 
 ---
 
-## Block Nodes
+## Core Block Nodes
 
 ### `paragraph`
 
@@ -43,49 +75,15 @@ interface ParagraphNode {
 
 ```typescript
 interface HeadingNode {
-  type:  "heading"
-  level: 1 | 2 | 3           // 3 is rare; never use 4+
+  type:    "heading"
+  level:   1 | 2 | 3          // 3 is rare; never use 4+
+  label?:  string              // "sec:name" if cross-referenced; omit otherwise
   content: InlineNode[]
 }
 ```
 
-### `mathDisplay`
-
-```typescript
-interface MathDisplayNode {
-  type:     "mathDisplay"
-  latex:    string            // canonical LaTeX (always post-normalization)
-  numbered: boolean
-  aligned:  boolean
-  label:    string            // "" if unnumbered; "eq:name" if numbered
-}
-```
-
-Serialization matrix:
-
-| `numbered` | `aligned` | LaTeX output |
-|---|---|---|
-| false | false | `\[…\]` |
-| true  | false | `\begin{equation}\label{eq:X}…\end{equation}` |
-| false | true  | `\begin{align*}…\end{align*}` |
-| true  | true  | `\begin{align}…\label{eq:X}\end{align}` |
-
-### `theoremEnv`
-
-```typescript
-type TheoremEnvType =
-  | "theorem" | "lemma" | "proposition" | "corollary"
-  | "definition" | "remark" | "example" | "note"
-  | "exercise" | "proof"
-
-interface TheoremEnvNode {
-  type:     "theoremEnv"
-  envType:  TheoremEnvType
-  envTitle: string            // optional; → \begin{theorem}[title]
-  label:    string            // "" if unreferenced
-  content:  BlockNode[]
-}
-```
+The `label` field follows the `sec:` prefix convention (see Label Prefix Convention).
+A heading with no `crossRef` pointing to it has no label.
 
 ### `bulletList` / `orderedList`
 
@@ -115,14 +113,17 @@ interface BlockquoteNode {
 ```typescript
 interface RawLatexNode {
   type:    "rawLatex"
-  content: string             // verbatim LaTeX — no normalization applied
-  reason:  string             // why this node exists, e.g. "unsupported: tikzFigure"
+  content: string             // verbatim — no normalization applied
+  reason:  string             // e.g. "unsupported: tikzFigure"
 }
 ```
 
+`rawLatex` is the escape hatch for content that no profile-defined node covers.
+It is serialized verbatim. In non-LaTeX manifests, it is dropped with a warning.
+
 ---
 
-## Inline Nodes
+## Core Inline Nodes
 
 ### `text`
 
@@ -137,8 +138,77 @@ type Mark =
   | { type: "bold" }
   | { type: "italic" }
   | { type: "code" }
-  | { type: "quote" }         // → \enquote{} via csquotes
+  | { type: "quote" }         // → \enquote{} via csquotes (LaTeX); typographic quotes otherwise
 ```
+
+### `crossRef`
+
+```typescript
+interface CrossRefNode {
+  type:     "crossRef"
+  refId:    string            // e.g. "thm:bolzano", "eq:euler", "sec:introduction"
+  position: "mid" | "start"  // mid-sentence vs sentence-start
+}
+```
+
+`position` is inferred from text context — the user never sets it manually.
+In LaTeX: `"mid"` → `\cref{refId}`, `"start"` → `\Cref{refId}`.
+In the editor UI: displays as a chip `[→ Bolzano]`.
+
+### `hardBreak`
+
+```typescript
+interface HardBreakNode {
+  type: "hardBreak"           // LaTeX: \\   HTML: <br>
+}
+```
+
+---
+
+## Math Domain Block Nodes
+
+> These nodes are provided by profiles that extend `article-base` or declare them
+> in `supportedNodes`. They are not part of the core vocabulary.
+
+### `mathDisplay`
+
+```typescript
+interface MathDisplayNode {
+  type:     "mathDisplay"
+  latex:    string            // canonical LaTeX (always post-normalization)
+  numbered: boolean
+  aligned:  boolean
+  label:    string            // "" if unnumbered; "eq:name" if numbered
+}
+```
+
+| `numbered` | `aligned` | LaTeX output |
+|---|---|---|
+| false | false | `\[…\]` |
+| true  | false | `\begin{equation}\label{eq:X}…\end{equation}` |
+| false | true  | `\begin{align*}…\end{align*}` |
+| true  | true  | `\begin{align}…\label{eq:X}\end{align}` |
+
+### `theoremEnv`
+
+```typescript
+type TheoremEnvType =
+  | "theorem" | "lemma" | "proposition" | "corollary"
+  | "definition" | "remark" | "example" | "note"
+  | "exercise" | "proof"
+
+interface TheoremEnvNode {
+  type:     "theoremEnv"
+  envType:  TheoremEnvType
+  envTitle: string            // optional title; → \begin{theorem}[title]
+  label:    string            // "" if unreferenced
+  content:  BlockNode[]
+}
+```
+
+---
+
+## Math Domain Inline Nodes
 
 ### `mathInline`
 
@@ -149,40 +219,43 @@ interface MathInlineNode {
 }
 ```
 
-### `crossRef`
+---
+
+## Planned Nodes (not yet implemented)
+
+These nodes are documented here to inform current design decisions — particularly
+`crossRef` semantics and `SemanticLinter` validation — without committing to implementation.
+
+### `footnote` *(planned)*
 
 ```typescript
-interface CrossRefNode {
-  type:     "crossRef"
-  refId:    string            // e.g. "thm:bolzano", "eq:euler"
-  position: "mid" | "start"  // mid-sentence vs sentence-start
+interface FootnoteNode {
+  type:    "footnote"
+  content: InlineNode[]       // rich text footnote body
 }
 ```
 
-Serialization:
-```
-position "mid"   → \cref{refId}
-position "start" → \Cref{refId}
-```
+Rendered inline in the editor as a superscript chip; expanded on hover.
+LaTeX: `\footnote{...}`. HTML/DOCX: standard footnote.
 
-The `position` attribute is inferred by the parser from text context — the user
-never writes `\cref` or `\Cref` manually. In the editor UI, a `crossRef` node
-displays as a chip: `[→ Bolzano]`.
-
-### `hardBreak`
+### `citation` *(planned)*
 
 ```typescript
-interface HardBreakNode {
-  type: "hardBreak"           // → \\
+interface CitationNode {
+  type:   "citation"
+  key:    string              // bibliography key, e.g. "aristotle-nicomachean"
+  pages?: string              // e.g. "12–14"
+  note?:  string              // optional parenthetical
 }
 ```
+
+Distinct from `crossRef` (which references internal document labels).
+`citation` references external bibliographic sources managed outside the document tree.
+LaTeX: depends on profile — `\cite{key}`, `\autocite{key}`, `\parencite{key}`, etc.
 
 ---
 
 ## Label Prefix Convention
-
-The `label` field on any node must follow this prefix scheme.
-The `SemanticLinter` validates all prefixes on serialization.
 
 | Node type | Prefix | Example |
 |---|---|---|
@@ -194,6 +267,8 @@ The `SemanticLinter` validates all prefixes on serialization.
 | `theoremEnv` proposition | `prop:` | `prop:density` |
 | `theoremEnv` corollary | `cor:` | `cor:roots` |
 | `theoremEnv` exercise | `ex:` | `ex:1` |
+| `rawLatex` figure | `fig:` | `fig:diagram` |
+| `rawLatex` table | `tab:` | `tab:results` |
 
 ---
 
@@ -236,13 +311,8 @@ The `SemanticLinter` validates all prefixes on serialization.
       ]
     },
     {
-      "type": "heading",
-      "level": 2,
-      "content": [{ "type": "text", "text": "Solution", "marks": [] }]
-    },
-    {
       "type": "mathDisplay",
-      "latex": "\\left|f(x) - f(x_0)\\right| = \\left|x^2 - x_0^2\\right| = \\left|x+x_0\\right|\\left|x-x_0\\right|",
+      "latex": "\\left|f(x) - f(x_0)\\right| = \\left|x^2 - x_0^2\\right|",
       "numbered": false,
       "aligned": false,
       "label": ""

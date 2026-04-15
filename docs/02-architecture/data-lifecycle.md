@@ -128,23 +128,27 @@ mathematical expression, regardless of entry point.
 ## Stage 3 — Normalizer
 
 **Module:** `src/core/math/normalizer/Normalizer.ts`  
-**Input:** `MathAST`, `ResolvedManifest`, `NormalizerMode`  
+**Input:** `MathAST`, `ResolvedProfile`, `NormalizerMode`  
 **Output:** `{ ast: MathAST, changes: NormalizerChange[] }`
 
-Rules run in this fixed order (order matters — `MacroExpansion` must run before
-`AutoDelimiters` so that `\mathbb{R}` is already `\R` when delimiter checking occurs):
+The Normalizer receives the `ResolvedProfile` (not the full `EffectiveConfig`),
+because normalization is a profile-level concern independent of the serialization target.
+The macro registry in `profile.json → macros` is what the `MacroExpansion` rule reads.
+
+Rules run in this fixed order (`MacroExpansion` must precede `AutoDelimiters`
+so that `\mathbb{R}` is already `\R` when delimiter checking occurs):
 
 ```
-1. ForbiddenSyntax    (blocks pipeline if triggered)
-2. MacroExpansion     (required)
-3. AutoDelimiters     (required)
-4. DxSpacing          (required)
-5. TextInMath         (preferred)
-6. AlignedSteps       (preferred — suggestion only in mixed mode)
-7. DisplayThreshold   (opinionated — suggestion only in mixed mode)
+1. ForbiddenSyntax    required    — blocks pipeline; produces E001/E002/E003
+2. MacroExpansion     required    — \mathbb{R} → \R
+3. AutoDelimiters     required    — (\frac{}{}) → \left(\right)
+4. DxSpacing          required    — integral dx → \,dx
+5. TextInMath         preferred   — plain text in math → \text{}
+6. AlignedSteps       opinionated — suggest align* for multi-step derivations
+7. DisplayThreshold   opinionated — suggest display for complex inline formulas
 ```
 
-Each rule calls `applies(ast, manifest)` before `transform()`. If `applies()`
+Each rule calls `applies(ast, profile)` before `transform()`. If `applies()`
 returns false, the rule is skipped with no `NormalizerChange` generated.
 
 In `strict` mode, all 7 rules auto-apply.  
@@ -239,31 +243,54 @@ is `null` at this point, so no feedback loop is triggered.
 
 ---
 
+## Stage 7.5 — Semantic Linter
+
+**Module:** `src/core/linter/SemanticLinter.ts`  
+**Triggered by:** user clicking "Export .tex" (runs before serialization)  
+**Input:** full `.ltxj` document JSON + `ResolvedProfile`  
+**Output:** `{ errors: LinterError[], warnings: LinterWarning[], valid: boolean }`
+
+If `valid === false`, export is blocked and errors are surfaced in the UI.
+Warnings are shown in the Coach Panel but do not block export.
+Full spec: `docs/03-engine-specs/semantic-linter.md`.
+
+---
+
 ## Stage 8 — Export to `.tex`
 
 **Module:** `src/core/serializer/TexSerializer.ts`  
-**Triggered by:** user clicking "Export .tex"  
-**Input:** full `.ltxj` document JSON + `ResolvedManifest`  
+**Triggered by:** user clicking "Export .tex" (only if SemanticLinter passes)  
+**Input:** full `.ltxj` document JSON + `EffectiveConfig`  
 **Output:** complete `.tex` string
 
 ```typescript
-function serializeToTex(doc: LtxjDocument, manifest: ResolvedManifest): string
+function exportToTex(
+  doc:      LtxjDocument,
+  override: ExportOverride = {}
+): string {
+  const profile  = ManifestEngine.resolveProfile(doc.profile)
+  const manifest = ManifestEngine.loadManifest(doc.profile + '-latex')
+  const config   = ManifestEngine.buildEffectiveConfig(profile, manifest, override)
+
+  const lint = SemanticLinter.validate(doc, profile)
+  if (!lint.valid) throw new LinterBlockedError(lint.errors)
+
+  return TexSerializer.serialize(doc, config)
+}
 ```
 
 The serializer walks the document tree and maps each node to its LaTeX equivalent.
 Because all `latex` attributes are already canonical (written in Stage 5a),
 the serializer performs **no normalization** — only structural mapping.
 
-Preamble is generated once from the manifest, then the body is walked.
-
 ```
-preamble (from manifest)
-  → \documentclass
-  → \usepackage list (in load order from profile.json)
+preamble (from EffectiveConfig)
+  → \documentclass (from profile: documentClass + classOptions)
+  → \usepackage list (in load order from manifest: packages.loadOrder)
   → \hypersetup
-  → \geometry
-  → macro injection (\newcommand, \DeclareMathOperator)
-  → \newtheorem declarations (in counter-dependency order)
+  → \geometry (from manifest, overridable via ExportOverride)
+  → macro injection (\newcommand from profile.macros, \DeclareMathOperator from profile.mathOperators)
+  → \newtheorem declarations (order from profile.environments, styles from manifest.environmentStyles)
   → \title, \author, \date
 
 body (from document tree)
@@ -284,7 +311,11 @@ body (from document tree)
 | Active visual edit | MathLive `<math-field>` | MathJSON + visual |
 | Coach suggestions | CoachStore | `NormalizerChange[]` |
 | Full document | `.ltxj` / Tiptap JSON | JSON |
+| Document schema + normalization policy | `profile.json` (via `ManifestEngine`) | `ResolvedProfile` |
+| Serialization contract | `manifest.json` (via `ManifestEngine`) | `Manifest` |
+| Runtime export config | computed at export time | `EffectiveConfig` (never persisted) |
 | Exported file | `.tex` string | LaTeX |
 
 **The only permanent, authoritative state is the `latex` attribute in each Tiptap
-node.** Everything else is derived.
+node.** Everything else is derived. The `EffectiveConfig` is computed fresh on every
+export and never stored.
