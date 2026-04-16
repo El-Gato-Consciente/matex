@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Formula Edit — POC</title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+<!-- MathLive (registers <math-field> globally) -->
+<script type="module">import 'https://cdn.jsdelivr.net/npm/mathlive/+esm';</script>
+
+<style>
+/* ── minimal tokens ── */
+:root {
+  --acc:  #5c47d6;
+  --ring: rgba(92,71,214,.22);
+  --bg:   rgba(92,71,214,.07);
+  --fm:   'Menlo', 'Consolas', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Georgia, serif; background: #f5f2ed; min-height: 100vh; }
+
+/* ═══ PANEL ═══════════════════════════════════════════ */
+#panel {
+  display: none;                        /* hidden until formula is activated */
+  align-items: center;
+  gap: 0;
+  background: #edeaff;
+  border-bottom: 1.5px solid #ccc4f5;
+  box-shadow: 0 2px 10px rgba(92,71,214,.09);
+}
+#panel.open { display: flex; }
+
+/* mode buttons */
+#mode-btns {
+  display: flex; gap: 3px;
+  padding: 8px 12px;
+  border-right: 1px solid #d0c8f5;
+  flex-shrink: 0;
+}
+.mbtn {
+  padding: 4px 11px; border-radius: 4px;
+  border: 1px solid #bbb4ec;
+  background: transparent; color: #4a3daa;
+  font-size: 11px; font-family: sans-serif; cursor: pointer;
+}
+.mbtn.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+/* editor zone — swaps between math-field and textarea */
+#panel-edit { flex: 1; padding: 6px 10px; display: flex; align-items: center; }
+
+math-field#pmf {
+  flex: 1; height: 38px;
+  border: 1.5px solid transparent; border-radius: 5px;
+  background: rgba(255,255,255,.6);
+  padding: 2px 8px; font-size: 17px;
+  --caret-color: var(--acc);
+  transition: border-color .14s, box-shadow .14s;
+}
+math-field#pmf:focus-within {
+  border-color: var(--acc); background: #fff;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+#pta {
+  display: none;           /* shown only in Visual mode */
+  flex: 1; height: 34px;
+  padding: 5px 9px;
+  border: 1.5px solid transparent; border-radius: 5px;
+  background: rgba(255,255,255,.6);
+  font-family: var(--fm); font-size: 12px; outline: none; resize: none;
+  caret-color: var(--acc);
+  transition: border-color .14s, box-shadow .14s;
+}
+#pta:focus { border-color: var(--acc); background: #fff; box-shadow: 0 0 0 3px var(--ring); }
+
+/* action buttons */
+#panel-acts {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 10px; border-left: 1px solid #d0c8f5;
+  align-self: stretch; justify-content: center; flex-shrink: 0;
+}
+.act {
+  padding: 3px 11px; border-radius: 3px;
+  border: 1px solid #ccc; background: transparent;
+  font-size: 10.5px; font-family: sans-serif; cursor: pointer;
+}
+.act.ok { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+/* ═══ DOCUMENT ═════════════════════════════════════════ */
+#doc {
+  max-width: 560px; margin: 44px auto 80px;
+  background: #fff; padding: 44px 52px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05); border-radius: 2px;
+  font-size: .97rem; line-height: 1.9;
+}
+#doc p { margin-bottom: .5rem; }
+
+/* inline formula chip */
+.mi {
+  display: inline-flex; align-items: center;
+  background: var(--bg); border: 1px solid rgba(92,71,214,.25);
+  border-radius: 4px; padding: 1px 5px 2px;
+  cursor: pointer; user-select: none; vertical-align: middle;
+  transition: background .1s, border-color .1s;
+}
+.mi:hover { background: rgba(92,71,214,.14); border-color: rgba(92,71,214,.45); }
+.mi.active { border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
+.mi .katex { font-size: .87em; pointer-events: none; }
+
+/* in-situ inline — Codex: text input replacing the chip */
+input.insitu-code {
+  display: inline-block; vertical-align: middle;
+  font-family: var(--fm); font-size: .83em;
+  border: 1.5px solid var(--acc); border-radius: 4px;
+  background: #fff; padding: 2px 7px; outline: none;
+  box-shadow: 0 0 0 3px var(--ring); min-width: 50px;
+  color: #1c1812; caret-color: var(--acc);
+}
+/* in-situ inline — Visual: math-field replacing the chip */
+math-field.insitu-mf-inline {
+  display: inline-flex; vertical-align: middle; font-size: 15px;
+  border: 1.5px solid var(--acc); border-radius: 4px;
+  background: #fff; padding: 1px 6px; min-width: 70px;
+  box-shadow: 0 0 0 3px var(--ring);
+  --caret-color: var(--acc);
+}
+
+/* display formula block */
+.md {
+  display: flex; justify-content: center; align-items: center;
+  padding: 20px 24px; margin: .7rem 0; min-height: 60px;
+  background: var(--bg); border: 1px solid rgba(92,71,214,.25);
+  border-radius: 8px; cursor: pointer;
+  transition: background .1s, border-color .1s;
+}
+.md:hover { background: rgba(92,71,214,.13); border-color: rgba(92,71,214,.45); }
+.md.active { border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
+.katex-display { margin: 0 !important; }
+
+/* in-situ display — Codex: textarea filling the block */
+textarea.insitu-code {
+  width: 100%; font-family: var(--fm); font-size: 12px;
+  border: 1.5px solid var(--acc); border-radius: 5px;
+  background: #fff; padding: 7px 10px; outline: none; resize: none;
+  box-shadow: 0 0 0 3px var(--ring); caret-color: var(--acc);
+}
+/* in-situ display — Visual: math-field filling the block */
+math-field.insitu-mf-display {
+  width: 100%; font-size: 21px;
+  border: 1.5px solid var(--acc); border-radius: 5px;
+  background: #fff; padding: 6px 8px;
+  box-shadow: 0 0 0 3px var(--ring);
+  --caret-color: var(--acc);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ PANEL ════════════════════════════════════════ -->
+<div id="panel">
+  <div id="mode-btns">
+    <button type="button" class="mbtn on" id="btn-codex"  onclick="setMode('codex')">Codex</button>
+    <button type="button" class="mbtn"    id="btn-visual" onclick="setMode('visual')">Visual ✦</button>
+  </div>
+
+  <div id="panel-edit">
+    <!--
+      Codex  → pmf visible  (MathLive renders the formula)
+      Visual → pta visible  (textarea shows the LaTeX code)
+    -->
+    <math-field id="pmf" virtual-keyboard-mode="onfocus"></math-field>
+    <textarea   id="pta" rows="1" spellcheck="false" placeholder="LaTeX…"></textarea>
+  </div>
+
+  <div id="panel-acts">
+    <button type="button" class="act ok" onclick="save()">✓</button>
+    <button type="button" class="act"    onclick="cancel()">✕</button>
+  </div>
+</div>
+
+<!-- ═══ DOCUMENT ═════════════════════════════════════ -->
+<div id="doc">
+  <p>
+    Sea <span class="mi" data-latex="f : U \subset \mathbb{R}^n \to \mathbb{R}^m"></span>
+    diferenciable en <span class="mi" data-latex="a \in U"></span>.
+    Existe <span class="mi" data-latex="T_a : \mathbb{R}^n \to \mathbb{R}^m"></span> tal que:
+  </p>
+
+  <div class="md" data-latex="\lim_{h \to 0} \frac{\| f(a+h) - f(a) - T_a(h) \|}{\|h\|} = 0"></div>
+
+  <p>
+    Llamamos <span class="mi" data-latex="Df(a) = T_a"></span>
+    a la diferencial de <span class="mi" data-latex="f"></span>
+    en <span class="mi" data-latex="a"></span>.
+  </p>
+
+  <div class="md" data-latex="D(g \circ f)(a) = Dg(f(a)) \circ Df(a)"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   STATE  (only four variables)
+   ═══════════════════════════════════════════════════════ */
+let mode    = 'codex'; // 'codex' | 'visual'
+let active  = null;    // the .mi or .md element being edited right now
+let insitu  = null;    // the live editor that replaced the formula in the document
+let syncing = false;   // true while one surface is pushing a value to the other
+                       // (prevents the receiving surface from echoing it back)
+
+/* panel DOM refs */
+let pmf = null; // <math-field id="pmf">  — resolved once MathLive is defined
+const pta = document.getElementById('pta');
+const panel = document.getElementById('panel');
+
+
+/* ═══════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+
+  /* Initial KaTeX render for every formula in the document */
+  document.querySelectorAll('.mi, .md').forEach(el => {
+    renderKatex(el.dataset.latex, el, el.classList.contains('md'));
+    el.addEventListener('click', e => { e.stopPropagation(); open(el); });
+  });
+
+  /* MathLive panel field setup — runs once MathLive registers <math-field> */
+  customElements.whenDefined('math-field').then(() => {
+    pmf = document.getElementById('pmf');
+
+    /*
+      Codex mode: pmf is the panel surface the user edits.
+      When pmf changes → push value down to the in-situ code editor.
+      NOTE: setting mf.value programmatically fires 'input' synchronously,
+      so we guard with `syncing` BEFORE writing and release via rAF.
+    */
+    pmf.addEventListener('input', () => {
+      if (syncing || mode !== 'codex') return;
+      pushDown(pmf.value);
+    });
+  });
+
+  /*
+    Visual mode: pta is the panel surface the user edits.
+    When pta changes → push value down to the in-situ math-field.
+    Setting textarea.value = x does NOT fire 'input', so no guard needed there.
+  */
+  pta.addEventListener('input', () => {
+    if (syncing || mode !== 'visual') return;
+    pushDown(pta.value);
+  });
+  pta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
+    if (e.key === 'Escape') cancel();
+  });
+
+  /* Click outside → cancel */
+  document.addEventListener('click', () => { if (active) cancel(); });
+});
+
+
+/* ═══════════════════════════════════════════════════════
+   OPEN  —  activate a formula for editing
+   ═══════════════════════════════════════════════════════ */
+function open(el) {
+  if (active === el) return;     // already editing this one — ignore
+  if (active) cancel();          // switch away from previous without saving
+
+  active = el;
+  el.classList.add('active');
+
+  const latex = el.dataset.latex;
+
+  /* Load latex into the panel surface for the current mode */
+  loadPanel(latex);
+  panel.classList.add('open');
+
+  /* Create the in-situ editor inside the document */
+  createInsitu(el, latex);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   CREATE IN-SITU EDITOR
+   ═══════════════════════════════════════════════════════ */
+function createInsitu(el, latex) {
+  const isDisplay = el.classList.contains('md');
+
+  if (mode === 'codex') {
+    /*
+      Codex mode
+      ┌─────────────────────────────────┐
+      │ Panel    : math-field (rendered) │
+      │ In-situ  : code input / textarea │
+      └─────────────────────────────────┘
+    */
+    if (isDisplay) {
+      const ta = document.createElement('textarea');
+      ta.className = 'insitu-code';
+      ta.rows = 2;
+      ta.value = latex;
+      ta.spellcheck = false;
+      ta.addEventListener('input', () => {
+        if (syncing) return;
+        pushUp(ta.value);         // in-situ → panel
+      });
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
+        if (e.key === 'Escape') cancel();
+      });
+      el.innerHTML = '';          // clear KaTeX render
+      el.appendChild(ta);
+      insitu = ta;
+      setTimeout(() => { ta.focus(); ta.select(); }, 10);
+
+    } else {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'insitu-code';
+      inp.value = latex;
+      inp.style.width = codeWidth(latex);
+      inp.spellcheck = false;
+      inp.addEventListener('input', () => {
+        if (syncing) return;
+        inp.style.width = codeWidth(inp.value);
+        pushUp(inp.value);        // in-situ → panel
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') cancel();
+      });
+      el.replaceWith(inp);        // chip → input
+      insitu = inp;
+      inp.focus();
+      inp.select();
+    }
+
+  } else {
+    /*
+      Visual mode
+      ┌───────────────────────────────────────┐
+      │ Panel    : textarea (LaTeX code)       │
+      │ In-situ  : math-field (rendered, live) │
+      └───────────────────────────────────────┘
+    */
+    const mfEl = document.createElement('math-field');
+    mfEl.className = isDisplay ? 'insitu-mf-display' : 'insitu-mf-inline';
+    mfEl.setAttribute('virtual-keyboard-mode', 'onfocus');
+
+    /* Attach input listener BEFORE inserting into DOM */
+    mfEl.addEventListener('input', () => {
+      if (syncing) return;
+      pushUp(mfEl.value);         // in-situ → panel
+    });
+
+    /* Insert into DOM first, then set value (custom elements need to be connected) */
+    if (isDisplay) {
+      el.innerHTML = '';
+      el.appendChild(mfEl);
+    } else {
+      el.replaceWith(mfEl);       // chip → math-field
+    }
+    insitu = mfEl;
+
+    /* Set value after connection; guard so the 'input' event it fires is ignored */
+    requestAnimationFrame(() => {
+      syncing = true;
+      mfEl.value = latex;
+      requestAnimationFrame(() => {
+        syncing = false;
+        mfEl.focus();
+      });
+    });
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SYNC HELPERS
+   Exactly two directions: up (in-situ→panel) and down (panel→in-situ).
+   The guard `syncing` prevents the receiving end from echoing the value back.
+   ═══════════════════════════════════════════════════════ */
+
+/* in-situ changed → push to panel */
+function pushUp(latex) {
+  syncing = true;
+  if (mode === 'codex') {
+    if (pmf) pmf.value = latex;   // fires pmf 'input' synchronously → guarded
+  } else {
+    pta.value = latex;            // does NOT fire 'input' → no guard needed but harmless
+  }
+  requestAnimationFrame(() => { syncing = false; });
+}
+
+/* panel changed → push to in-situ */
+function pushDown(latex) {
+  if (!insitu) return;
+  syncing = true;
+  insitu.value = latex;           // for input/textarea: no event; for math-field: event fired → guarded
+  if (insitu.tagName === 'INPUT') insitu.style.width = codeWidth(latex);
+  requestAnimationFrame(() => { syncing = false; });
+}
+
+/* Load latex into panel without triggering its input handler */
+function loadPanel(latex) {
+  syncing = true;
+  if (mode === 'codex') {
+    if (pmf) pmf.value = latex;
+  } else {
+    pta.value = latex;
+  }
+  requestAnimationFrame(() => { syncing = false; });
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SAVE / CANCEL
+   ═══════════════════════════════════════════════════════ */
+function save() {
+  if (!active || !insitu) return;
+  active.dataset.latex = insitu.value || active.dataset.latex;
+  restore();
+}
+
+function cancel() {
+  if (!active) return;
+  restore();   // dataset.latex is unchanged → original formula re-rendered
+}
+
+/*
+  Tear down the in-situ editor and put the formula element back.
+  Uses active.dataset.latex (already updated by save() if saving,
+  or the original value if cancelling).
+*/
+function restore() {
+  const el     = insitu;
+  const target = active;
+  insitu = null;
+  active = null;
+  panel.classList.remove('open');
+
+  if (!target) return;
+  target.classList.remove('active');
+
+  const latex = target.dataset.latex;
+
+  if (target.classList.contains('mi')) {
+    renderKatex(latex, target, false);
+    if (el) el.replaceWith(target);   // put chip back where the insitu was
+  } else {
+    target.innerHTML = '';
+    renderKatex(latex, target, true); // re-render display block
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   MODE SWITCH
+   ═══════════════════════════════════════════════════════ */
+function setMode(m) {
+  if (mode === m) return;
+
+  /* 1. Snapshot the in-progress latex (from whichever surface is current) */
+  const draft = insitu ? insitu.value : (mode === 'codex' ? (pmf ? pmf.value : '') : pta.value);
+
+  /* 2. Destroy the current in-situ — put the formula element back in DOM
+        so we can re-create the in-situ in the new mode. */
+  if (insitu && active) {
+    const el = insitu;
+    insitu = null;
+    if (active.classList.contains('mi')) {
+      el.replaceWith(active);           // chip back, no KaTeX render needed yet
+    } else {
+      active.innerHTML = '';            // just clear; new in-situ will fill it
+    }
+  }
+
+  /* 3. Switch */
+  mode = m;
+  document.getElementById('btn-codex').classList.toggle('on',  mode === 'codex');
+  document.getElementById('btn-visual').classList.toggle('on', mode === 'visual');
+
+  /* 4. Swap panel surfaces */
+  if (mode === 'codex') {
+    pta.style.display = 'none';
+    if (pmf) {
+      pmf.style.display = '';
+      syncing = true;
+      pmf.value = draft;
+      requestAnimationFrame(() => { syncing = false; });
+    }
+  } else {
+    if (pmf) pmf.style.display = 'none';
+    pta.style.display = 'block';
+    pta.value = draft;
+  }
+
+  /* 5. Re-create in-situ in the new mode with the draft latex */
+  if (active) {
+    active.dataset.latex = draft; // keep draft alive through the re-creation
+    createInsitu(active, draft);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   KATEX HELPER
+   ═══════════════════════════════════════════════════════ */
+function renderKatex(latex, el, display) {
+  if (typeof katex === 'undefined') { el.textContent = latex; return; }
+  try {
+    katex.render(latex, el, { throwOnError: false, displayMode: display });
+  } catch (_) {
+    el.textContent = latex;
+  }
+}
+
+function codeWidth(s) {
+  return Math.max(s.length * 7.8 + 24, 50) + 'px';
+}
+</script>
+</body>
+</html>

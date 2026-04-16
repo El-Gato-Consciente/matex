@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Formalia — demo mínimo de edición</title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+<!-- MathLive -->
+<script type="module">import 'https://cdn.jsdelivr.net/npm/mathlive/+esm';</script>
+
+<style>
+/* ── tokens ── */
+:root {
+  --bg:      #f8f5f0;
+  --paper:   #ffffff;
+  --brd:     #ddd6cc;
+  --ink:     #1c1812;
+  --muted:   #8a8278;
+  --acc:     #6c5ce7;
+  --acc-bg:  rgba(108,92,231,.07);
+  --acc-brd: rgba(108,92,231,.28);
+  --acc-ring: 0 0 0 3px rgba(108,92,231,.18);
+  --fd: Georgia, 'Times New Roman', serif;
+  --fm: 'Menlo', 'Consolas', monospace;
+  --r: 5px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--fd);
+  background: var(--bg);
+  color: var(--ink);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ════════════════════════════════
+   FORMULA PANEL (toolbar)
+   ════════════════════════════════ */
+#fp {
+  flex-shrink: 0;
+  background: #f2f0ff;
+  border-bottom: 1.5px solid #ccc4f8;
+  box-shadow: 0 3px 14px rgba(108,92,231,.10);
+  display: none;
+}
+#fp.open { display: block; }
+
+#fp-row {
+  display: flex;
+  align-items: center;
+  height: 54px;
+}
+
+/* ── mode toggle ── */
+#fp-modes {
+  display: flex;
+  gap: 3px;
+  padding: 0 12px;
+  border-right: 1px solid #d8d2f5;
+  height: 100%;
+  align-items: center;
+  flex-shrink: 0;
+}
+.mdbtn {
+  height: 24px; padding: 0 11px;
+  border-radius: 4px; border: 1px solid #c0b8f0;
+  background: transparent;
+  font-family: sans-serif; font-size: 11px; color: #5a4eb8;
+  cursor: pointer; transition: all .1s;
+}
+.mdbtn.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+/* ── editor area inside the panel ──
+   Codex  → shows math-field (rendered view)
+   Visual → shows textarea  (code view)    */
+#fp-edit {
+  flex: 1;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+}
+
+math-field#panel-mf {
+  flex: 1; height: 38px;
+  border: 1.5px solid transparent; border-radius: var(--r);
+  background: rgba(255,255,255,.55);
+  padding: 2px 8px; font-size: 17px;
+  --caret-color: var(--acc);
+  transition: border-color .15s, box-shadow .15s;
+}
+math-field#panel-mf:focus-within {
+  border-color: var(--acc); background: #fff; box-shadow: var(--acc-ring);
+}
+
+#panel-ta {
+  display: none;          /* shown only in Visual mode */
+  flex: 1; height: 34px;
+  padding: 5px 9px;
+  border: 1.5px solid transparent; border-radius: var(--r);
+  background: rgba(255,255,255,.55);
+  font-family: var(--fm); font-size: 12px; color: var(--ink);
+  outline: none; resize: none;
+  caret-color: var(--acc);
+  transition: border-color .15s, box-shadow .15s;
+}
+#panel-ta:focus { border-color: var(--acc); background: #fff; box-shadow: var(--acc-ring); }
+
+/* ── actions ── */
+#fp-acts {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 10px; border-left: 1px solid #d8d2f5;
+  height: 100%; justify-content: center; flex-shrink: 0;
+}
+.fpa {
+  height: 20px; padding: 0 10px;
+  border-radius: 3px; border: 1px solid var(--brd);
+  background: transparent; color: var(--muted);
+  font-family: sans-serif; font-size: 10.5px; cursor: pointer;
+  transition: all .1s;
+}
+.fpa:hover { color: var(--ink); background: #eee; }
+.fpa.ok { background: var(--acc); color: #fff; border-color: var(--acc); }
+.fpa.ok:hover { background: #5a4bd4; }
+
+/* ── formula type label ── */
+#fp-label {
+  font-family: sans-serif; font-size: 8.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .1em; color: var(--acc);
+  padding: 0 10px; flex-shrink: 0; white-space: nowrap;
+}
+
+/* ════════════════════════════════
+   DOCUMENT CANVAS
+   ════════════════════════════════ */
+#canvas {
+  flex: 1; overflow-y: auto;
+  display: flex; justify-content: center;
+  padding: 48px 20px 80px;
+}
+#doc {
+  width: 580px;
+  background: var(--paper);
+  padding: 44px 52px 52px;
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.04);
+  font-size: .97rem; line-height: 1.92;
+}
+#doc p { margin-bottom: .5rem; }
+
+/* ── inline math chip ── */
+.mi {
+  display: inline-flex; align-items: center;
+  background: var(--acc-bg); border: 1px solid var(--acc-brd);
+  border-radius: 4px; padding: 1px 5px 2px;
+  cursor: pointer; user-select: none; vertical-align: middle;
+  transition: background .12s, border-color .12s;
+}
+.mi:hover { background: rgba(108,92,231,.13); border-color: rgba(108,92,231,.45); }
+.mi.active { background: rgba(108,92,231,.17); border-color: var(--acc); box-shadow: var(--acc-ring); }
+.mi .katex { font-size: .88em; pointer-events: none; }
+
+/* in-situ inline: Codex = text input */
+.insitu-input {
+  display: inline-block; vertical-align: middle;
+  font-family: var(--fm); font-size: .83em;
+  border: 1.5px solid var(--acc); border-radius: 4px;
+  background: #fff; padding: 2px 7px; outline: none;
+  color: var(--ink); caret-color: var(--acc);
+  box-shadow: var(--acc-ring); min-width: 60px;
+}
+/* in-situ inline: Visual = math-field */
+math-field.insitu-mf {
+  display: inline-flex; vertical-align: middle;
+  font-size: 15px; min-width: 80px;
+  border: 1.5px solid var(--acc); border-radius: 4px;
+  background: #fff; padding: 1px 6px;
+  box-shadow: var(--acc-ring);
+  --caret-color: var(--acc);
+}
+
+/* ── display math block ── */
+.md {
+  display: flex; justify-content: center; align-items: center;
+  padding: 20px 24px; margin: .7rem 0;
+  background: var(--acc-bg); border: 1px solid var(--acc-brd);
+  border-radius: 8px; cursor: pointer; min-height: 60px;
+  transition: background .12s, border-color .12s;
+}
+.md:hover { background: rgba(108,92,231,.12); border-color: rgba(108,92,231,.42); }
+.md.active { border-color: var(--acc); box-shadow: var(--acc-ring); }
+.md .katex-display { margin: 0 !important; }
+
+/* in-situ display: Codex = textarea */
+.insitu-display-ta {
+  width: 100%;
+  font-family: var(--fm); font-size: 12px;
+  border: 1.5px solid var(--acc); border-radius: var(--r);
+  background: #fff; padding: 7px 10px; outline: none; resize: none;
+  color: var(--ink); caret-color: var(--acc);
+  box-shadow: var(--acc-ring);
+}
+/* in-situ display: Visual = math-field */
+math-field.insitu-display-mf {
+  width: 100%; font-size: 21px;
+  border: 1.5px solid var(--acc); border-radius: var(--r);
+  background: #fff; padding: 6px 8px;
+  box-shadow: var(--acc-ring);
+  --caret-color: var(--acc);
+}
+
+/* ── hint bar ── */
+#hint {
+  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+  background: rgba(28,24,18,.78); color: rgba(255,255,255,.9);
+  font-family: sans-serif; font-size: 10.5px;
+  padding: 5px 14px; border-radius: 20px;
+  pointer-events: none; white-space: nowrap;
+  transition: opacity .3s; opacity: 1;
+}
+#hint.hide { opacity: 0; }
+</style>
+</head>
+<body>
+
+<!-- FORMULA PANEL ───────────────────────── -->
+<div id="fp">
+  <div id="fp-row">
+    <div id="fp-modes">
+      <button type="button" class="mdbtn on" id="btn-codex" onclick="setMode('codex')">Codex</button>
+      <button type="button" class="mdbtn"    id="btn-visual" onclick="setMode('visual')">Visual ✦</button>
+    </div>
+
+    <span id="fp-label">inline</span>
+
+    <div id="fp-edit">
+      <!--
+        Codex  → panel-mf visible  (rendered formula — editable MathLive)
+        Visual → panel-ta visible  (raw LaTeX code  — editable textarea)
+      -->
+      <math-field id="panel-mf" virtual-keyboard-mode="onfocus"></math-field>
+      <textarea   id="panel-ta" rows="1" spellcheck="false" placeholder="LaTeX…"></textarea>
+    </div>
+
+    <div id="fp-acts">
+      <button type="button" class="fpa ok" onclick="applyEdit()">✓ Aplicar</button>
+      <button type="button" class="fpa"    onclick="cancelEdit()">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- DOCUMENT ────────────────────────────── -->
+<div id="canvas">
+  <div id="doc">
+
+    <p>
+      Sea
+      <span class="mi" data-latex="f: U \subset \mathbb{R}^n \to \mathbb{R}^m"></span>
+      una función definida en un abierto
+      <span class="mi" data-latex="U \subset \mathbb{R}^n"></span>.
+      Decimos que <span class="mi" data-latex="f"></span> es
+      <em>diferenciable</em> en <span class="mi" data-latex="a \in U"></span>
+      si existe una transformación lineal
+      <span class="mi" data-latex="T_a : \mathbb{R}^n \to \mathbb{R}^m"></span>
+      tal que:
+    </p>
+
+    <div class="md" data-latex="\lim_{h \to 0} \frac{\|f(a+h) - f(a) - T_a(h)\|}{\|h\|} = 0"></div>
+
+    <p>
+      En ese caso escribimos <span class="mi" data-latex="Df(a) = T_a"></span>
+      y la llamamos la <em>derivada (diferencial) de <span class="mi" data-latex="f"></span>
+      en <span class="mi" data-latex="a"></span></em>.
+      La matriz jacobiana satisface
+      <span class="mi" data-latex="J_f(a) \in \mathbb{R}^{m \times n}"></span>.
+    </p>
+
+    <div class="md" data-latex="D(g \circ f)(a) = Dg(f(a)) \circ Df(a)"></div>
+
+  </div>
+</div>
+
+<!-- HINT ────────────────────────────────── -->
+<div id="hint">Haz click en cualquier fórmula para editarla</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════
+   STATE
+   ══════════════════════════════════════════════ */
+let mode     = 'codex'; // 'codex' | 'visual'
+let activeEl = null;    // the .mi or .md element being edited (or null)
+let insituEl = null;    // the live in-situ DOM element (input / textarea / math-field)
+let panelMf  = null;    // ref to <math-field id="panel-mf"> once defined
+let syncSrc  = null;    // 'panel' | 'insitu' | null  — prevents feedback loops
+
+const fp      = document.getElementById('fp');
+const panelTa = document.getElementById('panel-ta');
+const fpLabel = document.getElementById('fp-label');
+
+/* ══════════════════════════════════════════════
+   BOOT
+   ══════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+
+  // Initial KaTeX render + click listeners
+  document.querySelectorAll('.mi, .md').forEach(el => {
+    renderKatex(el.dataset.latex, el, el.classList.contains('md'));
+    el.addEventListener('click', e => { e.stopPropagation(); activate(el); });
+  });
+
+  // MathLive ready
+  customElements.whenDefined('math-field').then(() => {
+    panelMf = document.getElementById('panel-mf');
+
+    // Codex mode: panel-mf is the primary panel editor → push to in-situ
+    panelMf.addEventListener('input', () => {
+      if (syncSrc === 'insitu') return;
+      syncSrc = 'panel';
+      pushToInsitu(panelMf.value);
+      requestAnimationFrame(() => { syncSrc = null; });
+    });
+  });
+
+  // Visual mode: panel-ta is the primary panel editor → push to in-situ
+  panelTa.addEventListener('input', () => {
+    if (syncSrc === 'insitu') return;
+    syncSrc = 'panel';
+    pushToInsitu(panelTa.value);
+    requestAnimationFrame(() => { syncSrc = null; });
+  });
+  panelTa.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); applyEdit(); }
+    if (e.key === 'Escape') cancelEdit();
+  });
+
+  // Close panel when clicking outside
+  document.addEventListener('click', e => {
+    if (!fp.classList.contains('open')) return;
+    if (fp.contains(e.target)) return;
+    if (e.target.closest('.mi') || e.target.closest('.md')) return;
+    cancelEdit();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && fp.classList.contains('open')) cancelEdit();
+  });
+
+  hint('Click en cualquier fórmula para editarla');
+});
+
+/* ══════════════════════════════════════════════
+   KATEX HELPER
+   ══════════════════════════════════════════════ */
+function renderKatex(latex, el, display) {
+  if (typeof katex === 'undefined') { el.textContent = latex; return; }
+  try {
+    katex.render(latex, el, { throwOnError: false, displayMode: display, output: 'html' });
+  } catch (_) { el.textContent = latex; }
+}
+
+/* ══════════════════════════════════════════════
+   ACTIVATE — open panel + create in-situ
+   ══════════════════════════════════════════════ */
+function activate(el) {
+  if (activeEl === el) return;                // already editing this one
+  if (activeEl) cancelEdit();                 // close previous without saving
+
+  activeEl = el;
+  el.classList.add('active');
+
+  const isDisplay = el.classList.contains('md');
+  const latex     = el.dataset.latex;
+
+  fpLabel.textContent = isDisplay ? 'display' : 'inline';
+  writePanelLatex(latex);     // load latex into whichever panel surface is active
+  fp.classList.add('open');
+
+  if (isDisplay) openDisplayInsitu(el, latex);
+  else           openInlineInsitu(el, latex);
+}
+
+/* ══════════════════════════════════════════════
+   IN-SITU: INLINE CHIP
+   ══════════════════════════════════════════════ */
+function openInlineInsitu(chipEl, latex) {
+
+  if (mode === 'codex') {
+    /*
+      Codex mode
+      Panel  → math-field  (rendered, editable)
+      In-situ → text input  (LaTeX code)
+    */
+    const input    = document.createElement('input');
+    input.type     = 'text';
+    input.className = 'insitu-input';
+    input.value    = latex;
+    input.style.width = inputWidth(latex);
+    input.spellcheck  = false;
+
+    input.addEventListener('input', () => {
+      if (syncSrc === 'panel') return;
+      syncSrc = 'insitu';
+      input.style.width = inputWidth(input.value);
+      writePanelLatex(input.value);
+      requestAnimationFrame(() => { syncSrc = null; });
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); applyEdit(); }
+      if (e.key === 'Escape') cancelEdit();
+    });
+
+    chipEl.replaceWith(input);
+    insituEl = input;
+    input.focus();
+    input.select();
+
+  } else {
+    /*
+      Visual mode
+      Panel   → textarea     (LaTeX code)
+      In-situ → math-field   (rendered, editable)
+    */
+    const mfEl = document.createElement('math-field');
+    mfEl.className = 'insitu-mf';
+    mfEl.setAttribute('virtual-keyboard-mode', 'onfocus');
+
+    chipEl.replaceWith(mfEl);
+    insituEl = mfEl;
+
+    customElements.whenDefined('math-field').then(() => {
+      syncSrc = 'panel';
+      mfEl.value = latex;
+      requestAnimationFrame(() => { syncSrc = null; });
+
+      mfEl.addEventListener('input', () => {
+        if (syncSrc === 'panel') return;
+        syncSrc = 'insitu';
+        writePanelLatex(mfEl.value);
+        requestAnimationFrame(() => { syncSrc = null; });
+      });
+      setTimeout(() => mfEl.focus(), 60);
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════
+   IN-SITU: DISPLAY BLOCK
+   ══════════════════════════════════════════════ */
+function openDisplayInsitu(dispEl, latex) {
+  dispEl.innerHTML = ''; // clear the KaTeX render
+
+  if (mode === 'codex') {
+    /*
+      Codex mode
+      Panel   → math-field  (rendered, editable)
+      In-situ → textarea    (LaTeX code)
+    */
+    const ta       = document.createElement('textarea');
+    ta.className   = 'insitu-display-ta';
+    ta.rows        = 2;
+    ta.value       = latex;
+    ta.spellcheck  = false;
+    ta.placeholder = 'LaTeX…';
+
+    ta.addEventListener('input', () => {
+      if (syncSrc === 'panel') return;
+      syncSrc = 'insitu';
+      writePanelLatex(ta.value);
+      requestAnimationFrame(() => { syncSrc = null; });
+    });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); applyEdit(); }
+      if (e.key === 'Escape') cancelEdit();
+    });
+
+    dispEl.appendChild(ta);
+    insituEl = ta;
+    setTimeout(() => { ta.focus(); ta.select(); }, 20);
+
+  } else {
+    /*
+      Visual mode
+      Panel   → textarea    (LaTeX code)
+      In-situ → math-field  (rendered, editable)
+    */
+    const mfEl = document.createElement('math-field');
+    mfEl.className = 'insitu-display-mf';
+    mfEl.setAttribute('virtual-keyboard-mode', 'onfocus');
+
+    dispEl.appendChild(mfEl);
+    insituEl = mfEl;
+
+    customElements.whenDefined('math-field').then(() => {
+      syncSrc = 'panel';
+      mfEl.value = latex;
+      requestAnimationFrame(() => { syncSrc = null; });
+
+      mfEl.addEventListener('input', () => {
+        if (syncSrc === 'panel') return;
+        syncSrc = 'insitu';
+        writePanelLatex(mfEl.value);
+        requestAnimationFrame(() => { syncSrc = null; });
+      });
+      setTimeout(() => mfEl.focus(), 60);
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════
+   PANEL ↔ IN-SITU SYNC HELPERS
+   ══════════════════════════════════════════════ */
+
+/** Write a latex value into whichever panel surface is currently visible */
+function writePanelLatex(latex) {
+  syncSrc = 'panel';
+  if (mode === 'codex') {
+    if (panelMf) panelMf.value = latex;
+  } else {
+    panelTa.value = latex;
+  }
+  requestAnimationFrame(() => { syncSrc = null; });
+}
+
+/** Read the current latex from the active panel surface */
+function readPanelLatex() {
+  if (mode === 'codex') return panelMf ? panelMf.value : '';
+  return panelTa.value;
+}
+
+/** Push a latex value from panel down to the in-situ editor */
+function pushToInsitu(latex) {
+  if (!insituEl) return;
+  insituEl.value = latex;
+  if (insituEl.tagName === 'INPUT') insituEl.style.width = inputWidth(latex);
+}
+
+/* ══════════════════════════════════════════════
+   APPLY / CANCEL
+   ══════════════════════════════════════════════ */
+function applyEdit() {
+  if (!activeEl) return;
+  const latex = insituEl ? insituEl.value : readPanelLatex();
+  if (!latex) return;
+  activeEl.dataset.latex = latex;
+  closeInsituAndRestore(true);
+}
+
+function cancelEdit() {
+  if (!activeEl) return;
+  closeInsituAndRestore(false);
+}
+
+/**
+ * Tears down the in-situ editor.
+ * save=true  → commits insituEl.value to activeEl.dataset.latex
+ * save=false → leaves dataset.latex untouched (original restored)
+ * In both cases the activeEl gets its KaTeX re-rendered and is returned to the DOM.
+ */
+function closeInsituAndRestore(save) {
+  // Capture everything before clearing state
+  const el      = insituEl;
+  const target  = activeEl;
+
+  insituEl = null;
+  activeEl = null;
+
+  if (!el || !target) return;
+
+  if (save) {
+    target.dataset.latex = el.value || target.dataset.latex;
+  }
+
+  fp.classList.remove('open');
+  target.classList.remove('active');
+
+  if (target.classList.contains('mi')) {
+    // Re-render chip and put it back where the input/mf was
+    renderKatex(target.dataset.latex, target, false);
+    el.replaceWith(target);
+  } else {
+    // Re-render display block in place (el is inside target)
+    target.innerHTML = '';
+    renderKatex(target.dataset.latex, target, true);
+  }
+
+  hint('Click en cualquier fórmula para editarla');
+}
+
+/* ══════════════════════════════════════════════
+   MODE SWITCH
+   ══════════════════════════════════════════════ */
+function setMode(newMode) {
+  if (mode === newMode) return;
+
+  // Capture the current in-progress latex before tearing down
+  const currentLatex = insituEl ? insituEl.value : readPanelLatex();
+
+  // Tear down current in-situ (without touching activeEl or the DOM element)
+  if (insituEl) {
+    const el = insituEl;
+    insituEl = null;
+    if (activeEl) {
+      if (activeEl.classList.contains('mi')) {
+        // Restore chip temporarily so we can re-insert in new mode
+        renderKatex(activeEl.dataset.latex, activeEl, false);
+        el.replaceWith(activeEl);
+      } else {
+        // Display: just clear, new in-situ will be re-created below
+        activeEl.innerHTML = '';
+      }
+    }
+  }
+
+  mode = newMode;
+  document.getElementById('btn-codex').classList.toggle('on', mode === 'codex');
+  document.getElementById('btn-visual').classList.toggle('on', mode === 'visual');
+
+  // Swap panel surfaces
+  if (mode === 'codex') {
+    panelTa.style.display = 'none';
+    if (panelMf) {
+      panelMf.style.display = '';
+      syncSrc = 'panel';
+      panelMf.value = currentLatex;
+      requestAnimationFrame(() => { syncSrc = null; });
+    }
+    hint('Codex: edita código en el documento — el panel muestra la fórmula renderizada');
+  } else {
+    if (panelMf) panelMf.style.display = 'none';
+    panelTa.style.display = '';
+    panelTa.value = currentLatex;
+    hint('Visual: edita con MathLive en el documento — el panel muestra el código LaTeX');
+  }
+
+  // Re-open in-situ in the new mode (using currentLatex, not original)
+  if (activeEl) {
+    // Temporarily update dataset.latex to keep currentLatex alive
+    const saved = activeEl.dataset.latex;
+    activeEl.dataset.latex = currentLatex || saved;
+
+    if (activeEl.classList.contains('md')) {
+      openDisplayInsitu(activeEl, currentLatex);
+    } else {
+      openInlineInsitu(activeEl, currentLatex);
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════
+   UTILS
+   ══════════════════════════════════════════════ */
+function inputWidth(latex) {
+  return Math.max(latex.length * 7.8 + 24, 60) + 'px';
+}
+
+let _hintTimer = null;
+function hint(msg) {
+  const el = document.getElementById('hint');
+  el.textContent = msg;
+  el.classList.remove('hide');
+  clearTimeout(_hintTimer);
+  _hintTimer = setTimeout(() => el.classList.add('hide'), 4500);
+}
+</script>
+</body>
+</html>

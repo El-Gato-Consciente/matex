@@ -79,8 +79,23 @@ body { font-family: var(--fu); background: var(--parch); color: var(--ink);
 .fp-mode.on { background: var(--acc); color: #fff; border-color: var(--acc); }
 .fp-mode:hover:not(.on) { background: #ede8ff; }
 
-#fp-edit { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 7px 10px; gap: 4px; }
-#fp-textarea { width: 100%; padding: 5px 9px; border: 1.5px solid transparent;
+#fp-edit { flex: 1; display: flex; align-items: center; padding: 6px 10px; gap: 4px; }
+
+/* Codex mode: math-field in panel */
+math-field#global-mf {
+  flex: 1; min-height: 36px; max-height: 46px;
+  border: 1.5px solid transparent; border-radius: var(--r);
+  padding: 3px 8px; background: rgba(255,255,255,.6);
+  font-size: 17px; transition: border-color .15s, background .15s, box-shadow .15s;
+  --caret-color: var(--acc);
+}
+math-field#global-mf:focus-within {
+  border-color: var(--f-abd); background: #fff;
+  box-shadow: 0 0 0 3px rgba(123,104,200,.10);
+}
+
+/* Visual mode: textarea in panel (hidden by default; shown when mode=visual) */
+#fp-textarea { display: none; flex: 1; padding: 5px 9px; border: 1.5px solid transparent;
                border-radius: var(--r); background: rgba(255,255,255,.6);
                font-family: var(--fm); font-size: 12px; color: var(--ink);
                outline: none; resize: none; height: 36px; line-height: 1.5;
@@ -88,18 +103,6 @@ body { font-family: var(--fu); background: var(--parch); color: var(--ink);
                caret-color: var(--acc); }
 #fp-textarea:focus { border-color: var(--f-abd); background: #fff;
                      box-shadow: 0 0 0 3px rgba(123,104,200,.10); }
-#fp-latex-echo { font-family: var(--fm); font-size: 9.5px; color: #8070c0;
-                 display: none; padding: 0 3px; opacity: .7; white-space: nowrap;
-                 overflow: hidden; text-overflow: ellipsis; }
-
-/* MathLive field en el panel */
-#fp-mf-wrap { display: none; padding: 7px 10px; border-top: 1px solid #e8e0f8; }
-math-field#global-mf {
-  width: 100%; min-height: 34px;
-  border: 1.5px solid var(--f-abd); border-radius: var(--r);
-  padding: 4px 8px; background: #fff; font-size: 18px;
-  --caret-color: var(--acc);
-}
 
 #fp-acts { width: 90px; flex-shrink: 0; border-left: 1px solid #e0d8f5;
            display: flex; flex-direction: column; justify-content: center;
@@ -125,7 +128,6 @@ math-field#global-mf {
 #ds { flex: 1; overflow-y: auto; background: var(--parch);
       transition: padding-top .2s cubic-bezier(.4,0,.2,1); }
 #ds.fp-open { padding-top: 60px; }
-#ds.fp-open.fp-visual { padding-top: 110px; }
 #ds::-webkit-scrollbar { width: 7px; }
 #ds::-webkit-scrollbar-thumb { background: var(--brd); border-radius: 4px; }
 
@@ -276,6 +278,61 @@ math-field#global-mf {
         backdrop-filter: blur(4px); pointer-events: none;
         transition: opacity .3s; opacity: 1; white-space: nowrap; z-index: 100; }
 #hint.hide { opacity: 0; }
+
+/* ── IN-SITU FORMULA EDITING ─────────────────────── */
+/* Inline chip: replaced by input (Codex) or math-field (Visual) */
+.insitu-input {
+  display: inline-block; vertical-align: middle;
+  font-family: var(--fm); font-size: .88em;
+  border: 1.5px solid var(--f-abd); border-radius: 4px;
+  background: #fff; padding: 2px 7px; outline: none;
+  min-width: 60px; color: var(--ink); caret-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(123,104,200,.12), 0 2px 8px rgba(123,104,200,.08);
+}
+math-field.insitu-mf {
+  display: inline-flex; vertical-align: middle;
+  font-size: 16px; border: 1.5px solid var(--f-abd);
+  border-radius: 4px; background: #fff; padding: 2px 6px;
+  min-width: 80px; box-shadow: 0 0 0 3px rgba(123,104,200,.12);
+  --caret-color: var(--acc);
+}
+/* Display formula in-situ (wraps the mdisp content) */
+.mdisp-edit-wrap {
+  width: 100%; display: flex; flex-direction: column;
+  align-items: stretch; gap: 8px;
+}
+.insitu-display-ta {
+  width: 100%; font-family: var(--fm); font-size: 11.5px;
+  border: 1.5px solid var(--f-abd); border-radius: var(--r);
+  background: rgba(255,255,255,.9); padding: 6px 10px;
+  outline: none; resize: none; color: var(--ink); caret-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(123,104,200,.10);
+}
+math-field.insitu-display-mf {
+  width: 100%; font-size: 22px;
+  border: 1.5px solid var(--f-abd); border-radius: var(--r);
+  background: #fff; padding: 8px;
+  box-shadow: 0 0 0 3px rgba(123,104,200,.10);
+  --caret-color: var(--acc);
+}
+.insitu-preview { display: flex; justify-content: center; padding: 4px 0; opacity: .7; pointer-events: none; }
+
+
+/* ── EDITABLE TEXT BLOCKS ────────────────────────── */
+.bh1[contenteditable="true"], .bh2[contenteditable="true"] {
+  outline: none; cursor: text; border-radius: 2px;
+  transition: background .12s;
+}
+.bh1[contenteditable="true"]:focus { border-bottom-color: var(--acc); background: rgba(123,104,200,.03); }
+.bh2[contenteditable="true"]:focus { background: rgba(123,104,200,.03); }
+.bp.editable { outline: none; cursor: text; border-radius: 3px; transition: background .12s; }
+.bp.editable:focus { background: rgba(123,104,200,.025); }
+/* math chips inside editable paragraphs */
+.bp.editable .mc { cursor: pointer; }
+/* placeholder text */
+.bp.editable:empty::before, .bh1[contenteditable]:empty::before, .bh2[contenteditable]:empty::before {
+  content: attr(data-placeholder); color: var(--ink4); pointer-events: none;
+}
 </style>
 </head>
 <body>
@@ -304,18 +361,16 @@ math-field#global-mf {
         </div>
       </div>
       <div id="fp-edit">
+        <!-- Codex mode: panel shows MathLive (rendered formula) -->
+        <math-field id="global-mf" virtual-keyboard-mode="onfocus"></math-field>
+        <!-- Visual mode: panel shows LaTeX code -->
         <textarea id="fp-textarea" rows="1" spellcheck="false"
-          placeholder="LaTeX aquí… (prueba: \int f(x) dx)"></textarea>
-        <div id="fp-latex-echo"></div>
+          placeholder="LaTeX aquí…"></textarea>
       </div>
       <div id="fp-acts">
         <button class="fpa apply" onclick="applyFormula()">✓ Aplicar</button>
         <button class="fpa" onclick="cancelFormula()">✕ Cancelar</button>
       </div>
-    </div>
-    <!-- MathLive — solo visible en modo Visual -->
-    <div id="fp-mf-wrap">
-      <math-field id="global-mf" virtual-keyboard-mode="onfocus"></math-field>
     </div>
     <!-- Hint del normalizer en el panel -->
     <div id="fp-norm-hint">
@@ -357,6 +412,7 @@ math-field#global-mf {
    ══════════════════════════════════════════════════ */
 let _uid = 100;
 const uid = () => 'b' + (_uid++);
+
 
 // Bloques del documento (simulan el .ltxj)
 let BLOCKS = [
@@ -429,21 +485,23 @@ let BLOCKS = [
 ];
 
 /* ══════════════════════════════════════════════════
-   ESTADO DE LA FÓRMULA ACTIVA
+   ESTADO
    ══════════════════════════════════════════════════ */
 let activeId   = null;   // id del bloque activo
 let activeIdx  = null;   // índice del chip inline (-1 = display)
 let mode       = 'codex'; // 'codex' | 'visual'
-let syncSrc    = null;   // null | 'text' | 'mathlive'  (patrón syncSrc del data-lifecycle)
+let syncSrc    = null;   // null | 'text' | 'mathlive' | 'insitu'
 let normTimer  = null;
+
+// In-situ editor state
+let insituEl   = null;  // DOM element activo (input / textarea / math-field)
+let insituKind = null;  // 'inline' | 'display'
 
 const fp       = document.getElementById('fp');
 const ds       = document.getElementById('ds');
 const textarea = document.getElementById('fp-textarea');
 const fpType   = document.getElementById('fp-type');
-const latexEcho= document.getElementById('fp-latex-echo');
-const mfWrap   = document.getElementById('fp-mf-wrap');
-let   mf       = null; // <math-field>, se resuelve cuando el custom element está listo
+let   mf       = null;  // <math-field id="global-mf">, resolved after custom element ready
 
 /* ══════════════════════════════════════════════════
    RENDER DEL DOCUMENTO
@@ -459,10 +517,10 @@ function mkBlock(b) {
   wrap.className = 'blk';
   wrap.dataset.id = b.id;
 
-  // Handle: drag + plus
   const handle = document.createElement('div');
   handle.className = 'blk-handle';
   const plus = document.createElement('button');
+  plus.type = 'button';
   plus.className = 'blk-plus';
   plus.textContent = '+';
   plus.title = 'Insertar bloque';
@@ -470,18 +528,28 @@ function mkBlock(b) {
   handle.appendChild(plus);
   wrap.appendChild(handle);
 
-  // Contenido
   const inner = document.createElement('div');
 
   if (b.type === 'h1') {
     inner.className = 'bh1';
+    inner.setAttribute('contenteditable', 'true');
+    inner.dataset.placeholder = 'Sección…';
     inner.textContent = b.text;
+    inner.addEventListener('blur', () => { b.text = inner.textContent.trim() || b.text; });
+    inner.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inner.blur(); } });
   } else if (b.type === 'h2') {
     inner.className = 'bh2';
+    inner.setAttribute('contenteditable', 'true');
+    inner.dataset.placeholder = 'Subsección…';
     inner.textContent = b.text;
+    inner.addEventListener('blur', () => { b.text = inner.textContent.trim() || b.text; });
+    inner.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inner.blur(); } });
   } else if (b.type === 'p') {
-    inner.className = 'bp';
+    inner.className = 'bp editable';
+    inner.setAttribute('contenteditable', 'true');
+    inner.dataset.placeholder = 'Escribe aquí…';
     renderParagraphInto(inner, b);
+    inner.addEventListener('blur', () => saveEditableParagraph(inner, b));
   } else if (b.type === 'md') {
     inner.className = 'mdisp';
     inner.dataset.bid = b.id;
@@ -492,16 +560,22 @@ function mkBlock(b) {
     const kEl = document.createElement('span');
     renderKatex(b.latex, kEl, true);
     inner.appendChild(kEl);
-    inner.addEventListener('click', () => activateDisplay(b.id));
+    inner.addEventListener('click', e => { e.stopPropagation(); activateDisplay(b.id); });
   } else if (b.type === 'thm') {
     inner.className = `bthm env-${b.env}`;
     const lbl = document.createElement('div');
     lbl.className = 'thm-lbl';
+    lbl.setAttribute('contenteditable', 'true');
     lbl.textContent = b.label || b.env.charAt(0).toUpperCase() + b.env.slice(1);
+    lbl.addEventListener('blur', () => { b.label = lbl.textContent.trim() || b.label; });
+    lbl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); lbl.blur(); } });
     inner.appendChild(lbl);
     const body = document.createElement('div');
-    body.className = 'thm-body bp';
+    body.className = 'thm-body bp editable';
+    body.setAttribute('contenteditable', 'true');
+    body.dataset.placeholder = 'Enunciado…';
     renderParagraphInto(body, b);
+    body.addEventListener('blur', () => saveEditableParagraph(body, b));
     inner.appendChild(body);
   }
 
@@ -520,13 +594,30 @@ function renderParagraphInto(container, block) {
     } else if (node.k === 'm') {
       const chip = document.createElement('span');
       chip.className = 'mc';
+      chip.setAttribute('contenteditable', 'false');
       chip.dataset.bid = block.id;
       chip.dataset.idx = idx;
       renderKatex(node.v, chip, false);
-      chip.addEventListener('click', () => activateInline(block.id, idx));
+      chip.addEventListener('click', e => { e.stopPropagation(); activateInline(block.id, idx); });
       container.appendChild(chip);
     }
   });
+}
+
+/* Saves text + preserves math chips after editing a paragraph */
+function saveEditableParagraph(el, block) {
+  const nodes = [];
+  el.childNodes.forEach(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = node.textContent;
+      if (t) nodes.push({ k: 't', v: t });
+    } else if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('mc')) {
+      const idx = parseInt(node.dataset.idx);
+      const orig = block.nodes[idx];
+      if (orig) nodes.push({ k: 'm', v: orig.v });
+    }
+  });
+  if (nodes.length > 0) block.nodes = nodes;
 }
 
 function renderKatex(latex, el, display) {
@@ -542,51 +633,39 @@ function renderKatex(latex, el, display) {
 }
 
 /* ══════════════════════════════════════════════════
-   ACTIVAR FÓRMULA
+   ACTIVAR FÓRMULA — panel + in-situ
    ══════════════════════════════════════════════════ */
 function activateInline(blockId, nodeIdx) {
+  if (activeId === blockId && activeIdx === nodeIdx) return;
+  closeInsitu(false);
+
   const block = BLOCKS.find(b => b.id === blockId);
   const latex = block.nodes[nodeIdx].v;
-
   activeId  = blockId;
   activeIdx = nodeIdx;
 
   fpType.textContent = '✎ Fórmula inline';
-  textarea.value = latex;
+  setPanelLatex(latex);
   openPanel();
-  textarea.focus();
-  textarea.select();
   runNormalizerCheck(latex);
-  markActive(blockId, nodeIdx);
-  setHint('Edita el LaTeX · Enter para aplicar · Toggle "Visual ✦" para MathLive');
+  createInsituInline(blockId, nodeIdx, latex);
+  setHint('Codex: edita el código aquí o en el panel · Visual ✦: edita con MathLive · Enter aplica');
 }
 
 function activateDisplay(blockId) {
-  const block = BLOCKS.find(b => b.id === blockId);
+  if (activeId === blockId && activeIdx === -1) return;
+  closeInsitu(false);
 
+  const block = BLOCKS.find(b => b.id === blockId);
   activeId  = blockId;
   activeIdx = -1;
 
   fpType.textContent = '✎ Fórmula display';
-  textarea.value = block.latex;
+  setPanelLatex(block.latex);
   openPanel();
-  textarea.focus();
-  textarea.select();
   runNormalizerCheck(block.latex);
-  markActive(blockId, -1);
-  setHint('Fórmula display activa · Edita el LaTeX · Toggle "Visual ✦" para MathLive');
-}
-
-function markActive(blockId, nodeIdx) {
-  // Quitar activos previos
-  document.querySelectorAll('.mc.active, .mdisp.active').forEach(el => el.classList.remove('active'));
-  if (nodeIdx === -1) {
-    const el = document.querySelector(`.mdisp[data-bid="${blockId}"]`);
-    if (el) el.classList.add('active');
-  } else {
-    const el = document.querySelector(`.mc[data-bid="${blockId}"][data-idx="${nodeIdx}"]`);
-    if (el) el.classList.add('active');
-  }
+  createInsituDisplay(blockId, block.latex);
+  setHint('Edita la fórmula display · Enter aplica (Shift+Enter = nueva línea en textarea)');
 }
 
 function openPanel() {
@@ -595,9 +674,9 @@ function openPanel() {
 }
 
 function closePanelVisuals() {
+  closeInsitu(true);
   fp.classList.remove('open');
   ds.classList.remove('fp-open');
-  ds.classList.remove('fp-visual');
   document.querySelectorAll('.mc.active, .mdisp.active').forEach(el => el.classList.remove('active'));
   activeId  = null;
   activeIdx = null;
@@ -606,78 +685,304 @@ function closePanelVisuals() {
 }
 
 /* ══════════════════════════════════════════════════
+   IN-SITU EDITORS
+   Codex  → in-situ = text input (code)   / panel = MathLive
+   Visual → in-situ = math-field          / panel = textarea (code)
+   ══════════════════════════════════════════════════ */
+function createInsituInline(blockId, nodeIdx, latex) {
+  const chip = document.querySelector(`.mc[data-bid="${blockId}"][data-idx="${nodeIdx}"]`);
+  if (!chip) return;
+  insituKind = 'inline';
+
+  if (mode === 'codex') {
+    // In-situ: text input (code). Panel already shows MathLive.
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'insitu-input';
+    input.value = latex;
+    input.style.width = Math.max(latex.length * 7.5 + 24, 70) + 'px';
+    input.spellcheck = false;
+    input.addEventListener('input', () => {
+      if (syncSrc === 'insitu') return;
+      const v = input.value;
+      input.style.width = Math.max(v.length * 7.5 + 24, 70) + 'px';
+      syncFromInsitu(v);
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); applyFormula(); }
+      if (e.key === 'Escape') { cancelFormula(); }
+    });
+    chip.replaceWith(input);
+    insituEl = input;
+    input.focus(); input.select();
+
+  } else {
+    // Visual mode: in-situ = math-field. Panel already shows textarea (code).
+    const mfEl = document.createElement('math-field');
+    mfEl.className = 'insitu-mf';
+    mfEl.setAttribute('virtual-keyboard-mode', 'onfocus');
+    chip.replaceWith(mfEl);
+    insituEl = mfEl;
+
+    customElements.whenDefined('math-field').then(() => {
+      syncSrc = 'panel';
+      mfEl.value = latex;
+      requestAnimationFrame(() => { syncSrc = null; });
+      mfEl.addEventListener('input', () => {
+        if (syncSrc === 'insitu') return;
+        syncFromInsitu(mfEl.value);
+      });
+      setTimeout(() => mfEl.focus(), 80);
+    });
+  }
+}
+
+function createInsituDisplay(blockId, latex) {
+  const dispEl = document.querySelector(`.mdisp[data-bid="${blockId}"]`);
+  if (!dispEl) return;
+  insituKind = 'display';
+
+  const hint = dispEl.querySelector('.type-hint');
+  dispEl.innerHTML = '';
+  if (hint) dispEl.appendChild(hint);
+  dispEl.classList.add('active');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'mdisp-edit-wrap';
+
+  if (mode === 'codex') {
+    // In-situ: textarea (code). Panel shows MathLive.
+    const ta = document.createElement('textarea');
+    ta.className = 'insitu-display-ta';
+    ta.rows = 2;
+    ta.value = latex;
+    ta.spellcheck = false;
+    ta.placeholder = 'LaTeX aquí…';
+    ta.addEventListener('input', () => {
+      if (syncSrc === 'insitu') return;
+      syncFromInsitu(ta.value);
+    });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); applyFormula(); }
+      if (e.key === 'Escape') { cancelFormula(); }
+    });
+    wrap.appendChild(ta);
+    dispEl.appendChild(wrap);
+    insituEl = ta;
+    // small delay so click event finishes before focus
+    setTimeout(() => { ta.focus(); ta.select(); }, 20);
+
+  } else {
+    // Visual mode: in-situ = math-field. Panel shows textarea (code).
+    const mfEl = document.createElement('math-field');
+    mfEl.className = 'insitu-display-mf';
+    mfEl.setAttribute('virtual-keyboard-mode', 'onfocus');
+    wrap.appendChild(mfEl);
+    dispEl.appendChild(wrap);
+    insituEl = mfEl;
+
+    customElements.whenDefined('math-field').then(() => {
+      syncSrc = 'panel';
+      mfEl.value = latex;
+      requestAnimationFrame(() => { syncSrc = null; });
+      mfEl.addEventListener('input', () => {
+        if (syncSrc === 'insitu') return;
+        syncFromInsitu(mfEl.value);
+      });
+      setTimeout(() => mfEl.focus(), 80);
+    });
+  }
+}
+
+/* Close in-situ: if save=true persist current value; restore chip/display in DOM */
+function closeInsitu(save) {
+  if (!insituEl) return;
+  const el   = insituEl;
+  const kind = insituKind;
+  // Capture IDs NOW (before activeId/activeIdx are cleared by caller)
+  const bid  = activeId;
+  const nidx = activeIdx;
+
+  insituEl   = null;
+  insituKind = null;
+
+  const latexVal = el.value !== undefined ? el.value : '';
+
+  if (kind === 'inline') {
+    const block = bid ? BLOCKS.find(b => b.id === bid) : null;
+    if (save && block && nidx >= 0) {
+      block.nodes[nidx].v = latexVal || block.nodes[nidx].v;
+    }
+    // Restore chip — capture bid/nidx by value, not by reference to globals
+    const chip = document.createElement('span');
+    chip.className = 'mc';
+    chip.setAttribute('contenteditable', 'false');
+    if (block && nidx !== null) {
+      chip.dataset.bid = bid;
+      chip.dataset.idx = nidx;
+      renderKatex(block.nodes[nidx].v, chip, false);
+      chip.addEventListener('click', e => { e.stopPropagation(); activateInline(bid, nidx); });
+    }
+    el.replaceWith(chip);
+
+  } else if (kind === 'display') {
+    const block = bid ? BLOCKS.find(b => b.id === bid) : null;
+    if (save && block) {
+      block.latex = latexVal || block.latex;
+    }
+    const dispEl = document.querySelector(`.mdisp[data-bid="${bid}"]`);
+    if (dispEl && block) {
+      const hint = document.createElement('span');
+      hint.className = 'type-hint';
+      hint.textContent = '∑ display';
+      const kEl = document.createElement('span');
+      renderKatex(block.latex, kEl, true);
+      dispEl.innerHTML = '';
+      dispEl.appendChild(hint);
+      dispEl.appendChild(kEl);
+      dispEl.classList.remove('active');
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════
    APLICAR / CANCELAR
    ══════════════════════════════════════════════════ */
 function applyFormula() {
   if (activeId === null) return;
-  const latex = mode === 'visual' ? getMfValue() : textarea.value.trim();
+  const latex = insituEl
+    ? (insituEl.value !== undefined ? insituEl.value : '')
+    : getPanelLatex();
   if (!latex) return;
 
   const block = BLOCKS.find(b => b.id === activeId);
-  if (activeIdx === -1) {
-    block.latex = latex;
-  } else {
-    block.nodes[activeIdx].v = latex;
-  }
+  if (activeIdx === -1) block.latex = latex;
+  else block.nodes[activeIdx].v = latex;
 
+  // close insitu with save so it restores the chip/display with new value
+  const savedId  = activeId;
+  const savedIdx = activeIdx;
   closePanelVisuals();
-  if (mode === 'visual') setMode('codex', true);
-  renderAll();
+  // re-render only the changed block
+  const blkEl = document.querySelector(`.blk[data-id="${savedId}"]`);
+  if (blkEl) {
+    const newBlk = mkBlock(BLOCKS.find(b => b.id === savedId));
+    blkEl.replaceWith(newBlk);
+  }
   setHint('Fórmula actualizada ✓');
   setTimeout(() => setHint('Haz click en cualquier fórmula para editarla'), 2500);
 }
 
 function cancelFormula() {
-  if (mode === 'visual') setMode('codex', true);
-  closePanelVisuals();
+  const prevId = activeId;
+  if (insituEl) closeInsitu(false); // discard edits, restore DOM
+  fp.classList.remove('open');
+  ds.classList.remove('fp-open');
+  // Full re-render of the block so chip/display is clean from BLOCKS data
+  if (prevId !== null) {
+    const blkEl = document.querySelector(`.blk[data-id="${prevId}"]`);
+    if (blkEl) blkEl.replaceWith(mkBlock(BLOCKS.find(b => b.id === prevId)));
+  }
+  activeId = null; activeIdx = null;
+  clearCoachCards();
+  document.getElementById('fp-norm-hint').classList.remove('show');
   setHint('Haz click en cualquier fórmula para editarla');
 }
 
 /* ══════════════════════════════════════════════════
-   MODO CODEX / VISUAL (MathLive)
+   MODO CODEX / VISUAL
+   Codex  → panel muestra MathLive  / in-situ muestra input de código
+   Visual → panel muestra textarea  / in-situ muestra math-field
    ══════════════════════════════════════════════════ */
 function setMode(newMode, silent) {
+  if (mode === newMode) return;
+  // Snapshot current latex before tearing down the in-situ
+  const currentLatex = getPanelLatex();
+  if (insituEl) closeInsitu(false);
+
   mode = newMode;
   document.getElementById('btn-codex').classList.toggle('on', mode === 'codex');
   document.getElementById('btn-visual').classList.toggle('on', mode === 'visual');
 
-  if (mode === 'visual') {
+  if (mode === 'codex') {
+    // Panel: show MathLive, hide textarea
     textarea.style.display = 'none';
-    latexEcho.style.display = 'block';
-    mfWrap.style.display = 'block';
-    ds.classList.add('fp-visual');
-    // Pasar valor al campo MathLive
     if (mf) {
-      syncSrc = 'text';
-      mf.value = textarea.value;
+      mf.style.display = '';
+      syncSrc = 'panel';
+      mf.value = currentLatex;
       requestAnimationFrame(() => { syncSrc = null; });
-      setTimeout(() => mf.focus(), 80);
     }
-    if (!silent) setHint('Modo Visual activo — MathLive sincroniza con el LaTeX en tiempo real');
+    if (!silent) setHint('Codex: edita código en el documento · el panel muestra la fórmula renderizada');
   } else {
+    // Panel: show textarea, hide MathLive
+    if (mf) mf.style.display = 'none';
     textarea.style.display = '';
-    latexEcho.style.display = 'none';
-    mfWrap.style.display = 'none';
-    ds.classList.remove('fp-visual');
-    if (!silent) { textarea.focus(); setHint('Modo Codex — escribe LaTeX directamente'); }
+    textarea.value = currentLatex;
+    if (!silent) setHint('Visual: edita con MathLive en el documento · el panel muestra el código LaTeX');
+  }
+
+  // Rebuild in-situ in new mode
+  if (activeId !== null) {
+    if (activeIdx === -1) createInsituDisplay(activeId, currentLatex);
+    else createInsituInline(activeId, activeIdx, currentLatex);
   }
 }
 
 /* ══════════════════════════════════════════════════
-   SYNC TEXTAREA ↔ MATHLIVE  (patrón syncSrc)
+   PANEL ↔ IN-SITU SYNC  (syncSrc pattern)
+   Codex:  panel = MathLive (mf)  /  in-situ = text input
+   Visual: panel = textarea       /  in-situ = math-field
    ══════════════════════════════════════════════════ */
-textarea.addEventListener('input', () => {
-  if (syncSrc === 'mathlive') return;
-  const latex = textarea.value;
-  // Actualizar vista en documento en tiempo real
-  livePreview(latex);
-  // Si modo visual: sync → MathLive
-  if (mode === 'visual' && mf) {
-    syncSrc = 'text';
-    mf.value = latex;
-    requestAnimationFrame(() => { syncSrc = null; });
+
+/* Read current latex from whichever panel surface is active */
+function getPanelLatex() {
+  if (mode === 'codex') return mf ? mf.value : '';
+  return textarea.value;
+}
+
+/* Write latex to the panel surface (without triggering its own input handler) */
+function setPanelLatex(latex) {
+  syncSrc = 'panel';
+  if (mode === 'codex') {
+    if (mf) mf.value = latex;
+  } else {
+    textarea.value = latex;
   }
-  // Normalizer con debounce
+  requestAnimationFrame(() => { syncSrc = null; });
+}
+
+/* Push a new latex value from the in-situ to the panel and normalizer */
+function syncFromInsitu(latex) {
+  syncSrc = 'insitu';
+  if (mode === 'codex') {
+    if (mf) mf.value = latex;
+  } else {
+    textarea.value = latex;
+  }
+  requestAnimationFrame(() => { syncSrc = null; });
+  clearTimeout(normTimer);
+  normTimer = setTimeout(() => runNormalizerCheck(latex), 400);
+}
+
+/* Push a new latex value from the panel to the in-situ */
+function syncInsituFromPanel(latex) {
+  if (!insituEl) return;
+  if (insituEl.tagName === 'INPUT') {
+    insituEl.value = latex;
+    insituEl.style.width = Math.max(latex.length * 7.5 + 24, 70) + 'px';
+  } else {
+    insituEl.value = latex;
+  }
+}
+
+/* Visual mode: textarea in panel */
+textarea.addEventListener('input', () => {
+  if (syncSrc === 'insitu' || syncSrc === 'panel') return;
+  const latex = textarea.value;
+  syncSrc = 'panel';
+  syncInsituFromPanel(latex);
+  requestAnimationFrame(() => { syncSrc = null; });
   clearTimeout(normTimer);
   normTimer = setTimeout(() => runNormalizerCheck(latex), 400);
 });
@@ -691,36 +996,23 @@ function setupMathLiveSync() {
   mf = document.getElementById('global-mf');
   if (!mf) return;
 
+  // Codex mode: MathLive in panel
   mf.addEventListener('input', () => {
-    if (syncSrc === 'text') return;
+    if (syncSrc === 'insitu' || syncSrc === 'panel') return;
     const latex = mf.value;
-    syncSrc = 'mathlive';
-    textarea.value = latex;
-    latexEcho.textContent = latex;
+    syncSrc = 'panel';
+    syncInsituFromPanel(latex);
     requestAnimationFrame(() => { syncSrc = null; });
-    livePreview(latex);
     clearTimeout(normTimer);
     normTimer = setTimeout(() => runNormalizerCheck(latex), 400);
   });
+
 }
 
 function getMfValue() {
   return mf ? mf.value : textarea.value;
 }
 
-/* ══════════════════════════════════════════════════
-   PREVIEW EN TIEMPO REAL (mientras se edita)
-   ══════════════════════════════════════════════════ */
-function livePreview(latex) {
-  if (activeId === null) return;
-  if (activeIdx === -1) {
-    const el = document.querySelector(`.mdisp[data-bid="${activeId}"] span:last-child`);
-    if (el) renderKatex(latex, el, true);
-  } else {
-    const el = document.querySelector(`.mc[data-bid="${activeId}"][data-idx="${activeIdx}"]`);
-    if (el) renderKatex(latex, el, false);
-  }
-}
 
 /* ══════════════════════════════════════════════════
    NORMALIZER (simulado)
@@ -863,9 +1155,8 @@ function renderCoach(suggestions, currentLatex) {
 
 function acceptSuggestion(s, card) {
   const newLatex = s.latexAfter;
-  textarea.value = newLatex;
-  if (mode === 'visual' && mf) { mf.value = newLatex; }
-  livePreview(newLatex);
+  setPanelLatex(newLatex);
+  syncInsituFromPanel(newLatex);
   // Quitar esta sugerencia
   card.style.transition = 'opacity .25s, transform .25s';
   card.style.opacity = '0';
@@ -965,24 +1256,77 @@ function insertBlock(item, afterId) {
   const newBlock = buildNewBlock(item);
   BLOCKS.splice(idx + 1, 0, newBlock);
   renderAll();
-  setHint(`Bloque "${item.name}" insertado — click en él para editar`);
+  // Auto-focus new block
+  setTimeout(() => {
+    if (item.id === 'md') {
+      activateDisplay(newBlock.id);
+    } else if (item.id === 'h1' || item.id === 'h2') {
+      const el = document.querySelector(`.blk[data-id="${newBlock.id}"] [contenteditable]`);
+      if (el) { el.focus(); selectAllText(el); }
+    } else if (item.id === 'p') {
+      const el = document.querySelector(`.blk[data-id="${newBlock.id}"] .bp`);
+      if (el) { el.focus(); selectAllText(el); }
+    } else if (item.id === 'thm') {
+      const el = document.querySelector(`.blk[data-id="${newBlock.id}"] .thm-body`);
+      if (el) { el.focus(); selectAllText(el); }
+    }
+  }, 50);
+  setHint(`"${item.name}" insertado — escribe directamente`);
   setTimeout(() => setHint('Haz click en cualquier fórmula para editarla'), 3000);
+}
+
+function selectAllText(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
 }
 
 function buildNewBlock(item) {
   const id = uid();
   if (item.id === 'h1') return { id, type:'h1', text:'Nueva sección' };
   if (item.id === 'h2') return { id, type:'h2', text:'Nueva subsección' };
-  if (item.id === 'p')  return { id, type:'p',  nodes:[{k:'t', v:'Texto nuevo. Prueba insertar una fórmula con '},{k:'m', v:'f(x)'},{k:'t', v:'.'}] };
-  if (item.id === 'md') return { id, type:'md', latex:'\\int_a^b f(x) dx' };
+  if (item.id === 'p')  return { id, type:'p',  nodes:[{k:'t', v:'Escribe aquí…'}] };
+  if (item.id === 'md') return { id, type:'md', latex:'f(x)' };
   if (item.id === 'thm') {
     const labels = {
       theorem:'Nuevo Teorema', definition:'Nueva Definición', lemma:'Nuevo Lema',
       proof:'Demostración', exercise:'Nuevo Ejercicio'
     };
     return { id, type:'thm', env: item.env, label: labels[item.env],
-             nodes:[{k:'t', v:'Enunciado del '},{k:'t', v:item.name.toLowerCase()},{k:'t', v:'.'}] };
+             nodes:[{k:'t', v:'Enunciado.'}] };
   }
+}
+
+/* Inject a new inline math chip into an editable paragraph at cursor position */
+function injectInlineMath(bpEl, block) {
+  const newLatex = 'f(x)';
+  const newIdx   = block.nodes.length;
+  block.nodes.push({ k: 'm', v: newLatex });
+
+  const chip = document.createElement('span');
+  chip.className = 'mc';
+  chip.setAttribute('contenteditable', 'false');
+  chip.dataset.bid = block.id;
+  chip.dataset.idx = newIdx;
+  renderKatex(newLatex, chip, false);
+  chip.addEventListener('click', e => { e.stopPropagation(); activateInline(block.id, newIdx); });
+
+  // Insert at cursor or append
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && bpEl.contains(sel.anchorNode)) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(chip);
+    range.setStartAfter(chip);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    bpEl.appendChild(chip);
+  }
+  activateInline(block.id, newIdx);
 }
 
 /* ══════════════════════════════════════════════════
@@ -1004,18 +1348,32 @@ document.querySelector('.top-btn:not(.primary)').addEventListener('click', () =>
   document.getElementById('coach').classList.toggle('open');
 });
 
+/* Close formula panel when clicking outside active formula/panel */
+document.addEventListener('click', e => {
+  if (!fp.classList.contains('open')) return;
+  if (fp.contains(e.target)) return;
+  if (e.target.closest('.mdisp')) return;  // display click handled by its own listener
+  if (e.target.closest('.mc')) return;
+  if (e.target.closest('.insitu-input')) return;
+  if (e.target.closest('.insitu-display-ta')) return;
+  if (e.target.closest('math-field')) return;
+  cancelFormula();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && fp.classList.contains('open')) cancelFormula();
+});
+
 /* ══════════════════════════════════════════════════
    INIT
    ══════════════════════════════════════════════════ */
-// Esperar a que KaTeX y MathLive estén listos
 window.addEventListener('load', () => {
   renderAll();
-  // MathLive: esperar a que el custom element esté definido
   customElements.whenDefined('math-field').then(() => {
     setupMathLiveSync();
     console.log('[Formalia demo] MathLive listo');
   });
-  setTimeout(() => setHint('Haz click en cualquier fórmula para editarla'), 600);
+  setTimeout(() => setHint('Click en una fórmula para editar · "+" para insertar bloques'), 600);
 });
 </script>
 </body>

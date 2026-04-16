@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oda Planner - Tiptap + MathLive Fix</title>
+  
+  <style>
+    :root {
+      --primary: #0078d4;
+      --bg: #f3f4f6;
+      --border: #d1d5db;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background-color: var(--bg);
+      display: flex;
+      justify-content: center;
+      padding: 30px;
+      margin: 0;
+    }
+
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* EDITOR TIPTAP */
+    .editor-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    .toolbar-top {
+      padding: 10px;
+      background: #fafafa;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+    }
+
+    .tiptap-content {
+      padding: 25px;
+      min-height: 250px;
+      outline: none;
+      line-height: 1.8;
+      font-size: 1.1rem;
+    }
+
+    /* ESTILO DE LA FÓRMULA INLINE */
+    .math-wrapper {
+      display: inline-block;
+      vertical-align: middle;
+      margin: 0 4px;
+      padding: 2px 8px;
+      background: #f0f7ff;
+      border: 1px solid #cce3ff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .math-wrapper math-field {
+      font-size: 1.2rem;
+      background: transparent;
+      border: none;
+      pointer-events: none;
+    }
+
+    /* CONSOLA FLOTANTE DE EDICIÓN */
+    .edit-console {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 550px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      display: none;
+      z-index: 1000;
+    }
+
+    #mf-editor {
+      width: 100%;
+      font-size: 2rem;
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background: white;
+    }
+
+    .latex-sync {
+      width: 100%;
+      background: #1e1e1e;
+      color: #9cdcfe;
+      font-family: 'Fira Code', monospace;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      box-sizing: border-box;
+    }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="editor-card">
+    <div class="toolbar-top">
+      <button class="btn" id="add-formula">+ Insertar Fórmula</button>
+    </div>
+    <div id="tiptap-editor" class="tiptap-content"></div>
+  </div>
+
+  <div id="edit-console" class="edit-console">
+    <div style="display:flex; justify-content: space-between; margin-bottom: 10px;">
+      <span style="font-weight:bold; font-size: 0.75rem; color: #666; letter-spacing: 0.5px;">EDITOR ODA MATH</span>
+      <button onclick="closeConsole()" style="border:none; background:none; cursor:pointer; font-size: 1.2rem;">✕</button>
+    </div>
+    <math-field id="mf-editor"></math-field>
+    <input type="text" id="latex-input" class="latex-sync" placeholder="Escribe LaTeX aquí...">
+  </div>
+</div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "https://esm.sh/@tiptap/core": "https://esm.sh/@tiptap/core",
+      "https://esm.sh/@tiptap/starter-kit": "https://esm.sh/@tiptap/starter-kit"
+    }
+  }
+</script>
+
+<script type="module">
+  import { Editor } from 'https://esm.sh/@tiptap/core';
+  import StarterKit from 'https://esm.sh/@tiptap/starter-kit';
+  import 'https://unpkg.com/mathlive?module';
+
+  const mfEditor = document.getElementById('mf-editor');
+  const latexInput = document.getElementById('latex-input');
+  const consoleEl = document.getElementById('edit-console');
+  let activeNode = null;
+
+  // 1. INICIALIZAR TIPTAP
+  const editor = new Editor({
+    element: document.querySelector('#tiptap-editor'),
+    extensions: [StarterKit],
+    content: `<p>Bienvenido. Haz clic en esta fórmula: <span class="math-wrapper" data-latex="\\nabla \cdot \mathbf{E} = \frac{\rho}{\varepsilon_0}"></span> para editarla.</p>`,
+    onCreate() { renderMathNodes(); },
+    onUpdate() { renderMathNodes(); }
+  });
+
+  // 2. RENDERIZADOR DE NODOS
+  function renderMathNodes() {
+    document.querySelectorAll('.math-wrapper').forEach(el => {
+      if (!el.querySelector('math-field')) {
+        const latex = el.getAttribute('data-latex') || '';
+        el.innerHTML = `<math-field read-only>${latex}</math-field>`;
+        el.onclick = (e) => {
+          e.stopPropagation();
+          openConsole(el);
+        };
+      }
+    });
+  }
+
+  // 3. LÓGICA DE TRIPLE DIRECCIONALIDAD (CORREGIDA)
+  function openConsole(node) {
+    activeNode = node;
+    const latex = node.getAttribute('data-latex');
+    
+    // Sincronizar editores de la consola
+    mfEditor.value = latex;
+    latexInput.value = latex;
+    
+    consoleEl.style.display = 'block';
+    setTimeout(() => mfEditor.focus(), 50);
+  }
+
+  window.closeConsole = () => { 
+    consoleEl.style.display = 'none'; 
+    activeNode = null; 
+  };
+
+  // Sincronización: Visual -> Resto
+  mfEditor.addEventListener('input', () => {
+    const val = mfEditor.value;
+    latexInput.value = val;
+    updateDocNode(val);
+  });
+
+  // Sincronización: Código -> Resto
+  latexInput.addEventListener('input', () => {
+    const val = latexInput.value;
+    mfEditor.value = val;
+    updateDocNode(val);
+  });
+
+  function updateDocNode(val) {
+    if (activeNode) {
+      activeNode.setAttribute('data-latex', val);
+      const innerMf = activeNode.querySelector('math-field');
+      if (innerMf) innerMf.value = val;
+    }
+  }
+
+  // 4. INSERTAR FÓRMULA
+  document.getElementById('add-formula').onclick = () => {
+    editor.chain().focus().insertContent(' <span class="math-wrapper" data-latex="x = "></span> ').run();
+    renderMathNodes();
+  };
+
+  // CONFIGURACIÓN DE MATHLIVE (FORMA MODERNA)
+  window.addEventListener('DOMContentLoaded', () => {
+    // Configurar el editor principal
+    mfEditor.menuItems = [];
+    mfEditor.mathVirtualKeyboardPolicy = "manual";
+    
+    // Atajos y modo estricto
+    mfEditor.inlineShortcuts = {
+      "sqrt": "\\sqrt{#?}",
+      "\\sqrt": "\\sqrt{#?}",
+      "pi": "\\pi",
+      "\\pi": "\\pi"
+    };
+
+    // La propiedad smartMode se asigna directamente
+    mfEditor.smartMode = false;
+  });
+</script>
+
+</body>
+</html>
