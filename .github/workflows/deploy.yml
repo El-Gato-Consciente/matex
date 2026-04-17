@@ -12,10 +12,12 @@ env:
   AWS_REGION: us-east-1
   S3_BUCKET: matex-static-egc-prod
   DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_MATEX }}
+  DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Prod
     steps:
       - uses: actions/checkout@v4
 
@@ -27,10 +29,12 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
+
 
       - name: Sync to S3
         run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ --delete
