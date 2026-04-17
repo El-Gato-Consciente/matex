@@ -1,1 +1,37 @@
-{"name":"matex-demos","private":true,"type":"module","dependencies":{"mathlive":"^0.109.1"}}
+{
+  "name": "formalia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev":     "vite",
+    "build":   "tsc && vite build",
+    "preview": "vite preview",
+    "test":    "vitest"
+  },
+  "dependencies": {
+    "@preact/signals-core":           "^1.8.0",
+    "@tiptap/core":                   "^2.11.0",
+    "@tiptap/extension-bold":         "^2.11.0",
+    "@tiptap/extension-bullet-list":  "^2.11.0",
+    "@tiptap/extension-code":         "^2.11.0",
+    "@tiptap/extension-document":     "^2.11.0",
+    "@tiptap/extension-heading":      "^2.11.0",
+    "@tiptap/extension-history":      "^2.11.0",
+    "@tiptap/extension-italic":       "^2.11.0",
+    "@tiptap/extension-list-item":    "^2.11.0",
+    "@tiptap/extension-ordered-list": "^2.11.0",
+    "@tiptap/extension-paragraph":    "^2.11.0",
+    "@tiptap/extension-text":         "^2.11.0",
+    "@tiptap/pm":                     "^2.11.0",
+    "katex":                          "^0.16.21",
+    "lit":                            "^3.3.0",
+    "mathlive":                       "^0.109.1"
+  },
+  "devDependencies": {
+    "@types/katex": "^0.16.7",
+    "typescript":   "^5.8.3",
+    "vite":         "^6.3.4",
+    "vitest":       "^3.1.2"
+  }
+}

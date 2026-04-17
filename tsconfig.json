@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target":              "ES2022",
+    "module":              "ESNext",
+    "moduleResolution":    "bundler",
+    "lib":                 ["ES2022", "DOM", "DOM.Iterable"],
+    "useDefineForClassFields": true,
+    "strict":              true,
+    "noUnusedLocals":      true,
+    "noUnusedParameters":  true,
+    "noFallthroughCasesInSwitch": true,
+    "experimentalDecorators": true,
+    "outDir":              "./dist",
+    "rootDir":             "./src",
+    "baseUrl":             ".",
+    "paths": {
+      "@core/*":     ["src/core/*"],
+      "@features/*": ["src/features/*"],
+      "@ui/*":       ["src/ui/*"],
+      "@design/*":   ["src/design/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "demos", "docs"]
+}

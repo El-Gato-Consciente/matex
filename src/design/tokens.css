@@ -1,0 +1,125 @@
+/* ─────────────────────────────────────────────────────────────────
+   Formalia — Design tokens
+   Single source of truth for all CSS custom properties.
+   Dark theme overrides live at body.dark.
+   ───────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Colors — surfaces */
+  --bg:              #fafaf9;
+  --surface:         #ffffff;
+  --panel-bg:        #f4f3f0;
+  --border:          #e4e2dd;
+  --border-strong:   #c9c6c0;
+
+  /* Colors — text */
+  --text:            #1a1917;
+  --text-muted:      #6b6757;
+  --text-placeholder:#b5b2ab;
+
+  /* Colors — accent (blue) */
+  --accent:          #2563eb;
+  --accent-light:    #dbeafe;
+  --accent-hover:    #1d4ed8;
+
+  /* Colors — math nodes */
+  --math-inline-bg:  #f0f4ff;
+  --math-inline-bd:  #c7d7f8;
+  --math-display-bg: #f8f9ff;
+  --math-display-bd: #d8e2fb;
+
+  /* Colors — error */
+  --error:           #dc2626;
+  --error-bg:        #fef2f2;
+
+  /* Colors — LaTeX / Código mode indicator */
+  --latex-mode:      #7c3aed;
+  --latex-mode-bg:   #f5f3ff;
+  --latex-mode-bd:   #c4b5fd;
+
+  /* Colors — theorem environments */
+  --thm-theorem:     #2563eb;
+  --thm-definition:  #059669;
+  --thm-example:     #d97706;
+  --thm-remark:      #6b7280;
+  --thm-lemma:       #7c3aed;
+  --thm-proof:       #374151;
+
+  /* Typography */
+  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-doc:  'Source Serif 4', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Radii */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+
+  /* Spacing */
+  --toolbar-height: 38px;
+  --panel-height:   76px;   /* formula panel */
+}
+
+/* ── Dark theme ──────────────────────────────────────────────────── */
+
+body.dark {
+  --bg:              #1a1917;
+  --surface:         #262523;
+  --panel-bg:        #1e1d1b;
+  --border:          #3a3835;
+  --border-strong:   #4d4a46;
+
+  --text:            #e8e6e0;
+  --text-muted:      #9a9589;
+  --text-placeholder:#5a5750;
+
+  --accent:          #3b82f6;
+  --accent-light:    #1e3058;
+  --accent-hover:    #60a5fa;
+
+  --math-inline-bg:  #1a2848;
+  --math-inline-bd:  #2d4a7a;
+  --math-display-bg: #1a1f38;
+  --math-display-bd: #2d3560;
+
+  --error-bg:        #2d1515;
+
+  --latex-mode:      #a78bfa;
+  --latex-mode-bg:   #25193e;
+  --latex-mode-bd:   #5b21b6;
+
+  --thm-theorem:     #60a5fa;
+  --thm-definition:  #34d399;
+  --thm-example:     #fbbf24;
+  --thm-remark:      #9ca3af;
+  --thm-lemma:       #c084fc;
+  --thm-proof:       #d1d5db;
+}
+
+/* ── Base reset ──────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────── */
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }

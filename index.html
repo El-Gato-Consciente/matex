@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formalia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/node_modules/katex/dist/katex.min.css">
+  <link rel="stylesheet" href="/node_modules/mathlive/mathlive-fonts.css">
+  <link rel="stylesheet" href="/node_modules/mathlive/mathlive-static.css">
+</head>
+<body>
+
+  <!--
+    Layout structure:
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │  #app-toolbar  (2 rows: format | structure+math)             │
+    ├──────────────────────────────────────────────────────────────┤
+    │  #formula-panel  (always visible; FormulaPanel component)    │
+    ├──────────────┬───────────────────────────────┬───────────────┤
+    │  #snippet-   │  #editor-wrap                 │  #coach-      │
+    │  sidebar     │  (TipTap canvas)              │  panel        │
+    │  (collaps.)  │                               │               │
+    └──────────────┴───────────────────────────────┴───────────────┘
+  -->
+
+  <div id="app">
+
+    <!-- ── Toolbar ──────────────────────────────────────────────── -->
+    <header id="app-toolbar">
+      <!-- Row 1: text formatting -->
+      <div id="toolbar-row-1" class="toolbar-row">
+        <!-- populated by Toolbar component -->
+      </div>
+      <!-- Row 2: structure + math -->
+      <div id="toolbar-row-2" class="toolbar-row">
+        <!-- populated by Toolbar component -->
+      </div>
+    </header>
+
+    <!-- ── Formula panel ────────────────────────────────────────── -->
+    <div id="formula-panel">
+      <!-- populated by FormulaPanel component -->
+    </div>
+
+    <!-- ── Main area ────────────────────────────────────────────── -->
+    <main id="main-area">
+
+      <!-- Snippet sidebar (left) -->
+      <aside id="snippet-sidebar">
+        <!-- populated by SnippetSidebar component -->
+      </aside>
+
+      <!-- Editor canvas (center) -->
+      <div id="editor-wrap">
+        <div id="editor"></div>
+      </div>
+
+      <!-- Coach panel (right) -->
+      <aside id="coach-panel">
+        <!-- populated by CoachPanel component -->
+      </aside>
+
+    </main>
+
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
