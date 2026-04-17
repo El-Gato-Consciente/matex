@@ -284,10 +284,27 @@ body.dark .math-display:hover { background: #1a2040; border-color: #4f63bf; }
   margin-bottom: 6px;
 }
 
+.theorem-env-number {
+  font: 600 13px/1 var(--font-ui);
+  color: var(--text-muted);
+}
+
+/* ── Type selector (styled to look like a label) ─────────────────── */
+
 .theorem-env-type {
   font: 600 13px/1 var(--font-ui);
-  text-transform: capitalize;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 1px 3px 1px 2px;
+  cursor: pointer;
+  -webkit-appearance: auto;
+  appearance: auto;
+  line-height: 1;
 }
+.theorem-env-type:hover  { border-color: var(--border); background: var(--bg); }
+.theorem-env-type:focus  { outline: none; border-color: var(--accent); background: var(--bg); }
+
 .theorem-env[data-env="theorem"]    .theorem-env-type { color: var(--thm-theorem); }
 .theorem-env[data-env="lemma"]      .theorem-env-type { color: var(--thm-lemma); }
 .theorem-env[data-env="definition"] .theorem-env-type { color: var(--thm-definition); }
@@ -295,17 +312,33 @@ body.dark .math-display:hover { background: #1a2040; border-color: #4f63bf; }
 .theorem-env[data-env="remark"]     .theorem-env-type { color: var(--thm-remark); }
 .theorem-env[data-env="proof"]      .theorem-env-type { color: var(--thm-proof); }
 
-.theorem-env-number {
-  font: 600 13px/1 var(--font-ui);
-  color: var(--text-muted);
-}
+/* ── Title (inline contenteditable) ─────────────────────────────── */
 
 .theorem-env-title {
   font: italic 13px/1 var(--font-doc);
   color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 1px 4px;
+  min-width: 2ch;
+  outline: none;
+  cursor: text;
 }
-.theorem-env-title::before { content: "("; }
-.theorem-env-title::after  { content: ")"; }
+.theorem-env-title:hover  { border-color: var(--border); background: var(--bg); }
+.theorem-env-title:focus  { border-color: var(--accent); background: var(--bg); }
+
+/* Parens shown only when title has content or is focused */
+.theorem-env-title:not(:empty)::before,
+.theorem-env-title:focus::before { content: "("; }
+.theorem-env-title:not(:empty)::after,
+.theorem-env-title:focus::after  { content: ")"; }
+
+/* Placeholder when empty and not focused */
+.theorem-env-title:empty:not(:focus)::before {
+  content: attr(data-placeholder);
+  color: var(--text-placeholder);
+  font-style: italic;
+}
 
 .theorem-env-body {
   font: 400 16px/1.6 var(--font-doc);

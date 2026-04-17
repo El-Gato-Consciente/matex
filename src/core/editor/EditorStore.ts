@@ -169,25 +169,6 @@ export function getActiveFormulaDOM(): Element | null {
 }
 
 /**
- * Insert a new formula node at the current cursor position.
- * After insertion, the new node becomes the active node.
- */
-export function insertNewFormula(latex: string, displayMode: boolean): void {
-  if (!_editor) return
-  if (displayMode) {
-    _editor.chain().focus().insertContent({
-      type: 'mathDisplay',
-      attrs: { latex, numbered: false, aligned: false, label: '' },
-    }).run()
-  } else {
-    _editor.chain().focus().insertContent({
-      type: 'mathInline',
-      attrs: { latex },
-    }).run()
-  }
-}
-
-/**
  * Insert a theorem environment at the current cursor position.
  */
 export function insertTheoremEnv(envType: string): void {
