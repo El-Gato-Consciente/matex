@@ -16,7 +16,10 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  -webkit-user-select: none;
   user-select: none;
+  /* Ensures the toolbar strip is always visible even before Lit renders */
+  min-height: calc(var(--toolbar-height) * 2);
 }
 
 .toolbar-row {
