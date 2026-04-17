@@ -6,15 +6,17 @@ import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 
-import { MathInline }  from '@core/editor/extensions/MathInline'
-import { MathDisplay } from '@core/editor/extensions/MathDisplay'
-import { TheoremEnv }  from '@core/editor/extensions/TheoremEnv'
-import { setEditor }   from '@core/editor/EditorStore'
+import { MathInline }        from '@core/editor/extensions/MathInline'
+import { MathDisplay }       from '@core/editor/extensions/MathDisplay'
+import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
+import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
+import { setEditor }         from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
 
 // Register Lit components (side-effect imports)
 import '@ui/toolbar/Toolbar'
-import '@features/formula-editor/FormulaPanel'
+import '@ui/status-bar/StatusBar'
+import '@features/formula-editor/FloatingFormulaEditor'
 import '@features/export/ExportModal'
 
 // ── Persistence ─────────────────────────────────────────────────────
@@ -38,6 +40,7 @@ const editor: Editor = new Editor({
     MathInline,
     MathDisplay,
     TheoremEnv,
+    FormulaNavigation,
   ],
   content: (savedDoc ?? { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
   onUpdate({ editor: e }) {
@@ -55,14 +58,17 @@ appToolbar.innerHTML = ''
 const toolbar = document.createElement('fp-toolbar')
 appToolbar.appendChild(toolbar)
 
-// FormulaPanel
-const formulaPanel = document.getElementById('formula-panel')!
-const panel = document.createElement('fp-formula-panel')
-formulaPanel.appendChild(panel)
-
 // ExportModal — appended to body, renders its own <dialog>
 const modal = document.createElement('fp-export-modal')
 document.body.appendChild(modal)
+
+// FloatingFormulaEditor — fixed-position overlay, appended to body
+const floatingEditor = document.createElement('fp-floating-formula')
+document.body.appendChild(floatingEditor)
+
+// StatusBar
+const statusBarEl = document.getElementById('status-bar')!
+statusBarEl.appendChild(document.createElement('fp-status-bar'))
 
 // Sidebar + coach placeholders (Phase 2 / 3 will replace these)
 const sidebar = document.getElementById('snippet-sidebar')!

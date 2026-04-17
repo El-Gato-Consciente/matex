@@ -18,8 +18,7 @@
   flex-shrink: 0;
   -webkit-user-select: none;
   user-select: none;
-  /* Ensures the toolbar strip is always visible even before Lit renders */
-  min-height: calc(var(--toolbar-height) * 2);
+  min-height: var(--toolbar-height);
 }
 
 .toolbar-row {
@@ -32,6 +31,34 @@
 
 .toolbar-row + .toolbar-row {
   border-top: 1px solid var(--border);
+}
+
+/* ── Toolbar dropdown ────────────────────────────────────────────── */
+
+.tbtn-drop {
+  position: relative;
+  display: inline-flex;
+}
+
+.tbtn-menu {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  z-index: 300;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  box-shadow: 0 6px 20px rgba(0,0,0,.13);
+  display: flex;
+  flex-direction: column;
+  min-width: 68px;
+  padding: 3px;
+}
+
+.tbtn-menu .tbtn {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0 10px;
 }
 
 /* ── Toolbar buttons (shared) ────────────────────────────────────── */
@@ -78,19 +105,6 @@ body.dark .tbtn kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a
   flex-shrink: 0;
 }
 .sep.push { margin-left: auto; width: 0; }
-
-/* ── Formula panel ───────────────────────────────────────────────── */
-
-#formula-panel {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  min-height: var(--panel-height);
-  padding: 8px 12px;
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-}
 
 /* ── Main area (3 columns) ───────────────────────────────────────── */
 
@@ -309,3 +323,36 @@ body.dark .math-display:hover { background: #1a2040; border-color: #4f63bf; }
   flex-direction: column;
   overflow: hidden;
 }
+
+/* ── Status bar ──────────────────────────────────────────────────── */
+
+#status-bar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+fp-status-bar { display: contents; }
+
+.sb-idle {
+  font: 400 11px/1 var(--font-ui);
+  color: var(--text-placeholder);
+}
+
+.sb-error {
+  font: 400 11px/1.4 var(--font-mono);
+  color: var(--error);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-error-icon { font-style: normal; font-size: 12px; }

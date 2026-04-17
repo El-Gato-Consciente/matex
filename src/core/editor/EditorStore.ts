@@ -7,6 +7,7 @@
 
 import { signal } from '@preact/signals-core'
 import type { Editor } from '@tiptap/core'
+import { TextSelection } from '@tiptap/pm/state'
 import type { NormalizerChange } from '@core/math/types'
 
 // ── Signals ──────────────────────────────────────────────────────
@@ -19,6 +20,9 @@ export const activeNodePos = signal<number | null>(null)
 
 /** Pending normalizer suggestions (Phase 3). Empty in Phase 1. */
 export const coachChanges = signal<NormalizerChange[]>([])
+
+/** KaTeX parse error for the formula currently open in FloatingFormulaEditor. */
+export const activeFormulaError = signal<string | null>(null)
 
 /** Toolbar / mark active states, updated on every editor transaction. */
 export const editorFmtState = signal({
@@ -71,6 +75,30 @@ export function activateNode(pos: number, latex: string): void {
 export function deactivateNode(): void {
   activeNodePos.value = null
   activeFormula.value = ''
+  activeFormulaError.value = null
+}
+
+/**
+ * Releases the ProseMirror NodeSelection on the active formula by switching
+ * to a TextSelection right after it.  Must be called as soon as the floating
+ * editor opens so ProseMirror stops trying to re-assert the NodeSelection
+ * (which would steal focus from the textarea on every setNodeMarkup dispatch).
+ */
+export function releaseFormulaSelection(): void {
+  if (!_editor || activeNodePos.value === null) return
+  const { state } = _editor
+  const pos  = activeNodePos.value
+  const node = state.doc.nodeAt(pos)
+  if (!node) return
+  const afterPos = Math.min(pos + node.nodeSize, state.doc.content.size)
+  const $after   = state.doc.resolve(afterPos)
+  const sel      = TextSelection.near($after, 1)
+  _editor.view.dispatch(state.tr.setSelection(sel))
+}
+
+/** Returns focus to the editor canvas (called when closing the floating editor). */
+export function focusEditor(): void {
+  _editor?.view.focus()
 }
 
 // ── Formula mutations (called from FormulaPanel) ──────────────────
@@ -90,6 +118,54 @@ export function updateActiveFormula(latex: string): void {
 
   const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, latex })
   _editor.view.dispatch(tr)
+}
+
+/**
+ * Insert a new formula node and immediately open the floating editor on it.
+ * Used by toolbar buttons and Ctrl+M shortcuts.
+ */
+export function insertNewFormulaAndActivate(latex: string, displayMode: boolean): void {
+  if (!_editor) return
+  const typeName = displayMode ? 'mathDisplay' : 'mathInline'
+  const attrs    = displayMode
+    ? { latex, numbered: false, aligned: false, label: '' }
+    : { latex }
+
+  // Save position before insert — used as search start for block nodes
+  const insertFrom = _editor.state.selection.from
+
+  _editor.chain().focus().insertContent({ type: typeName, attrs }).run()
+
+  const { selection, doc } = _editor.state
+  const { $from } = selection
+
+  // Strategy 1: nodeBefore (inline atom — TipTap leaves cursor right after it)
+  if ($from.nodeBefore?.type.name === typeName) {
+    activateNode($from.pos - $from.nodeBefore.nodeSize, latex)
+    return
+  }
+
+  // Strategy 2: scan forward from insert position (block node case)
+  let found = false
+  doc.nodesBetween(insertFrom, Math.min(insertFrom + 200, doc.content.size), (node, pos) => {
+    if (found) return false
+    if (node.type.name === typeName) {
+      activateNode(pos, latex)
+      found = true
+      return false
+    }
+  })
+}
+
+/**
+ * Returns the DOM element that renders the currently active formula node,
+ * used by FloatingFormulaEditor to position itself.
+ */
+export function getActiveFormulaDOM(): Element | null {
+  if (!_editor || activeNodePos.value === null) return null
+  const domNode = _editor.view.nodeDOM(activeNodePos.value)
+  if (!domNode) return null
+  return domNode instanceof Element ? domNode : (domNode as ChildNode).parentElement
 }
 
 /**

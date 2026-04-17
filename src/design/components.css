@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────────────────────────
    Formalia — Component styles
-   Styles for FormulaPanel, ExportModal, and other UI components.
+   Styles for ExportModal, FloatingFormulaEditor, and other UI components.
    ───────────────────────────────────────────────────────────────── */
 
 /* ── Custom element display defaults ────────────────────────────── */
@@ -12,106 +12,16 @@ fp-toolbar {
   width: 100%;
 }
 
-fp-formula-panel {
-  /* display:contents has a known Chrome bug with custom elements.   */
-  /* Instead, make fp-formula-panel a flex container that fills     */
-  /* the #formula-panel row.                                        */
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
 fp-export-modal {
   display: block;
 }
 
-/* ── FormulaPanel ────────────────────────────────────────────────── */
-
-#formula-panel {
-  gap: 10px;
-  align-items: center;
-  min-height: 72px;
-  padding: 8px 14px;
-}
-
-/* Inactive state */
-.fp-hint {
-  font: 400 13px/1 var(--font-ui);
-  color: var(--text-muted);
-  margin-right: 10px;
-}
-
-.fp-insert-btns {
-  display: flex;
-  gap: 6px;
-}
-
-/* Active state */
-.fp-left {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.fp-right {
-  width: 220px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.fp-label {
-  font: 600 9px/1 var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--text-placeholder);
-}
-
-.fp-textarea {
-  font: 400 13px/1.5 var(--font-mono);
-  width: 100%;
-  padding: 5px 8px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--bg);
-  color: var(--text);
-  resize: none;
-  outline: none;
-  transition: border-color .15s, box-shadow .15s;
-  min-height: 44px;
-}
-.fp-textarea:focus {
-  border-color: var(--accent);
-  background: var(--surface);
-  box-shadow: 0 0 0 2px rgba(37,99,235,.1);
-}
-.fp-textarea.fp-error  { border-color: var(--error); }
-.fp-textarea::placeholder { color: var(--text-placeholder); }
-
-.fp-preview {
-  min-height: 44px;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--math-display-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.fp-preview-error { border-color: var(--error); background: var(--error-bg); }
-.fp-err-msg { font: italic 12px var(--font-ui); color: var(--error); }
-.fp-rendered .katex-display { margin: 0; }
-
-.fp-actions {
-  flex-shrink: 0;
-  align-self: flex-start;
-  padding-top: 16px;
+fp-floating-formula {
+  /* Sits above all editor content */
+  position: fixed;
+  z-index: 500;
+  top: 0; left: 0;
+  pointer-events: none;
 }
 
 /* ── ExportModal ─────────────────────────────────────────────────── */
@@ -126,12 +36,17 @@ fp-export-modal {
   max-width: min(860px, 90vw);
   width: 100%;
   max-height: 80vh;
+}
+
+/* display:flex only when the dialog is open — never override browser's display:none */
+dialog[open].export-dialog {
   display: flex;
   flex-direction: column;
 }
 
 .export-dialog::backdrop {
   background: rgba(0,0,0,.45);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
 
@@ -202,3 +117,53 @@ fp-export-modal {
   text-align: center;
   margin-top: 20px;
 }
+
+/* ── Floating formula editor ─────────────────────────────────────── */
+
+.ff-panel {
+  position: fixed;
+  pointer-events: all;
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 28px rgba(0,0,0,.14), 0 2px 8px rgba(37,99,235,.12);
+  padding: 8px 10px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ff-textarea {
+  font: 400 13px/1.5 var(--font-mono);
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  resize: none;
+  outline: none;
+  min-height: 44px;
+  transition: border-color .15s;
+}
+.ff-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.1);
+}
+.ff-textarea::placeholder { color: var(--text-placeholder); }
+
+.ff-hint {
+  font: 400 10px/1 var(--font-ui);
+  color: var(--text-placeholder);
+  text-align: center;
+}
+.ff-hint kbd {
+  font: 500 9px/1 var(--font-mono);
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #a5b4fc;
+}
+body.dark .ff-hint kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a; }

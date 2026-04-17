@@ -5,7 +5,7 @@ import { activateNode } from '../EditorStore'
 /* ─────────────────────────────────────────────────────────────────
    MathInlineView — ProseMirror NodeView for mathInline nodes.
    Vanilla TypeScript (no Lit, no Shadow DOM).
-   Renders KaTeX; click activates the formula in EditorStore.
+   Renders KaTeX; click or Enter opens the floating formula editor.
    ───────────────────────────────────────────────────────────────── */
 
 export class MathInlineView {
@@ -24,6 +24,7 @@ export class MathInlineView {
 
     this._render()
 
+    // Click → open floating editor immediately (no Enter needed)
     this.dom.addEventListener('click', () => {
       const pos = this._getPos()
       if (pos !== undefined) {
@@ -41,14 +42,12 @@ export class MathInlineView {
 
   selectNode(): void {
     this.dom.classList.add('ProseMirror-selectednode')
-    const pos = this._getPos()
-    if (pos !== undefined) {
-      activateNode(pos, this._node.attrs['latex'] as string)
-    }
   }
 
   deselectNode(): void {
     this.dom.classList.remove('ProseMirror-selectednode')
+    // NOTE: do NOT call deactivateNode() here — the floating editor manages
+    // its own lifecycle via focusout and explicit close actions.
   }
 
   destroy(): void {

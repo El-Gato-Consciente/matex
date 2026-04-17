@@ -5,6 +5,7 @@ import { activateNode } from '../EditorStore'
 /* ─────────────────────────────────────────────────────────────────
    MathDisplayView — ProseMirror NodeView for mathDisplay nodes.
    Block-level, display mode KaTeX render.
+   Click or Enter opens the floating formula editor.
    ───────────────────────────────────────────────────────────────── */
 
 export class MathDisplayView {
@@ -23,6 +24,7 @@ export class MathDisplayView {
 
     this._render()
 
+    // Click → open floating editor immediately (no Enter needed)
     this.dom.addEventListener('click', () => {
       const pos = this._getPos()
       if (pos !== undefined) {
@@ -40,14 +42,12 @@ export class MathDisplayView {
 
   selectNode(): void {
     this.dom.classList.add('ProseMirror-selectednode')
-    const pos = this._getPos()
-    if (pos !== undefined) {
-      activateNode(pos, this._node.attrs['latex'] as string)
-    }
   }
 
   deselectNode(): void {
     this.dom.classList.remove('ProseMirror-selectednode')
+    // NOTE: do NOT call deactivateNode() here — the floating editor manages
+    // its own lifecycle via focusout and explicit close actions.
   }
 
   destroy(): void {
@@ -58,7 +58,7 @@ export class MathDisplayView {
     const latex = (this._node.attrs['latex'] as string) ?? ''
 
     if (!latex.trim()) {
-      this.dom.innerHTML = '<span class="math-empty">empty formula — click to edit</span>'
+      this.dom.innerHTML = '<span class="math-empty">fórmula vacía — click para editar</span>'
       this.dom.classList.remove('has-error')
       return
     }

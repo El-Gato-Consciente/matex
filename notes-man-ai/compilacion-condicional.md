@@ -22,3 +22,6 @@ Cuando generes documentos LaTeX, usá compilación condicional para asegurar com
 5. Mantener un bloque común para paquetes matemáticos (`amsmath`, etc.).
 
 El objetivo es que el mismo `.tex` sea portable y robusto en múltiples entornos, incluyendo compiladores WebAssembly.
+
+------------------------------------------------
+Opcion alternativa: generar codigo especifico para un compilador. Quizas podriamos tener un default y en algun lugar a futuro permitir configurarlo, y entre la configuraciones podria estar la de tener compilacion condicional.
