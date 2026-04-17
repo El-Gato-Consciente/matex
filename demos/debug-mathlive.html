@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MathLive minimal test</title>
+  <style>
+    math-field { font-size: 24px; width: 600px; border: 2px solid blue; display: block; margin: 40px auto; }
+  </style>
+</head>
+<body>
+  <p style="text-align:center">Hacé click en el campo y escribí <code>\hat</code> — ¿aparece popover?</p>
+  <math-field id="mf"></math-field>
+  <pre id="out" style="margin:20px auto;width:600px;background:#f0f0f0;padding:10px"></pre>
+
+  <script type="module">
+    import { MathfieldElement } from '../node_modules/mathlive/mathlive.min.mjs'
+    const mf = document.getElementById('mf')
+    await customElements.whenDefined('math-field')
+    document.getElementById('out').textContent =
+      'version: ' + (MathfieldElement.version ?? '?') + '\n' +
+      'popoverPolicy: ' + mf.popoverPolicy + '\n' +
+      'smartMode: ' + mf.smartMode + '\n' +
+      'defaultMode: ' + mf.defaultMode
+    mf.addEventListener('input', () => {
+      document.getElementById('out').textContent += '\ninput: ' + mf.getValue('latex')
+    })
+  </script>
+</body>
+</html>

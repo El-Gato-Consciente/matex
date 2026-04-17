@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formalia — Demo 3: TipTap + MathLive + KaTeX</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────────── */
+    :root {
+      --bg:              #fafaf9;
+      --surface:         #ffffff;
+      --border:          #e4e2dd;
+      --border-strong:   #c9c6c0;
+      --text:            #1a1917;
+      --text-muted:      #6b6757;
+      --text-placeholder:#b5b2ab;
+      --accent:          #2563eb;
+      --accent-light:    #dbeafe;
+      --accent-hover:    #1d4ed8;
+      --math-inline-bg:  #f0f4ff;
+      --math-inline-bd:  #c7d7f8;
+      --math-display-bg: #f8f9ff;
+      --math-display-bd: #d8e2fb;
+      --error:           #dc2626;
+      --error-bg:        #fef2f2;
+      --panel-bg:        #f4f3f0;
+      --latex-mode:      #7c3aed;
+      --latex-mode-bg:   #f5f3ff;
+      --latex-mode-bd:   #c4b5fd;
+
+      --font-ui:   'Inter', system-ui, sans-serif;
+      --font-doc:  'Source Serif 4', Georgia, serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --r-sm: 4px; --r-md: 6px; --r-lg: 10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg); color: var(--text);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* ── Toolbar ───────────────────────────────────────────────────── */
+    #toolbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 5px 12px; display: flex; align-items: center; gap: 2px;
+      flex-shrink: 0; user-select: none;
+    }
+    .sep { width: 1px; height: 20px; background: var(--border); margin: 0 5px; }
+    .sep.push { margin-left: auto; }
+    .tbtn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 30px; height: 28px; padding: 0 7px;
+      border: none; border-radius: var(--r-sm);
+      background: transparent; color: var(--text-muted);
+      font: 500 13px/1 var(--font-ui); cursor: pointer;
+      transition: background .1s, color .1s; white-space: nowrap;
+    }
+    .tbtn:hover    { background: var(--bg); color: var(--text); }
+    .tbtn.active   { background: var(--accent-light); color: var(--accent-hover); }
+    .tbtn:disabled { opacity: .38; cursor: default; pointer-events: none; }
+    .tbtn.math     { font-family: var(--font-mono); font-size: 12px; color: #4f46e5; gap: 4px; }
+    .tbtn.math:hover { background: #ede9fe; }
+    .tbtn kbd {
+      font: 500 9px/1 var(--font-mono); padding: 1px 3px; border-radius: 3px;
+      background: #e0e7ff; color: #4338ca; border: 1px solid #a5b4fc; pointer-events: none;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────── */
+    #main-area { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Editor ────────────────────────────────────────────────────── */
+    #editor-wrap {
+      flex: 1; overflow-y: auto; padding: 48px 24px;
+      display: flex; justify-content: center;
+    }
+    .ProseMirror {
+      font: 400 17px/1.72 var(--font-doc); color: var(--text);
+      max-width: 700px; width: 100%; min-height: 100%; outline: none;
+    }
+    .ProseMirror > * + * { margin-top: .6em; }
+    .ProseMirror h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; }
+    .ProseMirror h2 { font-size: 1.45em; font-weight: 600; line-height: 1.3; }
+    .ProseMirror h3 { font-size: 1.18em; font-weight: 600; line-height: 1.4; }
+    .ProseMirror strong { font-weight: 700; }
+    .ProseMirror em { font-style: italic; }
+    .ProseMirror code {
+      font-family: var(--font-mono); font-size: .85em;
+      background: #f1f0ee; border: 1px solid var(--border);
+      border-radius: 3px; padding: 1px 4px;
+    }
+    .ProseMirror p.is-empty:first-child::before {
+      content: attr(data-placeholder); float: left; height: 0;
+      color: var(--text-placeholder); pointer-events: none;
+    }
+    .ProseMirror-gapcursor { display: none; pointer-events: none; position: absolute; }
+    .ProseMirror-gapcursor:after {
+      content: ""; display: block; position: absolute; top: -2px;
+      width: 20px; border-top: 1px solid var(--text);
+      animation: ProseMirror-cursor-blink .7s step-end infinite;
+    }
+    @keyframes ProseMirror-cursor-blink { 50% { border-color: transparent; } }
+    .ProseMirror-focused .ProseMirror-gapcursor { display: block; }
+
+    /* ── Math nodes ────────────────────────────────────────────────── */
+    .math-inline {
+      display: inline-flex; align-items: center;
+      padding: 1px 5px; margin: 0 1px;
+      background: var(--math-inline-bg); border: 1px solid var(--math-inline-bd);
+      border-radius: var(--r-sm); cursor: pointer; vertical-align: middle;
+      line-height: 1; transition: background .1s, border-color .1s;
+    }
+    .math-inline:hover { background: #dbeafe; border-color: #93c5fd; }
+    .math-inline.ProseMirror-selectednode {
+      background: var(--accent-light); border-color: var(--accent);
+      outline: 2px solid rgba(37,99,235,.25); outline-offset: 1px;
+    }
+    .math-inline.has-error { background: var(--error-bg); border-color: #fca5a5; }
+    .math-display {
+      display: block; text-align: center; padding: 18px 28px; margin: 1.4em 0;
+      background: var(--math-display-bg); border: 1px solid var(--math-display-bd);
+      border-radius: var(--r-md); cursor: pointer; overflow-x: auto; min-height: 52px;
+      transition: background .1s, border-color .1s;
+    }
+    .math-display:hover { background: #eff3ff; border-color: #a5b4fc; }
+    .math-display.ProseMirror-selectednode {
+      background: var(--accent-light); border-color: var(--accent);
+      outline: 2px solid rgba(37,99,235,.25); outline-offset: 2px;
+    }
+    .math-display.has-error { background: var(--error-bg); border-color: #fca5a5; }
+    .math-empty     { font: italic 12px var(--font-mono); color: var(--text-placeholder); }
+    .math-empty-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 2px; background: var(--text-placeholder); opacity: .45; vertical-align: middle;
+    }
+    .math-errstr { font: 400 12px var(--font-mono); color: var(--error); }
+    .katex { font-size: 1em; }
+    .math-display .katex-display { margin: 0; }
+
+    /* ── Popover ───────────────────────────────────────────────────── */
+    #formula-popover {
+      position: fixed; z-index: 200;
+      width: 320px; min-width: 280px;
+      background: var(--surface);
+      border: 1.5px solid var(--border-strong);
+      border-radius: var(--r-lg);
+      box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.06);
+      padding: 10px 12px;
+      display: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    #formula-popover.visible { display: block; }
+    #formula-popover:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1), 0 8px 24px rgba(0,0,0,.12);
+    }
+    #formula-popover.has-error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(220,38,38,.08), 0 8px 24px rgba(0,0,0,.12);
+    }
+    #formula-popover.latex-mode-active {
+      border-color: var(--latex-mode);
+      box-shadow: 0 0 0 3px rgba(124,58,237,.12), 0 8px 24px rgba(0,0,0,.12);
+    }
+
+    /* Flecha */
+    #fp-arrow {
+      position: absolute; width: 9px; height: 9px;
+      background: var(--surface);
+      border-top: 1.5px solid var(--border-strong);
+      border-left: 1.5px solid var(--border-strong);
+      transform: rotate(45deg); pointer-events: none;
+      top: -5px; left: 18px; transition: border-color .15s;
+    }
+    #fp-arrow.below {
+      top: auto; bottom: -5px; border-top: none; border-left: none;
+      border-bottom: 1.5px solid var(--border-strong);
+      border-right:  1.5px solid var(--border-strong);
+    }
+
+    /* Toolbar siempre visible */
+    #fp-mf-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    /* Wraps alternos */
+    #fp-mf-wrap { margin-bottom: 8px; }
+    #fp-mf-wrap.fp-hidden,
+    #fp-source-wrap.fp-hidden { display: none; }
+
+    /* Toggle Visual / LaTeX */
+    #fp-mode-toggle {
+      display: flex; align-items: center;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 2px; gap: 1px;
+    }
+    .fp-mode-btn {
+      font: 500 10px/1 var(--font-ui); padding: 3px 9px; height: 18px;
+      border: none; border-radius: 3px;
+      background: transparent; color: var(--text-muted);
+      cursor: pointer; transition: background .1s, color .1s, box-shadow .1s;
+    }
+    .fp-mode-btn.active {
+      background: var(--surface); color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+    #btn-latex-mode {
+      display: flex; align-items: center; gap: 4px;
+      padding: 2px 7px; height: 20px;
+      border: 1.5px solid var(--latex-mode-bd); border-radius: var(--r-sm);
+      background: var(--latex-mode-bg); color: var(--latex-mode);
+      font: 500 10px/1 var(--font-ui); cursor: pointer;
+      transition: background .1s, border-color .1s; white-space: nowrap;
+    }
+    #btn-latex-mode:hover  { background: #ede9fe; border-color: var(--latex-mode); }
+    #btn-latex-mode:disabled { opacity: .35; cursor: default; pointer-events: none; }
+    .btn-lm-bslash { font-family: var(--font-mono); font-weight: 700; font-size: 11px; }
+    math-field#fp-mf {
+      display: block; width: 100%; font-size: 22px; min-height: 52px;
+      padding: 8px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md);
+      background: var(--bg);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    math-field#fp-mf:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(37,99,235,.1);
+      background: var(--surface);
+    }
+    math-field#fp-mf.latex-mode {
+      border-color: var(--latex-mode);
+      box-shadow: 0 0 0 2px rgba(124,58,237,.1);
+    }
+    math-field#fp-mf::part(virtual-keyboard-toggle) { display: none !important; }
+    math-field#fp-mf::part(menu-toggle)             { display: none !important; }
+
+    /* Hint modo LaTeX */
+    #fp-latex-hint {
+      display: none; align-items: center; flex-wrap: wrap; gap: 4px;
+      font-size: 10px; color: var(--latex-mode); padding: 3px 2px 0;
+    }
+    #fp-latex-hint.visible { display: flex; }
+    #fp-latex-hint kbd {
+      font: 500 9px/1 var(--font-mono);
+      background: var(--latex-mode-bg); border: 1px solid var(--latex-mode-bd);
+      border-radius: 3px; padding: 1px 4px; color: #5b21b6;
+    }
+
+    /* Divisor LaTeX */
+    #fp-divider {
+      font: 600 9px/1 var(--font-ui); text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-placeholder);
+      margin: 8px 0 4px;
+    }
+
+    /* Textarea LaTeX */
+    #formula-input {
+      font: 400 12px/1.5 var(--font-mono);
+      width: 100%; min-height: 36px; height: auto;
+      padding: 6px 8px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md);
+      background: var(--bg);
+      color: var(--text-muted); resize: none; outline: none; overflow: hidden;
+      cursor: text;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    #formula-input::placeholder { color: var(--text-placeholder); }
+    #formula-input:focus {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 0 0 2px rgba(37,99,235,.08);
+    }
+
+    /* Span espejo para medir texto */
+    #fp-mirror {
+      position: fixed; top: -9999px; left: -9999px;
+      font: 400 12px/1.5 var(--font-mono); white-space: pre;
+      visibility: hidden; pointer-events: none;
+    }
+
+    /* ── Snippets sidebar ──────────────────────────────────────────── */
+    #snippets-sidebar {
+      width: 230px; flex-shrink: 0;
+      background: var(--panel-bg); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    #sb-header {
+      padding: 8px 8px 7px; display: flex; flex-direction: column;
+      gap: 5px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #sb-top-row { display: flex; align-items: center; gap: 5px; }
+    #sb-title { flex: 1; font: 600 10px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+
+    #btn-save-snip {
+      font: 500 10px var(--font-ui); height: 20px; padding: 0 7px;
+      border: 1px solid var(--border); border-radius: var(--r-sm);
+      background: var(--surface); color: var(--text-muted);
+      cursor: pointer; white-space: nowrap;
+      transition: background .1s, color .1s, border-color .1s;
+    }
+    #btn-save-snip:hover { background: #fef9c3; color: #92400e; border-color: #fcd34d; }
+
+    #snippet-search {
+      font: 400 12px var(--font-ui); height: 26px; padding: 0 8px;
+      border: 1px solid var(--border); border-radius: var(--r-sm);
+      background: var(--surface); color: var(--text); outline: none; width: 100%;
+    }
+    #snippet-search:focus { border-color: var(--accent); }
+    #snippet-search::placeholder { color: var(--text-placeholder); }
+    #snippet-cat {
+      font: 400 11px var(--font-ui); height: 24px; padding: 0 5px;
+      border: 1px solid var(--border); border-radius: var(--r-sm);
+      background: var(--surface); color: var(--text);
+      outline: none; cursor: pointer; width: 100%;
+    }
+    #snippet-list { flex: 1; overflow-y: auto; padding: 4px 4px 8px; }
+    .snip-sep {
+      font: 600 9px/1 var(--font-ui); text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-placeholder); padding: 9px 6px 3px;
+      user-select: none;
+    }
+    .snip {
+      display: flex; align-items: center; width: 100%; height: 27px; padding: 0 6px;
+      border: none; border-radius: var(--r-sm); background: transparent;
+      cursor: pointer; text-align: left; transition: background .1s, color .1s; gap: 7px;
+    }
+    .snip:hover { background: #ede9fe; }
+    .snip-icon  { font: 400 12px/1 var(--font-mono); width: 26px; flex-shrink: 0; color: #4f46e5; text-align: center; }
+    .snip-label { font: 400 11px/1 var(--font-ui); color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .snip:hover .snip-label { color: #4338ca; }
+    .snip:hover .snip-icon  { color: #4338ca; }
+    .snip-custom .snip-icon { color: #d97706; }
+    .snip-del { margin-left: auto; font-size: 11px; color: transparent; cursor: pointer; padding: 1px 3px; border-radius: 3px; line-height: 1; flex-shrink: 0; }
+    .snip:hover .snip-del { color: #9ca3af; }
+    .snip-del:hover { color: var(--error) !important; background: var(--error-bg); }
+
+    /* ── Status bar ────────────────────────────────────────────────── */
+    #status-bar {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 3px 14px; font: 400 11px/1 var(--font-mono); color: var(--text-muted);
+      display: flex; align-items: center; gap: 16px; flex-shrink: 0; min-height: 22px;
+    }
+    #sb-node  { font-weight: 600; }
+    #sb-latex { color: #4338ca; }
+    #sb-error { color: var(--error); }
+    /* MathLive suggestion popover — restyled para desktop, vive en document.body */
+    #mathlive-suggestion-popover {
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      border: 1.5px solid var(--border-strong) !important;
+      border-radius: var(--r-lg) !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,.1), 0 1px 4px rgba(0,0,0,.06) !important;
+      z-index: 300 !important;
+    }
+    /* Flechas del popover — más pequeñas y del color correcto */
+    #mathlive-suggestion-popover.top-tip::after {
+      border-width: 6px !important;
+      top: -6px !important;
+      left: calc(50% - 6px) !important;
+      border-bottom-color: var(--border-strong) !important;
+    }
+    #mathlive-suggestion-popover.bottom-tip::after {
+      border-width: 6px !important;
+      bottom: -6px !important;
+      left: calc(50% - 6px) !important;
+      border-top-color: var(--border-strong) !important;
+    }
+    /* Deshabilitar animación de fade-in — se re-dispara en cada flecha y parpadea */
+    #mathlive-suggestion-popover.is-animated {
+      animation: none !important;
+      transition: none !important;
+    }
+    /* Lista de sugerencias */
+    #mathlive-suggestion-popover ul {
+      padding: 3px !important;
+      max-height: 220px !important;
+    }
+    #mathlive-suggestion-popover li {
+      margin: 1px 0 !important;
+      padding: 4px 10px !important;
+      border-radius: var(--r-sm) !important;
+      column-gap: 12px !important;
+      min-width: 160px !important;
+    }
+    #mathlive-suggestion-popover li:hover,
+    #mathlive-suggestion-popover li.is-pressed {
+      background: var(--accent-light) !important;
+      color: var(--accent-hover) !important;
+    }
+    #mathlive-suggestion-popover li.is-active {
+      background: var(--accent) !important;
+      color: #fff !important;
+    }
+    /* Texto del comando LaTeX (\hat, \frac…) */
+    #mathlive-suggestion-popover .ML__popover__latex {
+      font: 500 11px/1.4 var(--font-mono) !important;
+      color: var(--text-muted) !important;
+      align-self: center !important;
+    }
+    #mathlive-suggestion-popover li:hover .ML__popover__latex,
+    #mathlive-suggestion-popover li.is-active .ML__popover__latex { color: inherit !important; }
+    /* Símbolo renderizado */
+    .ML__popover__command {
+      font-size: 1em !important;
+      line-height: 1.4 !important;
+    }
+    /* Ítem activo/seleccionado con highlight */
+    .ML__popover__current {
+      background: var(--accent) !important;
+      color: #fff !important;
+      border-radius: var(--r-sm) !important;
+    }
+
+    ::selection { background: #bfdbfe; }
+
+    /* ── Dark theme ───────────────────────────────────────────────────── */
+    body.dark {
+      --bg:              #1a1917;
+      --surface:         #262523;
+      --border:          #3a3835;
+      --border-strong:   #4d4a46;
+      --text:            #e8e6e0;
+      --text-muted:      #9a9589;
+      --text-placeholder:#4a4845;
+      --accent:          #3b82f6;
+      --accent-light:    #1e3058;
+      --accent-hover:    #60a5fa;
+      --math-inline-bg:  #1a2848;
+      --math-inline-bd:  #2a4080;
+      --math-display-bg: #151e3a;
+      --math-display-bd: #243478;
+      --error:           #f87171;
+      --error-bg:        #3a1212;
+      --panel-bg:        #1e1d1b;
+      --latex-mode:      #a78bfa;
+      --latex-mode-bg:   #25193e;
+      --latex-mode-bd:   #5e39b0;
+    }
+    body.dark .tbtn.math                  { color: #818cf8; }
+    body.dark .tbtn.math:hover            { background: #1e1a40; }
+    body.dark .tbtn kbd                   { background: #1a2050; color: #818cf8; border-color: #3040a0; }
+    body.dark .math-inline:hover          { background: #1a2a58; border-color: #3a52a0; }
+    body.dark .math-display:hover         { background: #141c38; border-color: #2a3888; }
+    body.dark .ProseMirror code           { background: #2a2825; }
+    body.dark .snip:hover                 { background: #22193a; }
+    body.dark .snip-icon                  { color: #818cf8; }
+    body.dark .snip:hover .snip-icon,
+    body.dark .snip:hover .snip-label     { color: #a5b4fc; }
+    body.dark .snip-del:hover             { color: #f87171 !important; background: #3a1212; }
+    body.dark #btn-save-snip:hover        { background: #2a2010; color: #fbbf24; border-color: #92400e; }
+    body.dark #sb-latex                   { color: #818cf8; }
+    body.dark #btn-latex-mode:hover       { background: #221540; }
+    body.dark math-field#fp-mf            { color: var(--text); }
+    body.dark .sb-quick-btn              { color: #818cf8; }
+    body.dark .sb-quick-btn:hover         { background: #22193a; }
+    body.dark ::selection                 { background: #1e3a5f; }
+
+    /* ── Sidebar — colapsar ───────────────────────────────────────────── */
+    #snippets-sidebar { transition: width .18s; }
+    #snippets-sidebar.collapsed { width: 44px; }
+    #snippets-sidebar.collapsed #sb-title,
+    #snippets-sidebar.collapsed #btn-save-snip,
+    #snippets-sidebar.collapsed #snippet-search,
+    #snippets-sidebar.collapsed #snippet-cat,
+    #snippets-sidebar.collapsed #snippet-list { display: none; }
+    #snippets-sidebar.collapsed #sb-top-row   { justify-content: center; }
+    #snippets-sidebar.collapsed #sb-header    { padding: 6px 4px; }
+
+    #btn-collapse-sb {
+      width: 22px; height: 22px; flex-shrink: 0;
+      border: none; border-radius: var(--r-sm);
+      background: transparent; color: var(--text-muted);
+      font: 500 14px/1 var(--font-ui); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .1s, color .1s;
+    }
+    #btn-collapse-sb:hover { background: var(--border); color: var(--text); }
+
+    /* Quick icons — solo visibles cuando la sidebar está colapsada */
+    #sb-quick {
+      display: none; flex-direction: column; align-items: center;
+      padding: 4px 0; gap: 1px; overflow-y: auto; flex: 1;
+    }
+    #snippets-sidebar.collapsed #sb-quick { display: flex; }
+    .sb-quick-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 32px; flex-shrink: 0;
+      border: none; border-radius: var(--r-sm);
+      background: transparent; color: #4f46e5;
+      font: 400 14px/1 var(--font-mono); cursor: pointer;
+      transition: background .1s;
+    }
+    .sb-quick-btn:hover    { background: #ede9fe; }
+    .sb-quick-btn:disabled { opacity: .38; cursor: default; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- Toolbar ============================================================ -->
+<div id="toolbar">
+  <button class="tbtn" type="button" id="btn-bold"   title="Negrita (Ctrl+B)"><b>B</b></button>
+  <button class="tbtn" type="button" id="btn-italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+  <div class="sep"></div>
+  <button class="tbtn" type="button" id="btn-h1" title="H1">H1</button>
+  <button class="tbtn" type="button" id="btn-h2" title="H2">H2</button>
+  <button class="tbtn" type="button" id="btn-h3" title="H3">H3</button>
+  <div class="sep"></div>
+  <button class="tbtn math" type="button" id="btn-mi" title="Insertar fórmula inline (Ctrl+M)">$ inline <kbd>^M</kbd></button>
+  <button class="tbtn math" type="button" id="btn-md" title="Insertar bloque display (Ctrl+Shift+M)">$$ bloque <kbd>^⇧M</kbd></button>
+  <div class="sep"></div>
+  <button class="tbtn" type="button" id="btn-undo" title="Deshacer">↩ Undo</button>
+  <button class="tbtn" type="button" id="btn-redo" title="Rehacer">↪ Redo</button>
+  <div class="sep push"></div>
+  <button class="tbtn" type="button" id="btn-theme" title="Cambiar tema">☾</button>
+</div>
+
+<!-- Main area ========================================================= -->
+<div id="main-area">
+
+  <div id="editor-wrap">
+    <div id="editor"></div>
+  </div>
+
+  <!-- Snippets sidebar -->
+  <aside id="snippets-sidebar">
+    <div id="sb-header">
+      <div id="sb-top-row">
+        <span id="sb-title">Snippets</span>
+        <button type="button" id="btn-save-snip" title="Guardar fórmula activa como snippet">⭐</button>
+        <button type="button" id="btn-collapse-sb" title="Colapsar panel">‹</button>
+      </div>
+      <input id="snippet-search" type="text" placeholder="buscar…" autocomplete="off" spellcheck="false">
+      <select id="snippet-cat" title="Categoría">
+        <option value="">Todos</option>
+        <option value="frac">Fracciones</option>
+        <option value="calc">Cálculo</option>
+        <option value="alg">Álgebra lineal</option>
+        <option value="logic">Lógica / Conjuntos</option>
+        <option value="greek">Griegos</option>
+        <option value="rel">Relaciones</option>
+        <option value="stats">Estadística</option>
+        <option value="custom">⭐ Guardados</option>
+      </select>
+    </div>
+    <div id="sb-quick"></div>
+    <div id="snippet-list"></div>
+  </aside>
+
+</div>
+
+<!-- Popover ============================================================ -->
+<span id="fp-mirror" aria-hidden="true"></span>
+
+<div id="formula-popover">
+  <div id="fp-arrow"></div>
+
+  <!-- Toolbar siempre visible — toggle + botón \ LaTeX -->
+  <div id="fp-mf-toolbar">
+    <div id="fp-mode-toggle">
+      <button type="button" class="fp-mode-btn active" id="btn-mode-visual">Visual</button>
+      <button type="button" class="fp-mode-btn" id="btn-mode-latex">Código</button>
+    </div>
+    <button type="button" id="btn-latex-mode" disabled title="Activar modo LaTeX para tipear comandos como \hat, \vec… → Enter confirma">
+      <span class="btn-lm-bslash">\</span> LaTeX
+    </button>
+  </div>
+
+  <!-- MathLive — visible en modo visual -->
+  <div id="fp-mf-wrap">
+    <math-field id="fp-mf"
+      math-virtual-keyboard-policy="off"
+      default-mode="math"
+    ></math-field>
+    <div id="fp-latex-hint">
+      Modo LaTeX —
+      <kbd>Enter</kbd> confirma ·
+      <kbd>Tab</kbd> autocompleta ·
+      <kbd>Esc</kbd> cancela
+    </div>
+  </div>
+
+  <!-- LaTeX source — visible en modo LaTeX -->
+  <div id="fp-source-wrap" class="fp-hidden">
+    <div id="fp-divider">LaTeX fuente</div>
+    <textarea
+      id="formula-input"
+      spellcheck="false"
+      autocomplete="off"
+      placeholder="\int_a^b f(x)\,dx"
+    ></textarea>
+  </div>
+</div>
+
+<!-- Status bar ======================================================== -->
+<div id="status-bar">
+  <span id="sb-node">—</span>
+  <span id="sb-latex"></span>
+  <span id="sb-error"></span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script type="module">
+import { Editor, Node, Extension, mergeAttributes, InputRule }
+  from 'https://esm.sh/@tiptap/core@2'
+import StarterKit   from 'https://esm.sh/@tiptap/starter-kit@2'
+import { NodeSelection, TextSelection } from 'https://esm.sh/@tiptap/pm@2/state'
+import { MathfieldElement } from '../node_modules/mathlive/mathlive.min.mjs'
+
+const katex = window.katex
+
+// ======================================================================
+// ESTADO
+// ======================================================================
+let activeNodePos          = null
+// Flags anti-feedback-loop:
+//   isFromTipTap  → estamos cargando contenido desde TipTap hacia el panel
+//   isFromMathLive → MathLive está actualizando el textarea
+//   isDispatchingFromPanel → el panel está despachando a TipTap
+let isFromTipTap           = false
+let editingSource          = null    // 'mathlive' | 'textarea' | null
+let skipMfReload           = false   // showPopover ya hizo el insert, el focus handler lo omite
+let isDispatchingFromPanel = false
+
+// ======================================================================
+// SNIPPETS
+// ======================================================================
+const SNIPPETS = [
+  { icon: 'a/b',   cat:'frac',  label: 'Fracción',        t: '\\frac{#@}{#?}'                    },
+  { icon: '√',     cat:'frac',  label: 'Raíz cuad.',      t: '\\sqrt{#@}'                        },
+  { icon: 'ⁿ√',    cat:'frac',  label: 'Raíz n-ésima',    t: '\\sqrt[#?]{#@}'                    },
+  { icon: 'xⁿ',    cat:'frac',  label: 'Potencia',        t: '{#@}^{#?}'                         },
+  { icon: 'xₙ',    cat:'frac',  label: 'Subíndice',       t: '{#@}_{#?}'                         },
+  { icon: '()',     cat:'frac',  label: 'Paréntesis',      t: '\\left( #@ \\right)'               },
+  { icon: '[]',    cat:'frac',  label: 'Corchetes',       t: '\\left[ #@ \\right]'               },
+  { icon: '{}',    cat:'frac',  label: 'Llaves',          t: '\\left\\{ #@ \\right\\}'           },
+  { icon: '∫',     cat:'calc',  label: 'Integral def.',   t: '\\int_{#?}^{#?} #? \\,d#?'        },
+  { icon: '∫˙',    cat:'calc',  label: 'Integral indef.', t: '\\int #? \\,d#?'                   },
+  { icon: 'Σ',     cat:'calc',  label: 'Sumatorio',       t: '\\sum_{#?}^{#?} #?'               },
+  { icon: 'Π',     cat:'calc',  label: 'Productorio',     t: '\\prod_{#?}^{#?} #?'              },
+  { icon: 'lim',   cat:'calc',  label: 'Límite',          t: '\\lim_{#? \\to #?} #?'            },
+  { icon: 'd/dx',  cat:'calc',  label: 'Derivada',        t: '\\frac{d}{d#?}\\left(#?\\right)'  },
+  { icon: '∂',     cat:'calc',  label: 'Parcial',         t: '\\frac{\\partial #?}{\\partial #?}'},
+  { icon: '∇',     cat:'calc',  label: 'Gradiente',       t: '\\nabla #?'                        },
+  { icon: '∞',     cat:'calc',  label: 'Infinito',        t: '\\infty'                           },
+  { icon: 'M 2×2', cat:'alg',   label: 'Matriz 2×2',      t: '\\begin{pmatrix} #? & #? \\\\ #? & #? \\end{pmatrix}'},
+  { icon: 'M 3×3', cat:'alg',   label: 'Matriz 3×3',      t: '\\begin{pmatrix} #? & #? & #? \\\\ #? & #? & #? \\\\ #? & #? & #? \\end{pmatrix}'},
+  { icon: 'det',   cat:'alg',   label: 'Determinante',    t: '\\det\\left(#?\\right)'            },
+  { icon: 'tᵀ',    cat:'alg',   label: 'Transpuesta',     t: '{#@}^{\\top}'                      },
+  { icon: 'A⁻¹',   cat:'alg',   label: 'Inversa',         t: '{#@}^{-1}'                         },
+  { icon: '‖v‖',   cat:'alg',   label: 'Norma',           t: '\\left\\| #@ \\right\\|'           },
+  { icon: '⟨,⟩',   cat:'alg',   label: 'Prod. interno',   t: '\\langle #? , #? \\rangle'         },
+  { icon: '∈',     cat:'logic', label: 'pertenece',       t: '\\in'                              },
+  { icon: '∉',     cat:'logic', label: 'no pertenece',    t: '\\notin'                           },
+  { icon: '⊆',     cat:'logic', label: 'subconjunto',     t: '\\subseteq'                        },
+  { icon: '∪',     cat:'logic', label: 'unión',           t: '\\cup'                             },
+  { icon: '∩',     cat:'logic', label: 'intersección',    t: '\\cap'                             },
+  { icon: '∅',     cat:'logic', label: 'conjunto vacío',  t: '\\emptyset'                        },
+  { icon: '∀',     cat:'logic', label: 'para todo',       t: '\\forall #? \\in #?:'              },
+  { icon: '∃',     cat:'logic', label: 'existe',          t: '\\exists #? \\in #?:'              },
+  { icon: '⟹',    cat:'logic', label: 'implica',         t: '\\implies'                         },
+  { icon: '⟺',    cat:'logic', label: 'iff',             t: '\\iff'                             },
+  { icon: 'ℝ',     cat:'logic', label: 'Reales',          t: '\\mathbb{R}'                       },
+  { icon: 'ℕ',     cat:'logic', label: 'Naturales',       t: '\\mathbb{N}'                       },
+  { icon: 'ℤ',     cat:'logic', label: 'Enteros',         t: '\\mathbb{Z}'                       },
+  { icon: 'ℂ',     cat:'logic', label: 'Complejos',       t: '\\mathbb{C}'                       },
+  { icon: 'α',     cat:'greek', label: 'alpha',           t: '\\alpha'   },
+  { icon: 'β',     cat:'greek', label: 'beta',            t: '\\beta'    },
+  { icon: 'γ',     cat:'greek', label: 'gamma',           t: '\\gamma'   },
+  { icon: 'δ',     cat:'greek', label: 'delta',           t: '\\delta'   },
+  { icon: 'ε',     cat:'greek', label: 'epsilon',         t: '\\varepsilon'},
+  { icon: 'θ',     cat:'greek', label: 'theta',           t: '\\theta'   },
+  { icon: 'λ',     cat:'greek', label: 'lambda',          t: '\\lambda'  },
+  { icon: 'μ',     cat:'greek', label: 'mu',              t: '\\mu'      },
+  { icon: 'π',     cat:'greek', label: 'pi',              t: '\\pi'      },
+  { icon: 'σ',     cat:'greek', label: 'sigma',           t: '\\sigma'   },
+  { icon: 'φ',     cat:'greek', label: 'phi',             t: '\\varphi'  },
+  { icon: 'ω',     cat:'greek', label: 'omega',           t: '\\omega'   },
+  { icon: 'Δ',     cat:'greek', label: 'Delta',           t: '\\Delta'   },
+  { icon: 'Σ',     cat:'greek', label: 'Sigma (may.)',    t: '\\Sigma'   },
+  { icon: 'Ω',     cat:'greek', label: 'Omega (may.)',    t: '\\Omega'   },
+  { icon: '≤',     cat:'rel',   label: 'leq',             t: '\\leq'            },
+  { icon: '≥',     cat:'rel',   label: 'geq',             t: '\\geq'            },
+  { icon: '≠',     cat:'rel',   label: 'neq',             t: '\\neq'            },
+  { icon: '≈',     cat:'rel',   label: 'approx',          t: '\\approx'         },
+  { icon: '≡',     cat:'rel',   label: 'equiv',           t: '\\equiv'          },
+  { icon: '±',     cat:'rel',   label: 'pm',              t: '\\pm'             },
+  { icon: '→',     cat:'rel',   label: 'to',              t: '\\to'             },
+  { icon: '↔',     cat:'rel',   label: 'leftrightarrow',  t: '\\leftrightarrow' },
+  { icon: '⊥',     cat:'rel',   label: 'perp',            t: '\\perp'           },
+  { icon: 'P()',    cat:'stats', label: 'Probabilidad',    t: 'P\\left(#?\\right)'                       },
+  { icon: 'E[]',   cat:'stats', label: 'Esperanza',       t: '\\mathbb{E}\\left[#?\\right]'             },
+  { icon: 'Var',   cat:'stats', label: 'Varianza',        t: '\\operatorname{Var}\\left(#?\\right)'     },
+  { icon: 'x̄',    cat:'stats', label: 'Media',           t: '\\bar{#@}'                                },
+  { icon: 'N(μ,σ)',cat:'stats', label: 'Normal',          t: '\\mathcal{N}\\!\\left(#?,#?\\right)'      },
+  { icon: 'Bin',   cat:'stats', label: 'Binomial',        t: '\\binom{#?}{#?}'                          },
+]
+
+// ======================================================================
+// HELPER KaTeX
+// ======================================================================
+function renderLatex(latex, container, displayMode) {
+  if (!latex || !latex.trim()) {
+    container.innerHTML = displayMode
+      ? '<span class="math-empty">vacío — editá en el popover</span>'
+      : '<span class="math-empty-dot"></span>'
+    return true
+  }
+  try {
+    katex.render(latex, container, { throwOnError: true, displayMode, output: 'html', trust: false })
+    return true
+  } catch (err) {
+    container.innerHTML =
+      `<span class="math-errstr" title="${err.message}">⚠ ${latex.slice(0,40)}${latex.length>40?'…':''}</span>`
+    return false
+  }
+}
+
+// ======================================================================
+// NODEVIEWS
+// ======================================================================
+class MathInlineView {
+  constructor({ node, view, getPos }) {
+    this.node = node; this.view = view; this.getPos = getPos
+    this.dom = document.createElement('span')
+    this.dom.className = 'math-inline'
+    this.dom.contentEditable = 'false'
+    this.dom.addEventListener('click', () => {
+      const pos = this.getPos()
+      activeNodePos = pos
+      isFromTipTap = true
+      formulaInput.value = this.node.attrs.latex
+      isFromTipTap = false
+      autoResizeInput()
+      sbNode.textContent = '$ inline'
+      refreshStatus(this.node.attrs.latex)
+      document.querySelectorAll('#snippets-sidebar .snip, .sb-quick-btn, #btn-latex-mode, #btn-save-snip')
+        .forEach(b => b.disabled = false)
+      showPopover(pos)
+    })
+    this._render()
+  }
+  update(node) {
+    if (node.type.name !== 'mathInline') return false
+    const changed = node.attrs.latex !== this.node.attrs.latex
+    this.node = node
+    if (changed) this._render()
+    return true
+  }
+  selectNode()   { this.dom.classList.add('ProseMirror-selectednode') }
+  deselectNode() { this.dom.classList.remove('ProseMirror-selectednode') }
+  stopEvent()    { return false }
+  destroy()      {}
+  _render() {
+    const ok = renderLatex(this.node.attrs.latex, this.dom, false)
+    this.dom.classList.toggle('has-error', !ok)
+  }
+}
+
+class MathDisplayView {
+  constructor({ node, view, getPos }) {
+    this.node = node; this.view = view; this.getPos = getPos
+    this.dom = document.createElement('div')
+    this.dom.className = 'math-display'
+    this.dom.contentEditable = 'false'
+    this.dom.addEventListener('click', () => {
+      const pos = this.getPos()
+      activeNodePos = pos
+      isFromTipTap = true
+      formulaInput.value = this.node.attrs.latex
+      isFromTipTap = false
+      autoResizeInput()
+      sbNode.textContent = '$$ display'
+      refreshStatus(this.node.attrs.latex)
+      document.querySelectorAll('#snippets-sidebar .snip, .sb-quick-btn, #btn-latex-mode, #btn-save-snip')
+        .forEach(b => b.disabled = false)
+      showPopover(pos)
+    })
+    this._render()
+  }
+  update(node) {
+    if (node.type.name !== 'mathDisplay') return false
+    const changed = node.attrs.latex !== this.node.attrs.latex
+    this.node = node
+    if (changed) this._render()
+    return true
+  }
+  selectNode()   { this.dom.classList.add('ProseMirror-selectednode') }
+  deselectNode() { this.dom.classList.remove('ProseMirror-selectednode') }
+  stopEvent()    { return false }
+  destroy()      {}
+  _render() {
+    const ok = renderLatex(this.node.attrs.latex, this.dom, true)
+    this.dom.classList.toggle('has-error', !ok)
+  }
+}
+
+// ======================================================================
+// EXTENSIONES TipTap
+// ======================================================================
+const MathInline = Node.create({
+  name: 'mathInline', group: 'inline', inline: true, atom: true, draggable: false,
+  addAttributes() {
+    return { latex: {
+      default: '',
+      parseHTML:  el    => el.getAttribute('data-latex') ?? '',
+      renderHTML: attrs => ({ 'data-latex': attrs.latex }),
+    }}
+  },
+  parseHTML()  { return [{ tag: 'span[data-type="math-inline"]' }] },
+  renderHTML({ HTMLAttributes }) {
+    return ['span', mergeAttributes({ 'data-type': 'math-inline' }, HTMLAttributes)]
+  },
+  addNodeView() { return props => new MathInlineView(props) },
+  addInputRules() {
+    const type = this.type
+    return [new InputRule({
+      find: /\$([^\$\n]+)\$$/,
+      handler: ({ state, range, match }) => {
+        const latex = match[1].trim()
+        if (!latex) return null
+        state.tr.replaceRangeWith(range.from, range.to, type.create({ latex }))
+      },
+    })]
+  },
+  addCommands() {
+    return {
+      insertMathInline: latex => ({ state, dispatch }) => {
+        const node = this.type.create({ latex: latex ?? '' })
+        if (dispatch) {
+          const pos = state.selection.from
+          const tr  = state.tr.replaceSelectionWith(node)
+          tr.setSelection(NodeSelection.create(tr.doc, pos))
+          dispatch(tr)
+        }
+        return true
+      },
+    }
+  },
+})
+
+const MathDisplay = Node.create({
+  name: 'mathDisplay', group: 'block', atom: true, draggable: false,
+  addAttributes() {
+    return { latex: {
+      default: '',
+      parseHTML:  el    => el.getAttribute('data-latex') ?? '',
+      renderHTML: attrs => ({ 'data-latex': attrs.latex }),
+    }}
+  },
+  parseHTML()  { return [{ tag: 'div[data-type="math-display"]' }] },
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes({ 'data-type': 'math-display' }, HTMLAttributes)]
+  },
+  addNodeView() { return props => new MathDisplayView(props) },
+  addCommands() {
+    return {
+      insertMathDisplay: latex => ({ state, dispatch }) => {
+        const node = this.type.create({ latex: latex ?? '' })
+        if (dispatch) {
+          const { $from } = state.selection
+          const insertPos = $from.after($from.depth)
+          const tr = state.tr.insert(insertPos, node)
+          tr.setSelection(NodeSelection.create(tr.doc, insertPos))
+          dispatch(tr)
+        }
+        return true
+      },
+    }
+  },
+})
+
+const MathKeyboard = Extension.create({
+  name: 'mathKeyboard',
+  addKeyboardShortcuts() {
+    return {
+      'Mod-m': () => { insertAndFocus('inline');  return true },
+      'Mod-M': () => { insertAndFocus('display'); return true },
+      'Enter': ({ editor }) => {
+        const selNode = editor.state.selection.node
+        if (selNode && (selNode.type.name === 'mathInline' || selNode.type.name === 'mathDisplay')) {
+          showPopover(activeNodePos)
+          fpMf.focus()
+          return true
+        }
+        return false
+      },
+    }
+  },
+})
+
+// ======================================================================
+// INICIALIZAR EDITOR
+// ======================================================================
+const editor = new Editor({
+  element: document.getElementById('editor'),
+  extensions: [
+    StarterKit.configure({ codeBlock: false, heading: { levels: [1,2,3] }, history: { depth: 200 } }),
+    MathInline, MathDisplay, MathKeyboard,
+  ],
+  content: `
+    <h1>Formalia — Demo 3</h1>
+    <p>Editor con fórmulas LaTeX. Hacé click en una fórmula para editarla:
+       arriba el editor visual MathLive, abajo el LaTeX fuente.</p>
+
+    <h2>Fórmulas inline</h2>
+    <p>La identidad de Euler:
+       <span data-type="math-inline" data-latex="e^{i\\pi} + 1 = 0"></span>
+       y la fórmula cuadrática:
+       <span data-type="math-inline" data-latex="x = \\dfrac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"></span>.
+    </p>
+
+    <h2>Bloques display</h2>
+    <div data-type="math-display" data-latex="\\int_{-\\infty}^{\\infty} e^{-x^2} \\,dx = \\sqrt{\\pi}"></div>
+    <div data-type="math-display" data-latex="\\sum_{n=0}^{\\infty} \\frac{x^n}{n!} = e^x"></div>
+
+    <h2>Cómo usar</h2>
+    <p>• Escribí <code>$x^2$</code> para insertar inline.<br>
+       • Usá los botones del toolbar o los atajos de teclado.<br>
+       • <strong>Editor visual</strong>: inline shortcuts (<code>frac</code>, <code>sqrt</code>…) o snippets del panel.<br>
+       • <strong>Botón \\ LaTeX</strong>: modo LaTeX para tipear <code>\\hat</code>, <code>\\vec</code>… → Enter confirma.<br>
+       • <strong>LaTeX fuente</strong>: editá el LaTeX directamente si preferís.</p>
+  `,
+  editorProps: { attributes: { class: '' } },
+  onCreate:         ({ editor }) => refreshToolbar(editor),
+  onUpdate:         ({ editor }) => refreshToolbar(editor),
+  onSelectionUpdate:({ editor }) => { refreshToolbar(editor); syncPanelFromSelection(editor) },
+})
+
+// ======================================================================
+// MATHLIVE — setup
+// ======================================================================
+const fpMf       = document.getElementById('fp-mf')
+const fpLatexHint = document.getElementById('fp-latex-hint')
+
+await customElements.whenDefined('math-field')
+
+function configureField() {
+  fpMf.smartMode   = false
+  fpMf.defaultMode = 'math'
+  fpMf.mathVirtualKeyboardPolicy = 'off'
+  fpMf.menuItems   = []
+  fpMf.popoverPolicy = 'auto'
+  fpMf.inlineShortcuts = {
+    ...fpMf.inlineShortcuts,
+    'hat':   '\\hat{#@}',   'vec':  '\\vec{#@}',
+    'bar':   '\\bar{#@}',   'dot':  '\\dot{#@}',
+    'tilde': '\\tilde{#@}', 'norm': '\\left\\|#?\\right\\|',
+    'RR': '\\mathbb{R}', 'NN': '\\mathbb{N}', 'ZZ': '\\mathbb{Z}',
+  }
+}
+configureField()
+
+// Focus MathLive: recargar con el contenido actual del textarea.
+// fpMf.insert() con replaceAll solo es confiable con foco activo — por eso
+// lo hacemos aquí y NO cuando el campo no tiene foco.
+fpMf.addEventListener('focus', () => {
+  editingSource = 'mathlive'
+  if (skipMfReload) { skipMfReload = false }
+  else { fpMf.insert(formulaInput.value, { insertionMode: 'replaceAll', selectionMode: 'after' }) }
+  // Zombie fix: click en padding → host tiene foco pero no el shadow DOM
+  requestAnimationFrame(() => {
+    if (!fpMf.shadowRoot?.activeElement) fpMf.focus()
+  })
+})
+
+// Indicador visual de modo LaTeX
+fpMf.addEventListener('mode-change', () => {
+  const inLatex = fpMf.mode === 'latex'
+  fpMf.classList.toggle('latex-mode', inLatex)
+  fpLatexHint.classList.toggle('visible', inLatex)
+  popoverEl.classList.toggle('latex-mode-active', inLatex)
+})
+
+// MathLive input → textarea + TipTap
+// Solo corre cuando el usuario está editando activamente en MathLive.
+// Si editingSource = 'textarea', el evento viene de nuestro fpMf.insert()
+// programático — ignorar sin importar cuándo dispare su timer interno.
+fpMf.addEventListener('input', () => {
+  if (isFromTipTap || editingSource !== 'mathlive') return
+  if (activeNodePos === null) return
+
+  const latex = fpMf.getValue('latex')
+  formulaInput.value = latex
+  autoResizeInput()
+  dispatchToTipTap(latex, false)
+  refreshStatus(latex)
+})
+
+// MathLive blur → commit al historial
+fpMf.addEventListener('blur', () => {
+  // Si MathLive está en modo LaTeX interno, getValue() devuelve contenido
+  // truncado (el comando a medio tipear no está en el árbol de átomos).
+  // Saltear el dispatch: la fórmula queda como estaba antes del \
+  if (fpMf.mode === 'latex') {
+    editingSource = null
+    return
+  }
+  editingSource = null
+  if (activeNodePos === null) return
+  const latex = fpMf.getValue('latex')
+  formulaInput.value = latex
+  autoResizeInput()
+  dispatchToTipTap(latex, true)
+})
+
+// Escape / Ctrl+Enter desde MathLive
+fpMf.addEventListener('keydown', e => {
+  if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+    e.preventDefault()
+    closeAndMoveAfter()
+  }
+})
+
+// ======================================================================
+// DOM REFS — popover
+// ======================================================================
+const popoverEl     = document.getElementById('formula-popover')
+const fpArrow       = document.getElementById('fp-arrow')
+const formulaInput  = document.getElementById('formula-input')
+const fpMirror      = document.getElementById('fp-mirror')
+const sbNode        = document.getElementById('sb-node')
+const sbLatex       = document.getElementById('sb-latex')
+const sbError       = document.getElementById('sb-error')
+const fpMfWrap      = document.getElementById('fp-mf-wrap')
+const fpSourceWrap  = document.getElementById('fp-source-wrap')
+const btnModeVisual = document.getElementById('btn-mode-visual')
+const btnModeLatex  = document.getElementById('btn-mode-latex')
+const btnLatexMode  = document.getElementById('btn-latex-mode')
+
+const GAP    = 8
+const MARGIN = 10
+
+// ======================================================================
+// POPOVER — posicionamiento
+// ======================================================================
+function calcPopoverWidth() {
+  const text = formulaInput.value || formulaInput.getAttribute('placeholder') || ''
+  const longestLine = text.split('\n').reduce((a, b) => a.length > b.length ? a : b, '')
+  fpMirror.textContent = longestLine
+  const textPx = fpMirror.getBoundingClientRect().width
+  const editorWrap = document.getElementById('editor-wrap')
+  const maxW = editorWrap.clientWidth - 24
+  return Math.round(Math.max(280, Math.min(textPx + 30, maxW)))
+}
+
+function autoResizeInput() {
+  formulaInput.style.height = '0'
+  formulaInput.style.height = formulaInput.scrollHeight + 'px'
+}
+
+function showPopover(nodePos) {
+  const domNode = editor.view.nodeDOM(nodePos)
+  if (!domNode) {
+    requestAnimationFrame(() => { if (activeNodePos === nodePos) showPopover(nodePos) })
+    return
+  }
+
+  const rect = domNode.getBoundingClientRect()
+  const popoverW = calcPopoverWidth()
+  popoverEl.style.width = `${popoverW}px`
+
+  // Hacer visible (oculto) para medir alto real
+  popoverEl.style.visibility = 'hidden'
+  popoverEl.classList.add('visible')
+  autoResizeInput()
+  const popoverH = popoverEl.offsetHeight
+
+  // Posición horizontal
+  let left = rect.left + rect.width / 2 - popoverW / 2
+  left = Math.max(MARGIN, Math.min(left, window.innerWidth - popoverW - MARGIN))
+
+  // Posición vertical
+  const spaceBelow = window.innerHeight - rect.bottom - GAP - MARGIN
+  const spaceAbove = rect.top - GAP - MARGIN
+  let top, arrowBelow
+
+  if (spaceBelow >= popoverH || spaceBelow >= spaceAbove) {
+    top = rect.bottom + GAP; arrowBelow = false
+  } else {
+    top = rect.top - GAP - popoverH; arrowBelow = true
+  }
+
+  const arrowLeft = Math.max(10, Math.min(rect.left + rect.width/2 - left - 5, popoverW - 24))
+
+  popoverEl.style.left = `${left}px`
+  popoverEl.style.top  = `${top}px`
+  popoverEl.style.visibility = ''
+  fpArrow.style.left = `${arrowLeft}px`
+  fpArrow.classList.toggle('below', arrowBelow)
+
+  // Salir de modo LaTeX si estaba activo antes de cargar nueva fórmula.
+  // insert() con replaceAll en modo latex produce resultados incorrectos.
+  exitLatexMode()
+
+  // Siempre abrir en modo visual
+  fpMfWrap.classList.remove('fp-hidden')
+  fpSourceWrap.classList.add('fp-hidden')
+  btnModeVisual.classList.add('active')
+  btnModeLatex.classList.remove('active')
+  btnLatexMode.style.display = ''
+  // insert() con replaceAll antes de focus() para inicializar cursor correctamente.
+  // skipMfReload=true evita que el focus handler haga un segundo insert innecesario.
+  skipMfReload = true
+  isFromTipTap = true
+  fpMf.insert(formulaInput.value, { insertionMode: 'replaceAll', selectionMode: 'after' })
+  isFromTipTap = false
+  fpMf.focus()
+}
+
+function exitLatexMode() {
+  if (fpMf.mode === 'latex') fpMf.executeCommand(['complete', 'reject'])
+  fpMf.classList.remove('latex-mode')
+  fpLatexHint.classList.remove('visible')
+  popoverEl.classList.remove('latex-mode-active')
+}
+
+function hidePopover() {
+  exitLatexMode()
+  popoverEl.classList.remove('visible')
+}
+
+document.getElementById('editor-wrap').addEventListener('scroll', () => {
+  if (activeNodePos !== null && popoverEl.classList.contains('visible'))
+    showPopover(activeNodePos)
+})
+
+// ======================================================================
+// HELPER — dispatch a TipTap
+// ======================================================================
+function dispatchToTipTap(latex, addToHistory) {
+  if (activeNodePos === null) return
+  const { state, view } = editor
+  const node = state.doc.nodeAt(activeNodePos)
+  if (!node || (node.type.name !== 'mathInline' && node.type.name !== 'mathDisplay')) {
+    activeNodePos = null; return
+  }
+  const tr = state.tr.setNodeMarkup(activeNodePos, null, { latex })
+  if (!addToHistory) tr.setMeta('addToHistory', false)
+  isDispatchingFromPanel = true
+  view.dispatch(tr)
+  isDispatchingFromPanel = false
+}
+
+// ======================================================================
+// SYNC panel ← editor
+// ======================================================================
+function syncPanelFromSelection(editor) {
+  if (isDispatchingFromPanel) return
+
+  // Guard: si el foco está en el popover (textarea o MathLive), no cerrar
+  const editorEl = document.getElementById('editor')
+  if (editorEl && !editorEl.contains(document.activeElement)) return
+
+  const { selection } = editor.state
+  const selNode = selection.node
+
+  if (selNode && (selNode.type.name === 'mathInline' || selNode.type.name === 'mathDisplay')) {
+    activeNodePos = selection.from
+
+    // Cargar en textarea (MathLive se carga al abrir el popover)
+    isFromTipTap = true
+    formulaInput.value = selNode.attrs.latex
+    isFromTipTap = false
+    autoResizeInput()
+
+    sbNode.textContent = selNode.type.name === 'mathInline' ? '$ inline' : '$$ display'
+    refreshStatus(selNode.attrs.latex)
+    document.querySelectorAll('#snippets-sidebar .snip, #btn-latex-mode, #btn-save-snip')
+      .forEach(b => b.disabled = false)
+    return
+  }
+
+  // Sin nodo math — cerrar popover
+  activeNodePos = null
+  refreshQuickButtons()
+  sbNode.textContent = '—'; sbLatex.textContent = ''; sbError.textContent = ''
+  popoverEl.classList.remove('has-error')
+  hidePopover()
+  btnLatexMode.disabled = true
+}
+
+// ======================================================================
+// TEXTAREA — event handlers
+// ======================================================================
+// Sincronizar MathLive con debounce + solo LaTeX válido.
+// El guard real contra el loop está en el input handler de MathLive:
+// document.activeElement === formulaInput bloquea todos los eventos programáticos
+formulaInput.addEventListener('input', () => {
+  if (activeNodePos === null) return
+  autoResizeInput()
+  if (popoverEl.classList.contains('visible'))
+    popoverEl.style.width = `${calcPopoverWidth()}px`
+  const latex = formulaInput.value
+  // MathLive NO se actualiza en tiempo real desde el textarea:
+  // insert()/setValue() sin foco activo son no determinísticos en MathLive.
+  // El preview en tiempo real lo da KaTeX en TipTap (línea siguiente).
+  // MathLive se recarga en fpMf.focus() cuando el usuario vuelve a él.
+  dispatchToTipTap(latex, false)
+  refreshStatus(latex)
+})
+
+// Textarea focus → marcar editingSource + recuperar activeNodePos si se perdió
+formulaInput.addEventListener('focus', () => {
+  editingSource = 'textarea'
+  if (activeNodePos !== null) return
+  const { selection } = editor.state
+  const selNode = selection.node
+  if (selNode && (selNode.type.name === 'mathInline' || selNode.type.name === 'mathDisplay')) {
+    activeNodePos = selection.from
+    formulaInput.value = selNode.attrs.latex
+    autoResizeInput()
+  }
+})
+
+// Textarea blur → commit al historial
+formulaInput.addEventListener('blur', () => {
+  editingSource = null
+  if (activeNodePos === null) return
+  dispatchToTipTap(formulaInput.value, true)
+})
+
+// Escape / Ctrl+Enter desde textarea
+formulaInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+    e.preventDefault()
+    closeAndMoveAfter()
+  }
+})
+
+// ======================================================================
+// STATUS
+// ======================================================================
+function refreshStatus(latex) {
+  sbLatex.textContent = latex ? latex.slice(0, 80) + (latex.length > 80 ? '…' : '') : ''
+  try {
+    if (latex && latex.trim()) katex.renderToString(latex, { throwOnError: true })
+    sbError.textContent = ''
+    popoverEl.classList.remove('has-error')
+  } catch (err) {
+    const msg = err.message.split('\n')[0].replace(/KaTeX parse error: /, '')
+    sbError.textContent = `⚠ ${msg}`
+    popoverEl.classList.add('has-error')
+  }
+}
+
+// ======================================================================
+// CERRAR POPOVER — mover cursor después de la fórmula
+// ======================================================================
+function closeAndMoveAfter() {
+  if (activeNodePos === null) { editor.commands.focus(); return }
+
+  const latex = formulaInput.value
+  dispatchToTipTap(latex, true)  // un Undo-point al confirmar
+
+  const freshState = editor.state
+  const freshNode  = freshState.doc.nodeAt(activeNodePos)
+  if (freshNode) {
+    try {
+      const afterPos = activeNodePos + freshNode.nodeSize
+      const sel = TextSelection.near(freshState.doc.resolve(afterPos))
+      editor.view.dispatch(freshState.tr.setSelection(sel))
+    } catch (_) {}
+  }
+
+  hidePopover()
+  popoverEl.classList.remove('has-error')
+  activeNodePos = null
+  refreshQuickButtons()
+  sbNode.textContent = '—'; sbLatex.textContent = ''; sbError.textContent = ''
+  btnLatexMode.disabled = true
+
+  editor.commands.focus()
+}
+
+// ======================================================================
+// INSERTAR NUEVA FÓRMULA Y ABRIR POPOVER
+// ======================================================================
+function insertAndFocus(type) {
+  const cmd = type === 'inline' ? 'insertMathInline' : 'insertMathDisplay'
+  editor.chain().focus()[cmd]('').run()
+  requestAnimationFrame(() => {
+    if (activeNodePos !== null) {
+      showPopover(activeNodePos)
+      // showPopover ya llama fpMf.focus()
+    }
+  })
+}
+
+// ======================================================================
+// BOTÓN \ — activar modo LaTeX en MathLive (solo visible en modo visual)
+// ======================================================================
+btnLatexMode.addEventListener('mousedown', e => e.preventDefault())
+btnLatexMode.addEventListener('click', () => {
+  if (activeNodePos === null) return
+  if (!popoverEl.classList.contains('visible')) showPopover(activeNodePos)
+  fpMf.executeCommand(['switchMode', 'latex', '', '\\'])
+  fpMf.focus()
+})
+
+// ======================================================================
+// TOGGLE Visual / LaTeX
+// ======================================================================
+function setEditMode(mode) {
+  if (mode === 'visual') {
+    fpMfWrap.classList.remove('fp-hidden')
+    fpSourceWrap.classList.add('fp-hidden')
+    btnModeVisual.classList.add('active')
+    btnModeLatex.classList.remove('active')
+    btnLatexMode.style.display = ''
+    // Recargar MathLive con el contenido actual del textarea (mismo patrón que showPopover)
+    skipMfReload = true
+    isFromTipTap = true
+    fpMf.insert(formulaInput.value, { insertionMode: 'replaceAll', selectionMode: 'after' })
+    isFromTipTap = false
+    fpMf.focus()
+  } else {
+    fpMfWrap.classList.add('fp-hidden')
+    fpSourceWrap.classList.remove('fp-hidden')
+    btnModeVisual.classList.remove('active')
+    btnModeLatex.classList.add('active')
+    btnLatexMode.style.display = 'none'
+    editingSource = 'textarea'
+    formulaInput.focus()
+  }
+}
+
+btnModeVisual.addEventListener('mousedown', e => e.preventDefault())
+btnModeVisual.addEventListener('click', () => {
+  if (activeNodePos === null) return
+  setEditMode('visual')
+})
+btnModeLatex.addEventListener('mousedown', e => e.preventDefault())
+btnModeLatex.addEventListener('click', () => {
+  if (activeNodePos === null) return
+  setEditMode('latex')
+})
+
+// ======================================================================
+// SNIPPETS
+// ======================================================================
+function insertSnippet(template) {
+  if (activeNodePos === null) {
+    insertSnippetAsFormula(template)
+    return
+  }
+  if (!popoverEl.classList.contains('visible')) showPopover(activeNodePos)
+
+  editingSource = 'mathlive'
+  fpMf.focus()
+  fpMf.insert(template, { selectionMode: 'placeholder' })
+}
+
+function insertSnippetAsFormula(template) {
+  const latex = template.replace(/#@/g, '').replace(/#\?/g, '')
+  const { selection } = editor.state
+  const isEmptyParagraph =
+    selection.$from.parent.type.name === 'paragraph' &&
+    selection.$from.parent.content.size === 0
+  const cmd = isEmptyParagraph ? 'insertMathDisplay' : 'insertMathInline'
+  editor.chain().focus()[cmd](latex).run()
+  requestAnimationFrame(() => {
+    if (activeNodePos !== null) {
+      showPopover(activeNodePos)
+    }
+  })
+}
+
+// ======================================================================
+// SNIPPETS — custom (localStorage)
+// ======================================================================
+function loadCustomSnippets() {
+  try { return JSON.parse(localStorage.getItem('formalia-custom-snippets') ?? '[]') } catch { return [] }
+}
+function saveCustomSnippets(arr) {
+  localStorage.setItem('formalia-custom-snippets', JSON.stringify(arr))
+}
+
+const CAT_LABELS = {
+  frac:'Fracciones', calc:'Cálculo', alg:'Álgebra lineal',
+  logic:'Lógica / Conjuntos', greek:'Griegos', rel:'Relaciones',
+  stats:'Estadística', custom:'⭐ Guardados',
+}
+const CAT_ORDER = ['frac','calc','alg','logic','greek','rel','stats','custom']
+
+function makeSnipBtn(s) {
+  const btn = document.createElement('button')
+  btn.type = 'button'
+  btn.className = s.isCustom ? 'snip snip-custom' : 'snip'
+  btn.title = s.t.slice(0, 60)
+  btn.disabled = (activeNodePos === null)
+  btn.addEventListener('mousedown', e => e.preventDefault())
+  btn.addEventListener('click', () => insertSnippet(s.t))
+
+  const icon = document.createElement('span')
+  icon.className = 'snip-icon'; icon.textContent = s.icon
+  const label = document.createElement('span')
+  label.className = 'snip-label'; label.textContent = s.label
+
+  btn.appendChild(icon); btn.appendChild(label)
+
+  if (s.isCustom) {
+    const del = document.createElement('span')
+    del.className = 'snip-del'; del.textContent = '×'; del.title = 'Eliminar'
+    del.addEventListener('click', e => {
+      e.stopPropagation()
+      saveCustomSnippets(loadCustomSnippets().filter(c => !(c.icon === s.icon && c.t === s.t)))
+      renderSnippets()
+    })
+    btn.appendChild(del)
+  }
+  return btn
+}
+
+function renderSnippets() {
+  const filter = document.getElementById('snippet-search').value.toLowerCase()
+  const cat    = document.getElementById('snippet-cat').value
+  const list   = document.getElementById('snippet-list')
+  list.innerHTML = ''
+
+  const customs = loadCustomSnippets().map(c => ({ ...c, cat: 'custom', isCustom: true }))
+  const all = [...SNIPPETS, ...customs]
+
+  const visible = all.filter(s => {
+    if (cat === 'custom') return s.isCustom
+    if (cat && s.cat !== cat) return false
+    if (filter) return (
+      s.icon.toLowerCase().includes(filter) ||
+      s.label.toLowerCase().includes(filter) ||
+      s.t.toLowerCase().includes(filter)
+    )
+    return true
+  })
+
+  const showGroups = !cat && !filter
+  if (showGroups) {
+    const groups = {}
+    for (const s of visible) { if (!groups[s.cat]) groups[s.cat] = []; groups[s.cat].push(s) }
+    for (const c of CAT_ORDER) {
+      if (!groups[c]?.length) continue
+      const sep = document.createElement('div')
+      sep.className = 'snip-sep'; sep.textContent = CAT_LABELS[c] ?? c
+      list.appendChild(sep)
+      groups[c].forEach(s => list.appendChild(makeSnipBtn(s)))
+    }
+  } else {
+    visible.forEach(s => list.appendChild(makeSnipBtn(s)))
+  }
+}
+
+document.getElementById('snippet-search').addEventListener('input',  renderSnippets)
+document.getElementById('snippet-cat').addEventListener('change',    renderSnippets)
+
+document.getElementById('btn-save-snip').addEventListener('mousedown', e => e.preventDefault())
+document.getElementById('btn-save-snip').addEventListener('click', () => {
+  const latex = formulaInput.value.trim()
+  if (!latex) return
+  const name = prompt('Nombre para el snippet:', latex.slice(0, 24))
+  if (!name) return
+  const customs = loadCustomSnippets()
+  customs.push({ icon: name, label: name, t: latex })
+  saveCustomSnippets(customs)
+  document.getElementById('snippet-cat').value = 'custom'
+  renderSnippets()
+})
+
+renderSnippets()
+
+// ======================================================================
+// TOOLBAR
+// ======================================================================
+function refreshToolbar(editor) {
+  document.getElementById('btn-bold').classList.toggle('active',   editor.isActive('bold'))
+  document.getElementById('btn-italic').classList.toggle('active', editor.isActive('italic'))
+  document.getElementById('btn-h1').classList.toggle('active', editor.isActive('heading', { level: 1 }))
+  document.getElementById('btn-h2').classList.toggle('active', editor.isActive('heading', { level: 2 }))
+  document.getElementById('btn-h3').classList.toggle('active', editor.isActive('heading', { level: 3 }))
+  document.getElementById('btn-undo').disabled = !editor.can().undo()
+  document.getElementById('btn-redo').disabled = !editor.can().redo()
+}
+
+document.getElementById('btn-bold').addEventListener('click',
+  () => editor.chain().focus().toggleBold().run())
+document.getElementById('btn-italic').addEventListener('click',
+  () => editor.chain().focus().toggleItalic().run())
+document.getElementById('btn-h1').addEventListener('click',
+  () => editor.chain().focus().toggleHeading({ level: 1 }).run())
+document.getElementById('btn-h2').addEventListener('click',
+  () => editor.chain().focus().toggleHeading({ level: 2 }).run())
+document.getElementById('btn-h3').addEventListener('click',
+  () => editor.chain().focus().toggleHeading({ level: 3 }).run())
+document.getElementById('btn-undo').addEventListener('click',
+  () => editor.chain().focus().undo().run())
+document.getElementById('btn-redo').addEventListener('click',
+  () => editor.chain().focus().redo().run())
+document.getElementById('btn-mi').addEventListener('click', () => insertAndFocus('inline'))
+document.getElementById('btn-md').addEventListener('click', () => insertAndFocus('display'))
+
+// ======================================================================
+// DARK MODE
+// ======================================================================
+const btnTheme = document.getElementById('btn-theme')
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark)
+  btnTheme.textContent = dark ? '☀' : '☾'
+}
+applyTheme(localStorage.getItem('formalia-theme') === 'dark')
+btnTheme.addEventListener('click', () => {
+  const dark = !document.body.classList.contains('dark')
+  applyTheme(dark)
+  localStorage.setItem('formalia-theme', dark ? 'dark' : 'light')
+})
+
+// ======================================================================
+// SIDEBAR — colapsar / expandir + quick panel
+// ======================================================================
+const sbEl        = document.getElementById('snippets-sidebar')
+const btnCollapse = document.getElementById('btn-collapse-sb')
+const sbQuick     = document.getElementById('sb-quick')
+
+const QUICK_SNIPS = [
+  { icon: 'a/b',  label: 'Fracción',    t: '\\frac{#@}{#?}'                                       },
+  { icon: '√',    label: 'Raíz',        t: '\\sqrt{#@}'                                           },
+  { icon: 'xⁿ',  label: 'Potencia',    t: '{#@}^{#?}'                                            },
+  { icon: '∫',    label: 'Integral',    t: '\\int_{#?}^{#?} #? \\,d#?'                           },
+  { icon: 'Σ',    label: 'Sumatorio',   t: '\\sum_{#?}^{#?} #?'                                   },
+  { icon: 'lim',  label: 'Límite',      t: '\\lim_{#? \\to #?} #?'                                },
+  { icon: '()',   label: 'Paréntesis',  t: '\\left( #@ \\right)'                                   },
+  { icon: 'M',    label: 'Matriz 2×2',  t: '\\begin{pmatrix} #? & #? \\\\ #? & #? \\end{pmatrix}' },
+  { icon: 'α',    label: 'alpha',       t: '\\alpha'                                               },
+  { icon: 'π',    label: 'pi',          t: '\\pi'                                                  },
+  { icon: '∈',    label: 'pertenece',   t: '\\in'                                                  },
+  { icon: '≤',    label: 'leq',         t: '\\leq'                                                 },
+]
+
+function buildQuickPanel() {
+  sbQuick.innerHTML = ''
+  for (const s of QUICK_SNIPS) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'sb-quick-btn'
+    btn.title = s.label
+    btn.textContent = s.icon
+    btn.disabled = (activeNodePos === null)
+    btn.addEventListener('mousedown', e => e.preventDefault())
+    btn.addEventListener('click', () => insertSnippet(s.t))
+    sbQuick.appendChild(btn)
+  }
+}
+
+function refreshQuickButtons() {
+  sbQuick.querySelectorAll('.sb-quick-btn').forEach(b => b.disabled = (activeNodePos === null))
+}
+
+if (localStorage.getItem('formalia-sb-collapsed') === '1') {
+  sbEl.classList.add('collapsed')
+  btnCollapse.textContent = '›'
+  btnCollapse.title = 'Expandir panel'
+}
+buildQuickPanel()
+
+btnCollapse.addEventListener('click', () => {
+  const col = sbEl.classList.toggle('collapsed')
+  btnCollapse.textContent = col ? '›' : '‹'
+  btnCollapse.title = col ? 'Expandir panel' : 'Colapsar panel'
+  localStorage.setItem('formalia-sb-collapsed', col ? '1' : '0')
+})
+
+</script>
+</body>
+</html>
