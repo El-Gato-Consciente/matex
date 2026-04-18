@@ -175,8 +175,11 @@ export function insertTheoremEnv(envType: string): void {
   if (!_editor) return
   _editor.chain().focus().insertContent({
     type: 'theoremEnv',
-    attrs: { envType, envTitle: '', label: '' },
-    content: [{ type: 'paragraph' }],
+    attrs: { envType, label: '' },
+    content: [
+      { type: 'theoremEnvTitle' },
+      { type: 'paragraph' },
+    ],
   }).run()
 }
 

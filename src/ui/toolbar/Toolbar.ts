@@ -117,12 +117,16 @@ export class Toolbar extends LitElement {
             title="Theorem environments">Env ▾</button>
           ${this._openDropdown === 'env' ? html`
             <div class="tbtn-menu">
-              <button class="tbtn" style="color:var(--thm-theorem)"    @click="${() => { insertTheoremEnv('theorem');    this._openDropdown = null }}">Thm</button>
-              <button class="tbtn" style="color:var(--thm-definition)" @click="${() => { insertTheoremEnv('definition'); this._openDropdown = null }}">Def</button>
-              <button class="tbtn" style="color:var(--thm-example)"    @click="${() => { insertTheoremEnv('example');    this._openDropdown = null }}">Ex</button>
-              <button class="tbtn" style="color:var(--thm-remark)"     @click="${() => { insertTheoremEnv('remark');     this._openDropdown = null }}">Rmk</button>
-              <button class="tbtn" style="color:var(--thm-lemma)"      @click="${() => { insertTheoremEnv('lemma');      this._openDropdown = null }}">Lem</button>
-              <button class="tbtn" style="color:var(--thm-proof)"      @click="${() => { insertTheoremEnv('proof');      this._openDropdown = null }}">Proof</button>
+              <button class="tbtn" style="color:var(--thm-theorem)"     @click="${() => { insertTheoremEnv('theorem');     this._openDropdown = null }}">Thm</button>
+              <button class="tbtn" style="color:var(--thm-definition)"  @click="${() => { insertTheoremEnv('definition');  this._openDropdown = null }}">Def</button>
+              <button class="tbtn" style="color:var(--thm-lemma)"       @click="${() => { insertTheoremEnv('lemma');       this._openDropdown = null }}">Lem</button>
+              <button class="tbtn" style="color:var(--thm-proposition)" @click="${() => { insertTheoremEnv('proposition'); this._openDropdown = null }}">Prop</button>
+              <button class="tbtn" style="color:var(--thm-corollary)"   @click="${() => { insertTheoremEnv('corollary');   this._openDropdown = null }}">Cor</button>
+              <button class="tbtn" style="color:var(--thm-example)"     @click="${() => { insertTheoremEnv('example');     this._openDropdown = null }}">Ex</button>
+              <button class="tbtn" style="color:var(--thm-exercise)"    @click="${() => { insertTheoremEnv('exercise');    this._openDropdown = null }}">Exr</button>
+              <button class="tbtn" style="color:var(--thm-remark)"      @click="${() => { insertTheoremEnv('remark');      this._openDropdown = null }}">Rmk</button>
+              <button class="tbtn" style="color:var(--thm-note)"        @click="${() => { insertTheoremEnv('note');        this._openDropdown = null }}">Note</button>
+              <button class="tbtn" style="color:var(--thm-proof)"       @click="${() => { insertTheoremEnv('proof');       this._openDropdown = null }}">Proof</button>
             </div>
           ` : ''}
         </div>

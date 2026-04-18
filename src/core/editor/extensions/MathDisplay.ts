@@ -1,10 +1,24 @@
 import { Node, mergeAttributes, InputRule } from '@tiptap/core'
 import { MathDisplayView } from '../nodeviews/MathDisplayView'
+import { registerLatexSerializer } from '@core/serializer/LatexSerializerRegistry'
 
 /* ─────────────────────────────────────────────────────────────────
    MathDisplay — TipTap extension for display math nodes.
    Input rule: typing $$ on a blank paragraph → inserts MathDisplay.
    ───────────────────────────────────────────────────────────────── */
+
+registerLatexSerializer('mathDisplay', (node) => {
+  const latex    = (node.attrs['latex']    as string)  ?? ''
+  const numbered = node.attrs['numbered'] as boolean
+  const aligned  = node.attrs['aligned']  as boolean
+  const label    = (node.attrs['label']   as string)   ?? ''
+  const labelCmd = label ? `  \\label{${label}}\n` : ''
+
+  if (!numbered && !aligned) return `\\[\n  ${latex}\n\\]\n`
+  if ( numbered && !aligned) return `\\begin{equation}\n  ${latex}\n${labelCmd}\\end{equation}\n`
+  if (!numbered &&  aligned) return `\\begin{align*}\n  ${latex}\n\\end{align*}\n`
+  return `\\begin{align}\n  ${latex}\n${labelCmd}\\end{align}\n`
+})
 
 export const MathDisplay = Node.create({
   name:    'mathDisplay',

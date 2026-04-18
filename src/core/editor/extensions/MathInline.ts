@@ -1,10 +1,13 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { MathInlineView } from '../nodeviews/MathInlineView'
+import { registerLatexSerializer } from '@core/serializer/LatexSerializerRegistry'
 
 /* ─────────────────────────────────────────────────────────────────
    MathInline — TipTap extension for inline math nodes.
    Stored as: <span data-math-inline="latex">
    ───────────────────────────────────────────────────────────────── */
+
+registerLatexSerializer('mathInline', (node) => `$${node.attrs['latex']}$`)
 
 export const MathInline = Node.create({
   name:   'mathInline',

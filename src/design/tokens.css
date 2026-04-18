@@ -44,6 +44,10 @@
   --thm-remark:      #6b7280;
   --thm-lemma:       #7c3aed;
   --thm-proof:       #374151;
+  --thm-corollary:   #0891b2;
+  --thm-proposition: #9333ea;
+  --thm-note:        #6b7280;
+  --thm-exercise:    #ea580c;
 
   /* Typography */
   --font-ui:   'Inter', system-ui, sans-serif;
@@ -93,6 +97,10 @@ body.dark {
   --thm-remark:      #9ca3af;
   --thm-lemma:       #c084fc;
   --thm-proof:       #d1d5db;
+  --thm-corollary:   #22d3ee;
+  --thm-proposition: #c026d3;
+  --thm-note:        #9ca3af;
+  --thm-exercise:    #fb923c;
 }
 
 /* ── Base reset ──────────────────────────────────────────────────── */

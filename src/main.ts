@@ -9,7 +9,9 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { MathInline }        from '@core/editor/extensions/MathInline'
 import { MathDisplay }       from '@core/editor/extensions/MathDisplay'
 import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
+import { TheoremEnvTitle }   from '@core/editor/extensions/TheoremEnvTitle'
 import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
+import { SlashCommands }    from '@core/editor/extensions/SlashCommands'
 import { setEditor }         from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
 
@@ -39,8 +41,10 @@ const editor: Editor = new Editor({
     }),
     MathInline,
     MathDisplay,
+    TheoremEnvTitle,
     TheoremEnv,
     FormulaNavigation,
+    SlashCommands,
   ],
   content: (savedDoc ?? { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
   onUpdate({ editor: e }) {

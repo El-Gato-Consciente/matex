@@ -1,21 +1,19 @@
 import type { Node as PmNode } from '@tiptap/pm/model'
+import type { ViewMutationRecord } from '@tiptap/pm/view'
 import type { Editor } from '@tiptap/core'
 import type { TheoremEnvType } from '@core/math/types'
 
 /* ─────────────────────────────────────────────────────────────────
    TheoremEnvView — ProseMirror NodeView for theoremEnv nodes.
 
-   Has contentDOM so TipTap manages the body content.
-   The header (type selector + optional title) is rendered by the
-   view and is NOT part of contentDOM — it is interactive but lives
-   outside ProseMirror's managed tree.
+   Header (type dropdown + number) is built in JS and shielded from
+   PM via stopEvent / ignoreMutation.
 
-   stopEvent() returns true for events inside the header so that
-   ProseMirror ignores them and lets the browser handle the native
-   select / contenteditable behaviour.
+   The title is now a proper child node (theoremEnvTitle) rendered
+   inside contentDOM by TipTap — no custom editing code needed here.
    ───────────────────────────────────────────────────────────────── */
 
-const ENV_TYPES: { value: string; label: string }[] = [
+const ENV_TYPES: { value: TheoremEnvType; label: string }[] = [
   { value: 'theorem',     label: 'Theorem'     },
   { value: 'lemma',       label: 'Lemma'       },
   { value: 'proposition', label: 'Proposition' },
@@ -28,21 +26,30 @@ const ENV_TYPES: { value: string; label: string }[] = [
   { value: 'proof',       label: 'Proof'       },
 ]
 
+const UNNUMBERED = new Set(['proof'])
+
 export class TheoremEnvView {
   readonly dom:        HTMLElement
   readonly contentDOM: HTMLElement
 
-  private _node:       PmNode
-  private _getPos:     () => number | undefined
-  private _editor:     Editor
-  private _header:     HTMLElement
-  private _typeSelect: HTMLSelectElement
-  private _titleSpan:  HTMLElement
+  private _node:         PmNode
+  private _getPos:       () => number | undefined
+  private _editor:       Editor
+  private _header:       HTMLElement
+  private _typeBtn:      HTMLButtonElement
+  private _typeLabel:    HTMLSpanElement
+  private _typeMenu:     HTMLElement
+  private _numSpan:      HTMLElement
+  private _onDocUpdate:  () => void
+  private _outsideClick: (e: Event) => void
 
   constructor(node: PmNode, getPos: () => number | undefined, editor: Editor) {
     this._node   = node
     this._getPos = getPos
     this._editor = editor
+
+    this._onDocUpdate = () => this._updateNumber()
+    this._editor.on('update', this._onDocUpdate)
 
     // ── Outer container ──────────────────────────────────────────
     this.dom = document.createElement('div')
@@ -52,45 +59,55 @@ export class TheoremEnvView {
     // ── Header ───────────────────────────────────────────────────
     this._header = document.createElement('div')
     this._header.className = 'theorem-env-header'
+    this._header.contentEditable = 'false'
 
-    // Type selector — styled to look like a label, but clickable
-    this._typeSelect = document.createElement('select')
-    this._typeSelect.className = 'theorem-env-type'
+    // ── Custom type dropdown ──────────────────────────────────────
+    const typeWrap = document.createElement('div')
+    typeWrap.className = 'tenv-type-wrap'
+    typeWrap.addEventListener('mousedown', e => e.stopPropagation())
+
+    this._typeLabel = document.createElement('span')
+
+    this._typeBtn = document.createElement('button')
+    this._typeBtn.className = 'tenv-type-btn'
+    this._typeBtn.type = 'button'
+    this._typeBtn.appendChild(this._typeLabel)
+    this._typeBtn.addEventListener('click', () => this._toggleMenu())
+
+    this._typeMenu = document.createElement('div')
+    this._typeMenu.className = 'tenv-type-menu'
+    this._typeMenu.hidden = true
+
     ENV_TYPES.forEach(({ value, label }) => {
-      const opt = document.createElement('option')
-      opt.value = value
+      const opt = document.createElement('button')
+      opt.className = 'tenv-type-opt'
+      opt.type = 'button'
       opt.textContent = label
-      this._typeSelect.appendChild(opt)
-    })
-    this._typeSelect.addEventListener('change', () => this._onTypeChange())
-    this._typeSelect.addEventListener('mousedown', e => e.stopPropagation())
-
-    // Number placeholder (Phase 4 will populate this)
-    const numSpan = document.createElement('span')
-    numSpan.className = 'theorem-env-number'
-
-    // Title — inline contenteditable span
-    this._titleSpan = document.createElement('span')
-    this._titleSpan.className = 'theorem-env-title'
-    this._titleSpan.contentEditable = 'true'
-    this._titleSpan.spellcheck = false
-    this._titleSpan.dataset['placeholder'] = 'título...'
-    this._titleSpan.addEventListener('keydown',  e => this._onTitleKeyDown(e))
-    this._titleSpan.addEventListener('blur',     ()  => this._onTitleBlur())
-    this._titleSpan.addEventListener('mousedown', e => e.stopPropagation())
-    // Prevent paste from injecting HTML
-    this._titleSpan.addEventListener('paste', e => {
-      e.preventDefault()
-      const text = e.clipboardData?.getData('text/plain') ?? ''
-      document.execCommand('insertText', false, text)
+      opt.dataset['value'] = value
+      opt.style.color = `var(--thm-${value})`
+      opt.addEventListener('click', () => {
+        this._setType(value)
+        this._closeMenu()
+      })
+      this._typeMenu.appendChild(opt)
     })
 
-    this._header.appendChild(this._typeSelect)
-    this._header.appendChild(numSpan)
-    this._header.appendChild(this._titleSpan)
+    typeWrap.appendChild(this._typeBtn)
+    typeWrap.appendChild(this._typeMenu)
+
+    this._outsideClick = (e: Event) => {
+      if (!typeWrap.contains(e.target as Node)) this._closeMenu()
+    }
+
+    // ── Number ───────────────────────────────────────────────────
+    this._numSpan = document.createElement('span')
+    this._numSpan.className = 'theorem-env-number'
+
+    this._header.appendChild(typeWrap)
+    this._header.appendChild(this._numSpan)
     this.dom.appendChild(this._header)
 
-    // ── Body — managed by ProseMirror ────────────────────────────
+    // ── Body (contentDOM — TipTap manages title + body children) ─
     this.contentDOM = document.createElement('div')
     this.contentDOM.className = 'theorem-env-body'
     this.dom.appendChild(this.contentDOM)
@@ -104,29 +121,92 @@ export class TheoremEnvView {
     if (node.type.name !== 'theoremEnv') return false
     this._node = node
     this.dom.dataset['env'] = node.attrs['envType'] as string
-    // Only sync UI elements that are not currently being edited
-    if (document.activeElement !== this._typeSelect) {
-      this._typeSelect.value = node.attrs['envType'] as string
+
+    if (this._typeMenu.hidden) {
+      this._syncTypeBtn(node.attrs['envType'] as TheoremEnvType)
     }
-    if (document.activeElement !== this._titleSpan) {
-      this._titleSpan.textContent = (node.attrs['envTitle'] as string) || ''
-    }
+    this._updateNumber()
     return true
   }
 
-  /** Prevent ProseMirror from handling events fired inside the header. */
   stopEvent(event: Event): boolean {
     return this._header.contains(event.target as Node)
   }
 
-  destroy(): void { /* nothing to clean up */ }
+  ignoreMutation(mutation: ViewMutationRecord): boolean {
+    return this._header.contains(mutation.target)
+  }
 
-  // ── Private helpers ───────────────────────────────────────────
+  destroy(): void {
+    this._closeMenu()
+    this._editor.off('update', this._onDocUpdate)
+  }
+
+  // ── Dropdown ──────────────────────────────────────────────────
+
+  private _toggleMenu(): void {
+    this._typeMenu.hidden ? this._openMenu() : this._closeMenu()
+  }
+
+  private _openMenu(): void {
+    this._typeMenu.hidden = false
+    this._typeBtn.classList.add('open')
+    document.addEventListener('click', this._outsideClick)
+  }
+
+  private _closeMenu(): void {
+    this._typeMenu.hidden = true
+    this._typeBtn.classList.remove('open')
+    document.removeEventListener('click', this._outsideClick)
+  }
+
+  private _setType(envType: TheoremEnvType): void {
+    this.dom.dataset['env'] = envType
+    this._syncTypeBtn(envType)
+    this._dispatch({ envType })
+  }
+
+  private _syncTypeBtn(envType: TheoremEnvType): void {
+    const found = ENV_TYPES.find(t => t.value === envType)
+    this._typeLabel.textContent = found?.label ?? envType
+    this._typeBtn.style.color = `var(--thm-${envType})`
+    this._typeMenu.querySelectorAll<HTMLElement>('.tenv-type-opt').forEach(el => {
+      el.classList.toggle('active', el.dataset['value'] === envType)
+    })
+  }
+
+  // ── Header sync ───────────────────────────────────────────────
 
   private _syncHeader(): void {
-    this._typeSelect.value  = this._node.attrs['envType'] as string
-    this._titleSpan.textContent = (this._node.attrs['envTitle'] as string) || ''
+    this._syncTypeBtn(this._node.attrs['envType'] as TheoremEnvType)
+    this._updateNumber()
   }
+
+  private _updateNumber(): void {
+    const n = this._computeNumber()
+    this._numSpan.textContent = n !== null ? String(n) : ''
+  }
+
+  private _computeNumber(): number | null {
+    const envType = this._node.attrs['envType'] as string
+    if (UNNUMBERED.has(envType)) return null
+
+    const myPos = this._getPos()
+    if (myPos === undefined) return null
+
+    let preceding = 0
+    this._editor.state.doc.nodesBetween(0, myPos, (n) => {
+      if (n.type.name === 'theoremEnv') {
+        if (n.attrs['envType'] === envType) preceding++
+        return false
+      }
+      return true
+    })
+
+    return preceding + 1
+  }
+
+  // ── Dispatch ──────────────────────────────────────────────────
 
   private _dispatch(attrs: Record<string, unknown>): void {
     const pos = this._getPos()
@@ -135,32 +215,5 @@ export class TheoremEnvView {
     this._editor.view.dispatch(
       state.tr.setNodeMarkup(pos, undefined, { ...this._node.attrs, ...attrs })
     )
-  }
-
-  private _onTypeChange(): void {
-    const envType = this._typeSelect.value as TheoremEnvType
-    this.dom.dataset['env'] = envType
-    this._dispatch({ envType })
-  }
-
-  private _onTitleBlur(): void {
-    const envTitle = (this._titleSpan.textContent ?? '').trim()
-    // Normalise: empty string if whitespace-only
-    this._titleSpan.textContent = envTitle
-    if (envTitle === ((this._node.attrs['envTitle'] as string) ?? '')) return
-    this._dispatch({ envTitle })
-  }
-
-  private _onTitleKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      ;(e.target as HTMLElement).blur()
-    }
-    if (e.key === 'Escape') {
-      this._titleSpan.textContent = (this._node.attrs['envTitle'] as string) || ''
-      ;(e.target as HTMLElement).blur()
-    }
-    // Prevent newlines from being pasted via Shift+Enter etc.
-    if (e.key === 'Enter') e.preventDefault()
   }
 }

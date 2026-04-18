@@ -268,81 +268,127 @@ body.dark .math-display:hover { background: #1a2040; border-color: #4f63bf; }
   border-top: 1px solid var(--border);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
 }
 
-.theorem-env[data-env="theorem"]    { border-left-color: var(--thm-theorem); }
-.theorem-env[data-env="lemma"]      { border-left-color: var(--thm-lemma); }
-.theorem-env[data-env="definition"] { border-left-color: var(--thm-definition); }
-.theorem-env[data-env="example"]    { border-left-color: var(--thm-example); }
-.theorem-env[data-env="remark"]     { border-left-color: var(--thm-remark); }
-.theorem-env[data-env="proof"]      { border-left-color: var(--thm-proof); }
+.theorem-env[data-env="theorem"]     { border-left-color: var(--thm-theorem); }
+.theorem-env[data-env="lemma"]       { border-left-color: var(--thm-lemma); }
+.theorem-env[data-env="definition"]  { border-left-color: var(--thm-definition); }
+.theorem-env[data-env="example"]     { border-left-color: var(--thm-example); }
+.theorem-env[data-env="remark"]      { border-left-color: var(--thm-remark); }
+.theorem-env[data-env="proof"]       { border-left-color: var(--thm-proof); }
+.theorem-env[data-env="corollary"]   { border-left-color: var(--thm-corollary); }
+.theorem-env[data-env="proposition"] { border-left-color: var(--thm-proposition); }
+.theorem-env[data-env="note"]        { border-left-color: var(--thm-note); }
+.theorem-env[data-env="exercise"]    { border-left-color: var(--thm-exercise); }
 
 .theorem-env-header {
+  float: left;
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 5px;
+  margin-right: 32px;
+  padding-top: 2px;
 }
 
-.theorem-env-number {
-  font: 600 13px/1 var(--font-ui);
-  color: var(--text-muted);
+/* ── Custom type dropdown ────────────────────────────────────────── */
+
+.tenv-type-wrap {
+  position: relative;
+  display: inline-flex;
 }
 
-/* ── Type selector (styled to look like a label) ─────────────────── */
-
-.theorem-env-type {
-  font: 600 13px/1 var(--font-ui);
+.tenv-type-btn {
+  font: 700 15px/1 var(--font-ui);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
-  padding: 1px 3px 1px 2px;
+  padding: 2px 20px 2px 4px;
   cursor: pointer;
-  -webkit-appearance: auto;
-  appearance: auto;
-  line-height: 1;
+  /* Chevron via background-image, hidden by default */
+  background-image: none;
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 9px 5px;
+  transition: background-color 0.1s;
 }
-.theorem-env-type:hover  { border-color: var(--border); background: var(--bg); }
-.theorem-env-type:focus  { outline: none; border-color: var(--accent); background: var(--bg); }
+.theorem-env:hover .tenv-type-btn,
+.tenv-type-btn.open {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5' viewBox='0 0 9 5'%3E%3Cpath d='M1 1l3.5 3L8 1' stroke='%236b6757' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.tenv-type-btn:hover { border-color: var(--border); background-color: var(--bg); }
+.tenv-type-btn.open  { border-color: var(--accent); background-color: var(--bg); outline: none; }
+.tenv-type-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.theorem-env[data-env="theorem"]    .theorem-env-type { color: var(--thm-theorem); }
-.theorem-env[data-env="lemma"]      .theorem-env-type { color: var(--thm-lemma); }
-.theorem-env[data-env="definition"] .theorem-env-type { color: var(--thm-definition); }
-.theorem-env[data-env="example"]    .theorem-env-type { color: var(--thm-example); }
-.theorem-env[data-env="remark"]     .theorem-env-type { color: var(--thm-remark); }
-.theorem-env[data-env="proof"]      .theorem-env-type { color: var(--thm-proof); }
+.tenv-type-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 130px;
+}
+.tenv-type-menu[hidden] { display: none; }
 
-/* ── Title (inline contenteditable) ─────────────────────────────── */
+.tenv-type-opt {
+  font: 500 13px/1 var(--font-ui);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 7px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.08s;
+}
+.tenv-type-opt:hover  { background: var(--bg); }
+.tenv-type-opt.active { font-weight: 700; background: var(--bg); }
+
+/* ── Number ──────────────────────────────────────────────────────── */
+
+.theorem-env-number {
+  font: 700 15px/1 var(--font-ui);
+}
+
+.theorem-env[data-env="theorem"]     .theorem-env-number { color: var(--thm-theorem); }
+.theorem-env[data-env="lemma"]       .theorem-env-number { color: var(--thm-lemma); }
+.theorem-env[data-env="definition"]  .theorem-env-number { color: var(--thm-definition); }
+.theorem-env[data-env="example"]     .theorem-env-number { color: var(--thm-example); }
+.theorem-env[data-env="remark"]      .theorem-env-number { color: var(--thm-remark); }
+.theorem-env[data-env="proof"]       .theorem-env-number { color: var(--thm-proof); }
+.theorem-env[data-env="corollary"]   .theorem-env-number { color: var(--thm-corollary); }
+.theorem-env[data-env="proposition"] .theorem-env-number { color: var(--thm-proposition); }
+.theorem-env[data-env="note"]        .theorem-env-number { color: var(--thm-note); }
+.theorem-env[data-env="exercise"]    .theorem-env-number { color: var(--thm-exercise); }
+
+/* ── Title (theoremEnvTitle child node) ──────────────────────────── */
 
 .theorem-env-title {
-  font: italic 13px/1 var(--font-doc);
+  font: italic 15px/1.5 var(--font-doc);
   color: var(--text-muted);
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  padding: 1px 4px;
-  min-width: 2ch;
+  margin-bottom: 4px;
   outline: none;
-  cursor: text;
 }
-.theorem-env-title:hover  { border-color: var(--border); background: var(--bg); }
-.theorem-env-title:focus  { border-color: var(--accent); background: var(--bg); }
 
-/* Parens shown only when title has content or is focused */
-.theorem-env-title:not(:empty)::before,
-.theorem-env-title:focus::before { content: "("; }
-.theorem-env-title:not(:empty)::after,
-.theorem-env-title:focus::after  { content: ")"; }
-
-/* Placeholder when empty and not focused */
-.theorem-env-title:empty:not(:focus)::before {
-  content: attr(data-placeholder);
+.theorem-env-title:empty::before {
+  content: 'título...';
   color: var(--text-placeholder);
-  font-style: italic;
+  pointer-events: none;
 }
 
 .theorem-env-body {
   font: 400 16px/1.6 var(--font-doc);
   color: var(--text);
+}
+
+.theorem-env-body > :not(.theorem-env-title) {
+  clear: left;
 }
 
 /* ── Coach panel ─────────────────────────────────────────────────── */

@@ -1,4 +1,5 @@
 import type { Node, Fragment } from '@tiptap/pm/model'
+import { getLatexSerializer, type LatexSerializerContext } from './LatexSerializerRegistry'
 
 /* ─────────────────────────────────────────────────────────────────
    TexSerializer — Phase 1
@@ -57,7 +58,18 @@ export class TexSerializer {
     return parts.join('\n')
   }
 
+  private _ctx(): LatexSerializerContext {
+    return {
+      serializeFragment: (f) => this._serializeFragment(f),
+      serializeInline:   (f) => this._serializeInlineContent(f),
+      serializeNode:     (n) => this._serializeNode(n),
+    }
+  }
+
   private _serializeNode(node: Node): string {
+    const custom = getLatexSerializer(node.type.name)
+    if (custom) return custom(node, this._ctx())
+
     switch (node.type.name) {
       case 'doc':         return this._serializeFragment(node.content)
       case 'paragraph':   return this._serializeParagraph(node)
@@ -67,11 +79,7 @@ export class TexSerializer {
       case 'listItem':    return this._serializeListItem(node)
       case 'blockquote':  return this._serializeBlockquote(node)
       case 'hardBreak':   return '\\\\'
-      case 'mathInline':  return `$${node.attrs['latex']}$`
-      case 'mathDisplay': return this._serializeMathDisplay(node)
-      case 'theoremEnv':  return this._serializeTheoremEnv(node)
       default:
-        // Unknown node: serialize its text content as a fallback
         return this._serializeInlineContent(node.content)
     }
   }
@@ -107,45 +115,6 @@ export class TexSerializer {
     return `\\begin{quote}\n${content}\n\\end{quote}\n`
   }
 
-  private _serializeMathDisplay(node: Node): string {
-    const latex    = (node.attrs['latex'] as string) ?? ''
-    const numbered = node.attrs['numbered'] as boolean
-    const aligned  = node.attrs['aligned']  as boolean
-    const label    = (node.attrs['label'] as string) ?? ''
-
-    if (!numbered && !aligned) {
-      return `\\[\n  ${latex}\n\\]\n`
-    }
-    if (numbered && !aligned) {
-      const labelCmd = label ? `  \\label{${label}}\n` : ''
-      return `\\begin{equation}\n  ${latex}\n${labelCmd}\\end{equation}\n`
-    }
-    if (!numbered && aligned) {
-      return `\\begin{align*}\n  ${latex}\n\\end{align*}\n`
-    }
-    // numbered + aligned
-    const labelCmd = label ? `  \\label{${label}}\n` : ''
-    return `\\begin{align}\n  ${latex}\n${labelCmd}\\end{align}\n`
-  }
-
-  private _serializeTheoremEnv(node: Node): string {
-    const envType  = (node.attrs['envType']  as string) ?? 'theorem'
-    const envTitle = (node.attrs['envTitle'] as string) ?? ''
-    const label    = (node.attrs['label']    as string) ?? ''
-
-    const titleOpt  = envTitle ? `[${envTitle}]` : ''
-    const labelLine = label    ? `  \\label{${label}}\n` : ''
-    const body      = this._serializeFragment(node.content).trim()
-
-    // proof uses \begin{proof}...\end{proof} — no title variant in amsthm
-    if (envType === 'proof') {
-      const titleArg = envTitle ? `[${envTitle}]` : ''
-      return `\\begin{proof}${titleArg}\n${labelLine}  ${body}\n\\end{proof}\n`
-    }
-
-    return `\\begin{${envType}}${titleOpt}\n${labelLine}  ${body}\n\\end{${envType}}\n`
-  }
-
   // ── Inline content ──────────────────────────────────────────────
 
   private _serializeInlineContent(fragment: Fragment): string {
@@ -157,15 +126,10 @@ export class TexSerializer {
   }
 
   private _serializeInlineNode(node: Node): string {
-    if (node.type.name === 'mathInline') {
-      return `$${node.attrs['latex']}$`
-    }
-    if (node.type.name === 'hardBreak') {
-      return '\\\\\n'
-    }
-    if (node.isText) {
-      return this._serializeTextWithMarks(node)
-    }
+    const custom = getLatexSerializer(node.type.name)
+    if (custom) return custom(node, this._ctx())
+    if (node.type.name === 'hardBreak') return '\\\\\n'
+    if (node.isText) return this._serializeTextWithMarks(node)
     return ''
   }
 

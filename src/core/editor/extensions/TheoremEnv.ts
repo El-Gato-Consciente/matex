@@ -2,6 +2,27 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import { TheoremEnvView } from '../nodeviews/TheoremEnvView'
 import type { TheoremEnvType } from '@core/math/types'
+import { registerLatexSerializer } from '@core/serializer/LatexSerializerRegistry'
+
+registerLatexSerializer('theoremEnv', (node, ctx) => {
+  const envType = (node.attrs['envType'] as string) ?? 'theorem'
+  const label   = (node.attrs['label']   as string) ?? ''
+
+  // child(0) is always theoremEnvTitle; serialize its inline content as the title
+  const titleText = ctx.serializeInline(node.child(0).content).trim()
+  const titleOpt  = titleText ? `[${titleText}]` : ''
+  const labelLine = label     ? `  \\label{${label}}\n` : ''
+
+  // body = all children after the title node
+  const bodyParts: string[] = []
+  for (let i = 1; i < node.childCount; i++) bodyParts.push(ctx.serializeNode(node.child(i)))
+  const body = bodyParts.join('\n').trim()
+
+  if (envType === 'proof') {
+    return `\\begin{proof}${titleOpt}\n${labelLine}  ${body}\n\\end{proof}\n`
+  }
+  return `\\begin{${envType}}${titleOpt}\n${labelLine}  ${body}\n\\end{${envType}}\n`
+})
 
 /* ─────────────────────────────────────────────────────────────────
    TheoremEnv — TipTap extension for mathematical environments.
@@ -27,14 +48,13 @@ import type { TheoremEnvType } from '@core/math/types'
 export const TheoremEnv = Node.create({
   name:       'theoremEnv',
   group:      'block',
-  content:    'block+',
+  content:    'theoremEnvTitle block+',
   isolating:  true,   // ← blocks generic join/lift across env boundaries
 
   addAttributes() {
     return {
-      envType:  { default: 'theorem' as TheoremEnvType },
-      envTitle: { default: '' },
-      label:    { default: '' },
+      envType: { default: 'theorem' as TheoremEnvType },
+      label:   { default: '' },
     }
   },
 
@@ -42,9 +62,8 @@ export const TheoremEnv = Node.create({
     return [{
       tag: 'div[data-theorem-env]',
       getAttrs: (el) => ({
-        envType:  (el as HTMLElement).dataset['env']   ?? 'theorem',
-        envTitle: (el as HTMLElement).dataset['title'] ?? '',
-        label:    (el as HTMLElement).dataset['label'] ?? '',
+        envType: (el as HTMLElement).dataset['env']   ?? 'theorem',
+        label:   (el as HTMLElement).dataset['label'] ?? '',
       }),
     }]
   },
@@ -53,7 +72,6 @@ export const TheoremEnv = Node.create({
     return ['div', mergeAttributes(HTMLAttributes, {
       'data-theorem-env': '',
       'data-env':         node.attrs['envType'],
-      'data-title':       node.attrs['envTitle'],
       'data-label':       node.attrs['label'],
       class: 'theorem-env',
     }), 0]  // 0 = contentDOM slot
@@ -71,6 +89,7 @@ export const TheoremEnv = Node.create({
         contentDOM: view.contentDOM,
         update(n) { return view.update(n) },
         stopEvent(e: Event) { return view.stopEvent(e) },
+        ignoreMutation(m) { return view.ignoreMutation(m) },
         destroy() { view.destroy() },
       }
     }
@@ -128,8 +147,8 @@ export const TheoremEnv = Node.create({
         const { tr } = this.editor.state
         const paraType = schema.nodes['paragraph']!
 
-        if (envNode.childCount === 1) {
-          // Only child: replace the whole env with a paragraph.
+        if (envNode.childCount === 2) {
+          // Title + this one empty para: replace the whole env with a paragraph.
           const envStart = $from.before(envDepth)
           const envEnd   = $from.after(envDepth)
           tr.replaceWith(envStart, envEnd, paraType.create())

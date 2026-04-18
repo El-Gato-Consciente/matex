@@ -39,8 +39,12 @@ export const EXAMPLE_DOCUMENT = {
     // Definición con inline math y display math
     {
       type: 'theoremEnv',
-      attrs: { envType: 'definition', envTitle: 'Continuidad en un punto', label: '' },
+      attrs: { envType: 'definition', label: '' },
       content: [
+        {
+          type: 'theoremEnvTitle',
+          content: [{ type: 'text', text: 'Continuidad en un punto' }]
+        },
         {
           type: 'paragraph',
           content: [
@@ -71,65 +75,77 @@ export const EXAMPLE_DOCUMENT = {
     // Teorema del Valor Intermedio
     {
       type: 'theoremEnv',
-      attrs: { envType: 'theorem', envTitle: 'Valor Intermedio', label: '' },
-      content: [{
-        type: 'paragraph',
-        content: [
-          { type: 'text', text: 'Sea ' },
-          { type: 'mathInline', attrs: { latex: 'f: [a, b] \\to \\mathbb{R}' } },
-          { type: 'text', text: ' continua. Si ' },
-          { type: 'mathInline', attrs: { latex: 'f(a)' } },
-          { type: 'text', text: ' y ' },
-          { type: 'mathInline', attrs: { latex: 'f(b)' } },
-          { type: 'text', text: ' tienen signos opuestos, existe ' },
-          { type: 'mathInline', attrs: { latex: 'c \\in (a, b)' } },
-          { type: 'text', text: ' tal que ' },
-          { type: 'mathInline', attrs: { latex: 'f(c) = 0' } },
-          { type: 'text', text: '.' },
-        ]
-      }]
+      attrs: { envType: 'theorem', label: '' },
+      content: [
+        {
+          type: 'theoremEnvTitle',
+          content: [{ type: 'text', text: 'Valor Intermedio' }]
+        },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Sea ' },
+            { type: 'mathInline', attrs: { latex: 'f: [a, b] \\to \\mathbb{R}' } },
+            { type: 'text', text: ' continua. Si ' },
+            { type: 'mathInline', attrs: { latex: 'f(a)' } },
+            { type: 'text', text: ' y ' },
+            { type: 'mathInline', attrs: { latex: 'f(b)' } },
+            { type: 'text', text: ' tienen signos opuestos, existe ' },
+            { type: 'mathInline', attrs: { latex: 'c \\in (a, b)' } },
+            { type: 'text', text: ' tal que ' },
+            { type: 'mathInline', attrs: { latex: 'f(c) = 0' } },
+            { type: 'text', text: '.' },
+          ]
+        }
+      ]
     },
 
     // Demostración
     {
       type: 'theoremEnv',
-      attrs: { envType: 'proof', envTitle: '', label: '' },
-      content: [{
-        type: 'paragraph',
-        content: [
-          { type: 'text', text: 'Por bisección sucesiva. Definir ' },
-          { type: 'mathInline', attrs: { latex: 'a_0 = a' } },
-          { type: 'text', text: ', ' },
-          { type: 'mathInline', attrs: { latex: 'b_0 = b' } },
-          { type: 'text', text: ' y en cada paso ' },
-          { type: 'mathInline', attrs: { latex: 'm_n = \\frac{a_n + b_n}{2}' } },
-          { type: 'text', text: '. Se elige el subintervalo donde ' },
-          { type: 'mathInline', attrs: { latex: 'f' } },
-          { type: 'text', text: ' cambia de signo. Las sucesiones convergen al mismo ' },
-          { type: 'mathInline', attrs: { latex: 'c' } },
-          { type: 'text', text: '; por continuidad ' },
-          { type: 'mathInline', attrs: { latex: 'f(c) = 0' } },
-          { type: 'text', text: '.' },
-        ]
-      }]
+      attrs: { envType: 'proof', label: '' },
+      content: [
+        { type: 'theoremEnvTitle' },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Por bisección sucesiva. Definir ' },
+            { type: 'mathInline', attrs: { latex: 'a_0 = a' } },
+            { type: 'text', text: ', ' },
+            { type: 'mathInline', attrs: { latex: 'b_0 = b' } },
+            { type: 'text', text: ' y en cada paso ' },
+            { type: 'mathInline', attrs: { latex: 'm_n = \\frac{a_n + b_n}{2}' } },
+            { type: 'text', text: '. Se elige el subintervalo donde ' },
+            { type: 'mathInline', attrs: { latex: 'f' } },
+            { type: 'text', text: ' cambia de signo. Las sucesiones convergen al mismo ' },
+            { type: 'mathInline', attrs: { latex: 'c' } },
+            { type: 'text', text: '; por continuidad ' },
+            { type: 'mathInline', attrs: { latex: 'f(c) = 0' } },
+            { type: 'text', text: '.' },
+          ]
+        }
+      ]
     },
 
     // Observación
     {
       type: 'theoremEnv',
-      attrs: { envType: 'remark', envTitle: '', label: '' },
-      content: [{
-        type: 'paragraph',
-        content: [
-          { type: 'text', text: 'El recíproco es falso: ' },
-          { type: 'mathInline', attrs: { latex: 'f(x) = \\sin(1/x)' } },
-          { type: 'text', text: ' cumple la propiedad del valor intermedio en ' },
-          { type: 'mathInline', attrs: { latex: '(0, 1]' } },
-          { type: 'text', text: ' pero no es continua en ' },
-          { type: 'mathInline', attrs: { latex: 'x = 0' } },
-          { type: 'text', text: '.' },
-        ]
-      }]
+      attrs: { envType: 'remark', label: '' },
+      content: [
+        { type: 'theoremEnvTitle' },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'El recíproco es falso: ' },
+            { type: 'mathInline', attrs: { latex: 'f(x) = \\sin(1/x)' } },
+            { type: 'text', text: ' cumple la propiedad del valor intermedio en ' },
+            { type: 'mathInline', attrs: { latex: '(0, 1]' } },
+            { type: 'text', text: ' pero no es continua en ' },
+            { type: 'mathInline', attrs: { latex: 'x = 0' } },
+            { type: 'text', text: '.' },
+          ]
+        }
+      ]
     },
 
     // ── Sección 2 ─────────────────────────────────────────────────
@@ -141,8 +157,12 @@ export const EXAMPLE_DOCUMENT = {
     // Definición de derivada
     {
       type: 'theoremEnv',
-      attrs: { envType: 'definition', envTitle: 'Derivada', label: '' },
+      attrs: { envType: 'definition', label: '' },
       content: [
+        {
+          type: 'theoremEnvTitle',
+          content: [{ type: 'text', text: 'Derivada' }]
+        },
         {
           type: 'paragraph',
           content: [
@@ -165,23 +185,26 @@ export const EXAMPLE_DOCUMENT = {
     // Lema
     {
       type: 'theoremEnv',
-      attrs: { envType: 'lemma', envTitle: '', label: '' },
-      content: [{
-        type: 'paragraph',
-        content: [
-          { type: 'text', text: 'Si ' },
-          { type: 'mathInline', attrs: { latex: 'f' } },
-          { type: 'text', text: ' es diferenciable en ' },
-          { type: 'mathInline', attrs: { latex: 'x_0' } },
-          { type: 'text', text: ', entonces es continua en ' },
-          { type: 'mathInline', attrs: { latex: 'x_0' } },
-          { type: 'text', text: '. El recíproco es falso: ' },
-          { type: 'mathInline', attrs: { latex: 'f(x) = |x|' } },
-          { type: 'text', text: ' es continua pero no diferenciable en ' },
-          { type: 'mathInline', attrs: { latex: 'x = 0' } },
-          { type: 'text', text: '.' },
-        ]
-      }]
+      attrs: { envType: 'lemma', label: '' },
+      content: [
+        { type: 'theoremEnvTitle' },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Si ' },
+            { type: 'mathInline', attrs: { latex: 'f' } },
+            { type: 'text', text: ' es diferenciable en ' },
+            { type: 'mathInline', attrs: { latex: 'x_0' } },
+            { type: 'text', text: ', entonces es continua en ' },
+            { type: 'mathInline', attrs: { latex: 'x_0' } },
+            { type: 'text', text: '. El recíproco es falso: ' },
+            { type: 'mathInline', attrs: { latex: 'f(x) = |x|' } },
+            { type: 'text', text: ' es continua pero no diferenciable en ' },
+            { type: 'mathInline', attrs: { latex: 'x = 0' } },
+            { type: 'text', text: '.' },
+          ]
+        }
+      ]
     },
 
     // ── Sección 3 ─────────────────────────────────────────────────
@@ -239,8 +262,9 @@ export const EXAMPLE_DOCUMENT = {
     // Ejemplo completo
     {
       type: 'theoremEnv',
-      attrs: { envType: 'example', envTitle: '', label: '' },
+      attrs: { envType: 'example', label: '' },
       content: [
+        { type: 'theoremEnvTitle' },
         {
           type: 'paragraph',
           content: [
