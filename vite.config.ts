@@ -13,6 +13,11 @@ export default defineConfig({
       '@design':   resolve(__dirname, 'src/design'),
     },
   },
+  server: {
+    open: true,
+    port: 5176,
+    strictPort: true,
+  },
   build: {
     target: 'es2022',
   },
