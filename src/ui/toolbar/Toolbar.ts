@@ -24,6 +24,8 @@ export class Toolbar extends LitElement {
 
   @state() private _fmt            = editorFmtState.value
   @state() private _isDark         = storage.loadTheme() === 'dark'
+  @state() private _highlight      = storage.loadHighlight()
+  @state() private _thmStyle       = storage.loadThmStyle()
   @state() private _openDropdown: string | null = null
 
   private _disposes: (() => void)[] = []
@@ -40,6 +42,8 @@ export class Toolbar extends LitElement {
       })
     )
     this._applyTheme(this._isDark)
+    this._applyHighlight(this._highlight)
+    this._applyThmStyle(this._thmStyle)
 
     // Close any open dropdown when clicking outside the toolbar
     this._closeHandler = (e: Event) => {
@@ -139,6 +143,12 @@ export class Toolbar extends LitElement {
         <div class="sep"></div>
         <button class="tbtn" @click="${this._export}" title="Export LaTeX (.tex)">Export .tex</button>
         <div class="sep"></div>
+        <button class="tbtn" @click="${this._cycleHighlight}"
+          title="${{ strong: 'Fórmulas: resaltado fuerte', soft: 'Fórmulas: resaltado suave', none: 'Fórmulas: sin resaltado' }[this._highlight]}"
+          style="font-size:13px; min-width:32px; color:#4f46e5">${{ strong: '●f', soft: '◎f', none: '○f' }[this._highlight]}</button>
+        <button class="tbtn" @click="${this._cycleThmStyle}"
+          title="${{ strong: 'Entornos: caja completa', soft: 'Entornos: borde suave', none: 'Entornos: solo barra' }[this._thmStyle]}"
+          style="font-size:13px; min-width:32px; color:#059669">${{ strong: '●e', soft: '◎e', none: '○e' }[this._thmStyle]}</button>
         <button class="tbtn" @click="${this._toggleTheme}" title="Toggle dark mode"
           style="font-size:16px; min-width:32px">${this._isDark ? '☀' : '☾'}</button>
 
@@ -163,6 +173,20 @@ export class Toolbar extends LitElement {
     storage.saveTheme(this._isDark)
   }
 
+  private _cycleHighlight = () => {
+    const next = this._highlight === 'strong' ? 'soft' : this._highlight === 'soft' ? 'none' : 'strong'
+    this._highlight = next
+    this._applyHighlight(next)
+    storage.saveHighlight(next)
+  }
+
+  private _cycleThmStyle = () => {
+    const next = this._thmStyle === 'strong' ? 'soft' : this._thmStyle === 'soft' ? 'none' : 'strong'
+    this._thmStyle = next
+    this._applyThmStyle(next)
+    storage.saveThmStyle(next)
+  }
+
   private _confirmClear = () => {
     if (confirm('¿Borrar todo el contenido del documento?')) {
       clearDocument()
@@ -171,6 +195,16 @@ export class Toolbar extends LitElement {
 
   private _applyTheme(dark: boolean) {
     document.body.classList.toggle('dark', dark)
+  }
+
+  private _applyHighlight(mode: 'strong' | 'soft' | 'none') {
+    document.body.classList.toggle('highlight-soft', mode === 'soft')
+    document.body.classList.toggle('highlight-none', mode === 'none')
+  }
+
+  private _applyThmStyle(mode: 'strong' | 'soft' | 'none') {
+    document.body.classList.toggle('thm-soft', mode === 'soft')
+    document.body.classList.toggle('thm-none', mode === 'none')
   }
 }
 

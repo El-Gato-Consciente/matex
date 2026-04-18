@@ -4,9 +4,11 @@
    Phase 4 will add IndexedDB for large docs and multi-document management.
    ───────────────────────────────────────────────────────────────── */
 
-const DOC_KEY   = 'formalia:doc:main'
-const THEME_KEY = 'formalia:theme'
-const SIDEBAR_KEY = 'formalia:sidebar:collapsed'
+const DOC_KEY       = 'formalia:doc:main'
+const THEME_KEY     = 'formalia:theme'
+const HIGHLIGHT_KEY = 'formalia:highlight'
+const THM_STYLE_KEY = 'formalia:thm-style'
+const SIDEBAR_KEY   = 'formalia:sidebar:collapsed'
 
 export class LocalStorageAdapter {
 
@@ -42,6 +44,28 @@ export class LocalStorageAdapter {
 
   loadTheme(): 'dark' | 'light' {
     return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'
+  }
+
+  // ── Highlight style ──────────────────────────────────────────────
+
+  saveHighlight(mode: 'strong' | 'soft' | 'none'): void {
+    localStorage.setItem(HIGHLIGHT_KEY, mode)
+  }
+
+  loadHighlight(): 'strong' | 'soft' | 'none' {
+    const v = localStorage.getItem(HIGHLIGHT_KEY)
+    return (v === 'soft' || v === 'none') ? v : 'strong'
+  }
+
+  // ── Theorem env style ────────────────────────────────────────────
+
+  saveThmStyle(mode: 'strong' | 'soft' | 'none'): void {
+    localStorage.setItem(THM_STYLE_KEY, mode)
+  }
+
+  loadThmStyle(): 'strong' | 'soft' | 'none' {
+    const v = localStorage.getItem(THM_STYLE_KEY)
+    return (v === 'soft' || v === 'none') ? v : 'strong'
   }
 
   // ── Sidebar state ────────────────────────────────────────────────

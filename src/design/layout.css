@@ -153,7 +153,9 @@ body.dark .tbtn kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a
   color: var(--text);
   min-height: 100%;
   outline: none;
+  caret-color: var(--text);
 }
+body.dark .ProseMirror { caret-color: #93c5fd; }
 
 .ProseMirror > * + * { margin-top: .6em; }
 
@@ -191,8 +193,8 @@ body.dark .ProseMirror code { background: var(--panel-bg); }
   display: block;
   position: absolute;
   top: -2px;
-  width: 20px;
-  border-top: 1px solid var(--text);
+  width: 24px;
+  border-top: 2px solid var(--accent);
   animation: ProseMirror-cursor-blink .7s step-end infinite;
 }
 @keyframes ProseMirror-cursor-blink { 50% { border-color: transparent; } }
@@ -214,13 +216,16 @@ body.dark .ProseMirror code { background: var(--panel-bg); }
   transition: background .1s, border-color .1s;
 }
 .math-inline:hover { background: #dbeafe; border-color: #93c5fd; }
-body.dark .math-inline:hover { background: #1e3a5f; border-color: #3b82f6; }
+body.dark .math-inline:hover { background: #253354; border-color: #3b82f6; }
 
 .math-inline.ProseMirror-selectednode {
   background: var(--accent-light);
   border-color: var(--accent);
-  outline: 2px solid rgba(37,99,235,.25);
+  outline: 2px solid rgba(37,99,235,.3);
   outline-offset: 1px;
+}
+body.dark .math-inline.ProseMirror-selectednode {
+  outline-color: rgba(96,165,250,.55);
 }
 .math-inline.has-error { background: var(--error-bg); border-color: #fca5a5; }
 
@@ -238,13 +243,16 @@ body.dark .math-inline:hover { background: #1e3a5f; border-color: #3b82f6; }
   transition: background .1s, border-color .1s;
 }
 .math-display:hover { background: #eff3ff; border-color: #a5b4fc; }
-body.dark .math-display:hover { background: #1a2040; border-color: #4f63bf; }
+body.dark .math-display:hover { background: #223050; border-color: #4f63bf; }
 
 .math-display.ProseMirror-selectednode {
   background: var(--accent-light);
   border-color: var(--accent);
-  outline: 2px solid rgba(37,99,235,.25);
+  outline: 2px solid rgba(37,99,235,.3);
   outline-offset: 2px;
+}
+body.dark .math-display.ProseMirror-selectednode {
+  outline-color: rgba(96,165,250,.55);
 }
 .math-display.has-error { background: var(--error-bg); border-color: #fca5a5; }
 
@@ -264,10 +272,10 @@ body.dark .math-display:hover { background: #1a2040; border-color: #4f63bf; }
   padding: 12px 16px 14px;
   border-left: 3px solid var(--thm-theorem);
   border-radius: 0 var(--r-md) var(--r-md) 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  background: var(--thm-env-bg);
+  border-top: 1px solid var(--thm-env-border-color);
+  border-right: 1px solid var(--thm-env-border-color);
+  border-bottom: 1px solid var(--thm-env-border-color);
   overflow: hidden;
 }
 
