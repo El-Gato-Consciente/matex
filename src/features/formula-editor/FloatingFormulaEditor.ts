@@ -2,6 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { effect } from '@preact/signals-core'
 import katex from 'katex'
+import 'mathlive'
 import {
   activeNodePos,
   activeFormula,
@@ -13,36 +14,18 @@ import {
   getActiveFormulaDOM,
 } from '@core/editor/EditorStore'
 
-/* ─────────────────────────────────────────────────────────────────
-   FloatingFormulaEditor
-   A small floating LaTeX textarea that appears near the active
-   formula node.  Uses position:fixed — zero layout shift.
-
-   Opens when activeNodePos is set (click on formula, Enter on
-   a selected formula, or Ctrl+M insert shortcut).
-
-   Root cause of the "focus stealing" bug and its fix
-   ──────────────────────────────────────────────────
-   While a NodeSelection is active in ProseMirror, every call to
-   view.dispatch() (including our own setNodeMarkup) causes
-   ProseMirror to call window.getSelection().addRange() to re-assert
-   the selection on the formula DOM element.  That addRange call
-   refocuses the editor, steals focus from our textarea, and sends
-   subsequent keystrokes to TipTap (which replaces the selected node).
-
-   Fix: as soon as the floating editor opens, we call
-   releaseFormulaSelection() which switches ProseMirror to a
-   TextSelection after the formula.  From that point on dispatching
-   setNodeMarkup has no NodeSelection to re-assert and focus stays
-   in the textarea.
-   ───────────────────────────────────────────────────────────────── */
+const MODE_KEY = 'formalia:formula-mode'
 
 @customElement('fp-floating-formula')
 export class FloatingFormulaEditor extends LitElement {
 
   @state() private _active = false
+  @state() private _editMode: 'visual' | 'code' =
+    (localStorage.getItem(MODE_KEY) === 'code' ? 'code' : 'visual')
+  @state() private _inLatexMode = false
 
   private _prevActive = false
+  private _skipMfReload = false
   private _disposes: (() => void)[] = []
 
   override createRenderRoot() { return this }
@@ -57,14 +40,20 @@ export class FloatingFormulaEditor extends LitElement {
       })
     )
 
-    // Close when focus leaves this component entirely (user clicked elsewhere)
-    this.addEventListener('focusout', (e: FocusEvent) => {
+    // Close when the user clicks outside the panel.
+    // e.composedPath() crosses shadow DOM boundaries, so clicks inside
+    // math-field's shadow are correctly identified as "inside this".
+    // focusout is NOT used — it is unreliable across shadow DOM.
+    const onPointerdown = (e: PointerEvent) => {
       if (!this._active) return
-      const going = e.relatedTarget as Element | null
-      if (!going || !this.contains(going)) {
-        deactivateNode()
-      }
-    })
+      if (e.composedPath().includes(this)) return
+      // Clicking a formula node: activateNode() will fire shortly after,
+      // reopening the panel. Don't deactivate — avoid the close/reopen flash.
+      if ((e.target as Element)?.closest?.('.math-inline, .math-display')) return
+      deactivateNode()
+    }
+    document.addEventListener('pointerdown', onPointerdown, true)
+    this._disposes.push(() => document.removeEventListener('pointerdown', onPointerdown, true))
   }
 
   override disconnectedCallback() {
@@ -73,14 +62,10 @@ export class FloatingFormulaEditor extends LitElement {
     this._disposes = []
   }
 
-  /**
-   * After each render:
-   * - On first activation: release NodeSelection, populate textarea, focus it.
-   * - Every activation: position the panel over the formula.
-   */
   override updated() {
     if (!this._active) {
       this._prevActive = false
+      this._inLatexMode = false
       return
     }
 
@@ -90,20 +75,79 @@ export class FloatingFormulaEditor extends LitElement {
     this._positionPanel(panel)
 
     if (!this._prevActive) {
-      // ── Critical: release NodeSelection BEFORE focusing the textarea ──
-      // This prevents ProseMirror from re-asserting the selection (via
-      // addRange) on every setNodeMarkup dispatch, which would steal focus.
       releaseFormulaSelection()
 
+      const formula = activeFormula.value
       const ta = panel.querySelector<HTMLTextAreaElement>('.ff-textarea')
-      if (ta) {
-        ta.value = activeFormula.value
+      const mf = panel.querySelector<any>('math-field')
+
+      if (ta) ta.value = formula
+
+      if (mf) {
+        // Configure on each creation (panel is torn down when inactive)
+        mf.menuItems = []
+        mf.smartMode = false
+        mf.defaultMode = 'math'
+        mf.mathVirtualKeyboardPolicy = 'off'
+        mf.popoverPolicy = 'auto'
+
+        mf.addEventListener('mode-change', () => {
+          this._inLatexMode = mf.mode === 'latex'
+        })
+
+        this._skipMfReload = true
+        mf.insert(formula, { insertionMode: 'replaceAll', selectionMode: 'after' })
+        this._skipMfReload = false
+      }
+
+      if (this._editMode === 'visual' && mf) {
+        mf.focus()
+      } else if (ta) {
         ta.focus()
         ta.setSelectionRange(ta.value.length, ta.value.length)
       }
     }
 
     this._prevActive = this._active
+  }
+
+  private _onModeBtnMousedown = (e: Event) => {
+    e.preventDefault()  // keep focus in math-field / textarea during mode switch
+  }
+
+  private _setMode(mode: 'visual' | 'code') {
+    const mf = this.querySelector<any>('math-field')
+    // Exit latex sub-mode before switching
+    if (mf?.mode === 'latex') mf.executeCommand(['complete', 'reject'])
+    this._inLatexMode = false
+    this._editMode = mode
+    localStorage.setItem(MODE_KEY, mode)
+
+    const val = activeFormula.value
+    this.updateComplete.then(() => {
+      const panel = this.querySelector<HTMLElement>('.ff-panel')
+      if (!panel) return
+      const ta = panel.querySelector<HTMLTextAreaElement>('.ff-textarea')
+      const mf2 = panel.querySelector<any>('math-field')
+
+      if (mode === 'visual' && mf2) {
+        this._skipMfReload = true
+        mf2.insert(val, { insertionMode: 'replaceAll', selectionMode: 'after' })
+        this._skipMfReload = false
+        mf2.focus()
+      } else if (ta) {
+        ta.value = val
+        ta.focus()
+        ta.setSelectionRange(ta.value.length, ta.value.length)
+      }
+    })
+  }
+
+  private _activateLatexMode = () => {
+    const mf = this.querySelector<any>('math-field')
+    if (!mf) return
+    mf.executeCommand(['switchMode', 'latex', '', '\\'])
+    mf.focus()
   }
 
   private _positionPanel(panel: HTMLElement): void {
@@ -113,9 +157,9 @@ export class FloatingFormulaEditor extends LitElement {
     const rect   = formulaEl.getBoundingClientRect()
     const vw     = window.innerWidth
     const vh     = window.innerHeight
-    const panelH = 96
+    const panelH = 150
 
-    const panelW = Math.min(Math.max(300, rect.width + 48), vw - 16)
+    const panelW = Math.min(Math.max(320, rect.width + 48), vw - 16)
     const idealLeft = rect.left + rect.width / 2 - panelW / 2
     const left = Math.max(8, Math.min(idealLeft, vw - panelW - 8))
     const top  = (vh - rect.bottom >= panelH + 10)
@@ -132,10 +176,43 @@ export class FloatingFormulaEditor extends LitElement {
 
   override render() {
     if (!this._active) return html``
+    const isVisual = this._editMode === 'visual'
     return html`
       <div class="ff-panel" style="visibility:hidden">
+        <div class="ff-mode-bar">
+          <div class="ff-mode-toggle">
+            <button
+              class="ff-mode-btn ${isVisual ? 'active' : ''}"
+              tabindex="-1"
+              @mousedown="${this._onModeBtnMousedown}"
+              @click="${() => this._setMode('visual')}"
+            >Visual</button>
+            <button
+              class="ff-mode-btn ${!isVisual ? 'active' : ''}"
+              tabindex="-1"
+              @mousedown="${this._onModeBtnMousedown}"
+              @click="${() => this._setMode('code')}"
+            >Código</button>
+          </div>
+          ${isVisual ? html`
+            <button
+              class="ff-latex-btn${this._inLatexMode ? ' active' : ''}"
+              tabindex="-1"
+              title="Modo LaTeX — Enter confirma · Tab autocompleta · Esc cancela"
+              @mousedown="${this._onModeBtnMousedown}"
+              @click="${this._activateLatexMode}"
+            ><span class="ff-bslash">\</span> LaTeX</button>
+          ` : ''}
+        </div>
+        <math-field
+          class="ff-mathfield${isVisual ? '' : ' ff-hidden'}${this._inLatexMode ? ' latex-mode' : ''}"
+          math-virtual-keyboard-policy="off"
+          default-mode="math"
+          @input="${this._onMfInput}"
+          @keydown="${this._onMfKeyDown}"
+        ></math-field>
         <textarea
-          class="ff-textarea"
+          class="ff-textarea${isVisual ? ' ff-hidden' : ''}"
           placeholder="\\frac{a}{b}"
           rows="2"
           @input="${this._onInput}"
@@ -144,21 +221,50 @@ export class FloatingFormulaEditor extends LitElement {
           autocorrect="off"
           autocapitalize="off"
         ></textarea>
-        <div class="ff-hint">
-          <kbd>Enter</kbd> confirmar &nbsp;·&nbsp;
-          <kbd>Esc</kbd> cancelar &nbsp;·&nbsp;
-          <kbd>Shift+Enter</kbd> nueva línea
-        </div>
+        ${this._inLatexMode ? html`
+          <div class="ff-latex-hint">
+            Modo LaTeX — <kbd>Enter</kbd> confirma &nbsp;·&nbsp;
+            <kbd>Tab</kbd> autocompleta &nbsp;·&nbsp; <kbd>Esc</kbd> cancela
+          </div>
+        ` : html`
+          <div class="ff-hint">
+            <kbd>Esc</kbd> cerrar
+            ${!isVisual ? html`&nbsp;·&nbsp; <kbd>Enter</kbd> confirmar &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> nueva línea` : ''}
+          </div>
+        `}
       </div>
     `
   }
 
   // ── Event handlers ───────────────────────────────────────────────
 
+  private _onMfInput = (e: Event) => {
+    if (this._skipMfReload) return
+    const mf = e.target as any
+    const latex = (mf.getValue?.('latex') ?? mf.value ?? '') as string
+    const ta = this.querySelector<HTMLTextAreaElement>('.ff-textarea')
+    if (ta) ta.value = latex
+    updateActiveFormula(latex)
+    this._validateLatex(latex)
+  }
+
+  private _onMfKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      const mf = e.target as any
+      if (mf.mode === 'latex') return  // mathlive handles: exits latex sub-mode
+      e.preventDefault()
+      deactivateNode()
+      focusEditor()
+    }
+  }
+
   private _onInput = (e: Event) => {
     const latex = (e.target as HTMLTextAreaElement).value
     updateActiveFormula(latex)
+    this._validateLatex(latex)
+  }
 
+  private _validateLatex(latex: string) {
     if (!latex.trim()) {
       activeFormulaError.value = null
       return

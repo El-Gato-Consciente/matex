@@ -1,6 +1,7 @@
 import '@design/tokens.css'
 import '@design/layout.css'
 import '@design/components.css'
+import '/node_modules/mathlive/mathlive-static.css'
 
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'

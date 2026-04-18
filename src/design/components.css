@@ -133,6 +133,106 @@ dialog[open].export-dialog {
   gap: 5px;
 }
 
+.ff-hidden { display: none !important; }
+
+/* ── Mode toggle bar ──────────────────────────────────────────────── */
+
+.ff-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ff-mode-toggle {
+  display: flex;
+  gap: 2px;
+}
+
+.ff-mode-btn {
+  font: 500 11px/1 var(--font-ui);
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .1s, color .1s, border-color .1s;
+}
+.ff-mode-btn:hover { background: var(--bg); color: var(--text); }
+.ff-mode-btn.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── \ LaTeX mode button ──────────────────────────────────────────── */
+
+.ff-latex-btn {
+  font: 500 11px/1 var(--font-ui);
+  padding: 3px 8px;
+  border: 1.5px solid var(--latex-mode-bd);
+  border-radius: var(--r-sm);
+  background: var(--latex-mode-bg);
+  color: var(--latex-mode);
+  cursor: pointer;
+  transition: background .1s, border-color .1s;
+}
+.ff-latex-btn:hover  { background: #ede9fe; border-color: var(--latex-mode); }
+.ff-latex-btn.active { background: var(--latex-mode-bg); border-color: var(--latex-mode); box-shadow: 0 0 0 2px rgba(124,58,237,.15); }
+body.dark .ff-latex-btn:hover { background: #221540; }
+.ff-bslash { font: 600 12px/1 var(--font-mono); }
+
+/* ── MathLive field ───────────────────────────────────────────────── */
+
+.ff-mathfield {
+  width: 100%;
+  min-height: 44px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 18px;
+  --hue: 220;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ff-mathfield:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.1);
+  outline: none;
+}
+.ff-mathfield.latex-mode:focus-within {
+  border-color: var(--latex-mode);
+  box-shadow: 0 0 0 2px rgba(124,58,237,.12);
+}
+body.dark .ff-mathfield {
+  --text-color: var(--text);
+  --primary-color: var(--accent);
+}
+
+/* Hide mathlive's built-in UI chrome */
+.ff-mathfield::part(menu-toggle)             { display: none !important; }
+.ff-mathfield::part(virtual-keyboard-toggle) { display: none !important; }
+
+/* ── LaTeX mode hint ──────────────────────────────────────────────── */
+
+.ff-latex-hint {
+  font: 400 10px/1 var(--font-ui);
+  color: var(--latex-mode);
+  text-align: center;
+}
+.ff-latex-hint kbd {
+  font: 500 9px/1 var(--font-mono);
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: var(--latex-mode-bg);
+  color: var(--latex-mode);
+  border: 1px solid var(--latex-mode-bd);
+}
+
+/* ── Textarea (code mode) ─────────────────────────────────────────── */
+
 .ff-textarea {
   font: 400 13px/1.5 var(--font-mono);
   width: 100%;
@@ -167,3 +267,68 @@ dialog[open].export-dialog {
   border: 1px solid #a5b4fc;
 }
 body.dark .ff-hint kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a; }
+
+/* ── MathLive suggestion/autocomplete popover ────────────────────────
+   Injected into document.body (not shadow DOM) — regular CSS works.
+   ───────────────────────────────────────────────────────────────── */
+
+#mathlive-suggestion-popover {
+  z-index: 600 !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.06) !important;
+  min-width: 160px !important;
+  max-width: 240px !important;
+}
+
+/* Hide the arrow tip — it causes position jitter */
+#mathlive-suggestion-popover.top-tip::after,
+#mathlive-suggestion-popover.bottom-tip::after {
+  display: none !important;
+}
+
+/* Compact scrollable list */
+#mathlive-suggestion-popover ul {
+  max-height: 180px !important;
+  padding: 4px !important;
+}
+
+/* Compact rows */
+#mathlive-suggestion-popover li {
+  margin: 1px 0 !important;
+  padding: 5px 10px !important;
+  border-radius: var(--r-sm) !important;
+  column-gap: 0.8em !important;
+}
+#mathlive-suggestion-popover li:hover,
+#mathlive-suggestion-popover li.is-pressed,
+#mathlive-suggestion-popover li.is-active { background: var(--bg) !important; }
+
+/* LaTeX command name (left column) */
+.ML__popover__latex {
+  font: 500 12px/1.4 var(--font-mono) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Math preview (right column) */
+.ML__popover__command { font-size: 1rem !important; }
+
+/* Selected/active item */
+.ML__popover__current {
+  background: var(--accent-light) !important;
+  color: var(--accent) !important;
+}
+.ML__popover__current .ML__popover__latex { color: var(--accent) !important; }
+
+/* Link (if any) */
+#mathlive-suggestion-popover li a       { color: var(--accent) !important; font-size: 10px !important; }
+#mathlive-suggestion-popover li a:hover { color: var(--accent-hover) !important; }
+
+/* No transition or animation — eliminates repositioning flicker */
+#mathlive-suggestion-popover,
+#mathlive-suggestion-popover.is-animated {
+  transition: none !important;
+  animation: none !important;
+}
