@@ -1,6 +1,7 @@
+import { type LtxjDocument, migrate } from './DocumentSerializer'
+
 /* ─────────────────────────────────────────────────────────────────
    LocalStorageAdapter — Phase 1 persistence
-   Saves and loads the TipTap document JSON to localStorage.
    Phase 4 will add IndexedDB for large docs and multi-document management.
    ───────────────────────────────────────────────────────────────── */
 
@@ -14,19 +15,19 @@ export class LocalStorageAdapter {
 
   // ── Document ────────────────────────────────────────────────────
 
-  saveDocument(json: object): void {
+  saveDocument(doc: LtxjDocument): void {
     try {
-      localStorage.setItem(DOC_KEY, JSON.stringify(json))
+      localStorage.setItem(DOC_KEY, JSON.stringify(doc))
     } catch {
       // Ignore quota errors silently; document is still in memory
     }
   }
 
-  loadDocument(): object | null {
+  loadDocument(): LtxjDocument | null {
     const raw = localStorage.getItem(DOC_KEY)
     if (!raw) return null
     try {
-      return JSON.parse(raw) as object
+      return migrate(JSON.parse(raw) as object)
     } catch {
       return null
     }

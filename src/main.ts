@@ -14,6 +14,7 @@ import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
 import { SlashCommands }    from '@core/editor/extensions/SlashCommands'
 import { setEditor }         from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
+import { toStorage, fromStorage } from '@features/documents/DocumentSerializer'
 
 // Register Lit components (side-effect imports)
 import '@ui/toolbar/Toolbar'
@@ -30,7 +31,7 @@ const storage = new LocalStorageAdapter()
 const editorEl = document.getElementById('editor')
 if (!editorEl) throw new Error('#editor element not found')
 
-const savedDoc = storage.loadDocument()
+let currentDoc = storage.loadDocument()
 
 const editor: Editor = new Editor({
   element: editorEl,
@@ -46,9 +47,10 @@ const editor: Editor = new Editor({
     FormulaNavigation,
     SlashCommands,
   ],
-  content: (savedDoc ?? { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
+  content: (currentDoc ? fromStorage(currentDoc) : { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
   onUpdate({ editor: e }) {
-    storage.saveDocument(e.getJSON() as object)
+    currentDoc = toStorage(e.getJSON(), currentDoc ?? undefined)
+    storage.saveDocument(currentDoc)
   },
 })
 
