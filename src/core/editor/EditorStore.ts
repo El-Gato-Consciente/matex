@@ -24,6 +24,16 @@ export const coachChanges = signal<NormalizerChange[]>([])
 /** KaTeX parse error for the formula currently open in FloatingFormulaEditor. */
 export const activeFormulaError = signal<string | null>(null)
 
+/** How the floating editor was opened — drives mode and Esc behaviour. */
+export type TriggerSource = 'click' | 'keyboard' | 'toolbar' | 'backslash'
+export const triggerSource = signal<TriggerSource>('click')
+
+/** Type of the currently active formula node. */
+export const activeFormulaType = signal<'inline' | 'display' | null>(null)
+
+/** Live document statistics, updated on every editor transaction. */
+export const docStats = signal({ words: 0, mathInline: 0, mathDisplay: 0, theoremEnv: 0 })
+
 /** Toolbar / mark active states, updated on every editor transaction. */
 export const editorFmtState = signal({
   bold:        false,
@@ -63,19 +73,56 @@ function _syncFmtState(): void {
     canUndo:     _editor.can().undo(),
     canRedo:     _editor.can().redo(),
   }
+  _syncDocStats()
+}
+
+function _syncDocStats(): void {
+  if (!_editor) return
+  const doc = _editor.state.doc
+  let mathInline = 0, mathDisplay = 0, theoremEnv = 0
+  doc.descendants(node => {
+    if      (node.type.name === 'mathInline')  mathInline++
+    else if (node.type.name === 'mathDisplay') mathDisplay++
+    else if (node.type.name === 'theoremEnv')  theoremEnv++
+  })
+  const text  = doc.textContent.trim()
+  const words = text ? text.split(/\s+/).length : 0
+  docStats.value = { words, mathInline, mathDisplay, theoremEnv }
 }
 
 // ── Node activation (called from NodeView click handlers) ─────────
 
-export function activateNode(pos: number, latex: string): void {
+export function activateNode(pos: number, latex: string, source: TriggerSource = 'click'): void {
   activeNodePos.value = pos
   activeFormula.value = latex
+  triggerSource.value = source
+  if (_editor) {
+    const node = _editor.state.doc.nodeAt(pos)
+    activeFormulaType.value = node?.type.name === 'mathDisplay' ? 'display' : 'inline'
+  }
 }
 
 export function deactivateNode(): void {
   activeNodePos.value = null
   activeFormula.value = ''
   activeFormulaError.value = null
+  activeFormulaType.value = null
+  triggerSource.value = 'click'
+}
+
+/**
+ * Called when the user Esc's out of a backslash-triggered formula editor.
+ * Deletes the empty formula node and inserts a literal backslash in its place.
+ */
+export function cancelBackslashFormula(): void {
+  if (!_editor || activeNodePos.value === null) return
+  const pos  = activeNodePos.value
+  const node = _editor.state.doc.nodeAt(pos)
+  deactivateNode()
+  if (!node) { _editor.view.focus(); return }
+  const tr = _editor.state.tr.replaceWith(pos, pos + node.nodeSize, _editor.state.schema.text('\\'))
+  _editor.view.dispatch(tr)
+  _editor.view.focus()
 }
 
 /**
@@ -124,7 +171,7 @@ export function updateActiveFormula(latex: string): void {
  * Insert a new formula node and immediately open the floating editor on it.
  * Used by toolbar buttons and Ctrl+M shortcuts.
  */
-export function insertNewFormulaAndActivate(latex: string, displayMode: boolean): void {
+export function insertNewFormulaAndActivate(latex: string, displayMode: boolean, source: TriggerSource = 'toolbar'): void {
   if (!_editor) return
   const typeName = displayMode ? 'mathDisplay' : 'mathInline'
   const attrs    = displayMode
@@ -141,7 +188,7 @@ export function insertNewFormulaAndActivate(latex: string, displayMode: boolean)
 
   // Strategy 1: nodeBefore (inline atom — TipTap leaves cursor right after it)
   if ($from.nodeBefore?.type.name === typeName) {
-    activateNode($from.pos - $from.nodeBefore.nodeSize, latex)
+    activateNode($from.pos - $from.nodeBefore.nodeSize, latex, source)
     return
   }
 
@@ -150,7 +197,7 @@ export function insertNewFormulaAndActivate(latex: string, displayMode: boolean)
   doc.nodesBetween(insertFrom, Math.min(insertFrom + 200, doc.content.size), (node, pos) => {
     if (found) return false
     if (node.type.name === typeName) {
-      activateNode(pos, latex)
+      activateNode(pos, latex, source)
       found = true
       return false
     }

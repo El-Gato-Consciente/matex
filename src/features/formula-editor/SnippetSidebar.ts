@@ -5,11 +5,13 @@ import { activeNodePos, insertNewFormulaAndActivate } from '@core/editor/EditorS
 
 /* ─────────────────────────────────────────────────────────────────
    SnippetSidebar — Phase 2
-   Collapsed: 12 quick-access buttons (icon only).
-   Expanded: search + category tabs + full scrollable list.
+   Collapsed: favorites as quick buttons with slot badges 0–9.
+   Expanded: favorites section + search + category tabs + full list.
    ───────────────────────────────────────────────────────────────── */
 
-const SB_KEY = 'formalia:sidebar:collapsed'
+const SB_KEY  = 'formalia:sidebar:collapsed'
+const FAV_KEY = 'formalia:snippet-favorites'
+const MAX_FAVS = 16
 
 // ── Snippet data ─────────────────────────────────────────────────
 
@@ -217,24 +219,47 @@ const SNIPPETS: Snippet[] = [
   { icon: 'iid',    cat: 'stats', label: 'iid',            t: '\\overset{\\text{iid}}{\\sim}'             },
 ]
 
-const QUICK_SNIPS: Snippet[] = [
-  { icon: 'a/b',  cat: 'frac',  label: 'Fracción',   t: '\\frac{#@}{#?}'                                        },
-  { icon: '√',    cat: 'frac',  label: 'Raíz',       t: '\\sqrt{#@}'                                            },
-  { icon: 'xⁿ',   cat: 'frac',  label: 'Potencia',   t: '{#@}^{#?}'                                             },
-  { icon: '∫',    cat: 'calc',  label: 'Integral',   t: '\\int_{#?}^{#?} #? \\,d#?'                            },
-  { icon: 'Σ',    cat: 'calc',  label: 'Sumatorio',  t: '\\sum_{#?}^{#?} #?'                                    },
-  { icon: 'lim',  cat: 'calc',  label: 'Límite',     t: '\\lim_{#? \\to #?} #?'                                 },
-  { icon: '∂',    cat: 'calc',  label: 'Parcial',    t: '\\frac{\\partial #?}{\\partial #?}'                    },
-  { icon: '()',   cat: 'frac',  label: 'Paréntesis', t: '\\left( #@ \\right)'                                    },
-  { icon: 'M',    cat: 'alg',   label: 'Matriz 2×2', t: '\\begin{pmatrix} #? & #? \\\\ #? & #? \\end{pmatrix}'  },
-  { icon: 'sin',  cat: 'trig',  label: 'seno',       t: '\\sin #?'                                              },
-  { icon: 'α',    cat: 'greek', label: 'alpha',      t: '\\alpha'                                               },
-  { icon: 'π',    cat: 'greek', label: 'pi',         t: '\\pi'                                                  },
-  { icon: '∈',    cat: 'logic', label: 'pertenece',  t: '\\in'                                                  },
-  { icon: '≤',    cat: 'rel',   label: 'leq',        t: '\\leq'                                                 },
-  { icon: 'sup',  cat: 'anal',  label: 'supremo',    t: '\\sup_{#?} #?'                                         },
-  { icon: 'E[]',  cat: 'stats', label: 'Esperanza',  t: '\\mathbb{E}\\left[#?\\right]'                         },
+// Default favorite IDs (indices into SNIPPETS) — the classic quick picks
+const DEFAULT_FAV_TEMPLATES = [
+  '\\frac{#@}{#?}',                          // a/b
+  '\\sqrt{#@}',                              // √
+  '{#@}^{#?}',                               // xⁿ
+  '\\int_{#?}^{#?} #? \\,d#?',              // ∫
+  '\\sum_{#?}^{#?} #?',                      // Σ
+  '\\lim_{#? \\to #?} #?',                   // lim
+  '\\frac{\\partial #?}{\\partial #?}',      // ∂
+  '\\left( #@ \\right)',                     // ()
+  '\\begin{pmatrix} #? & #? \\\\ #? & #? \\end{pmatrix}', // M 2×2
+  '\\sin #?',                                // sin
+  '\\alpha',                                 // α
+  '\\pi',                                    // π
+  '\\in',                                    // ∈
+  '\\leq',                                   // ≤
+  '\\sup_{#?} #?',                           // sup
+  '\\mathbb{E}\\left[#?\\right]',            // E[]
 ]
+
+function getDefaultFavorites(): string[] {
+  return DEFAULT_FAV_TEMPLATES
+    .map(t => SNIPPETS.findIndex(s => s.t === t))
+    .filter(i => i >= 0)
+    .map(String)
+}
+
+function loadFavorites(): string[] {
+  try {
+    const raw = localStorage.getItem(FAV_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as string[]
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+  return getDefaultFavorites()
+}
+
+function saveFavorites(favs: string[]): void {
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs))
+}
 
 const CATS = [
   { id: 'all',   label: 'Todos'          },
@@ -252,14 +277,12 @@ const CATS = [
 // ── Insert helper ─────────────────────────────────────────────────
 
 function insertSnippet(latex: string): void {
-  // Visual mode: math-field is not hidden
   const mf = document.querySelector<any>('fp-floating-formula math-field:not(.ff-hidden)')
   if (mf) {
     mf.insert(latex)
     mf.focus()
     return
   }
-  // Code mode: textarea is not hidden
   const ta = document.querySelector<HTMLTextAreaElement>(
     'fp-floating-formula .ff-textarea:not(.ff-hidden)'
   )
@@ -283,6 +306,7 @@ export class SnippetSidebar extends LitElement {
   @state() private _search = ''
   @state() private _activeCat = 'all'
   @state() private _formulaActive = false
+  @state() private _favorites: string[] = loadFavorites()
 
   private _disposes: (() => void)[] = []
 
@@ -290,12 +314,25 @@ export class SnippetSidebar extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback()
-    // Sync initial collapse class to the #snippet-sidebar parent
     this.parentElement?.classList.toggle('collapsed', this._collapsed)
 
     this._disposes.push(
       effect(() => { this._formulaActive = activeNodePos.value !== null })
     )
+
+    const onKeydown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.shiftKey) return
+      const m = e.code.match(/^Digit(\d)$/)
+      if (!m) return
+      const idx = parseInt(m[1], 10)
+      const favId = this._favorites[idx]
+      if (favId === undefined) return
+      e.preventDefault()
+      const snip = SNIPPETS[parseInt(favId, 10)]
+      if (snip) this._onSnipClick(snip.t)
+    }
+    document.addEventListener('keydown', onKeydown)
+    this._disposes.push(() => document.removeEventListener('keydown', onKeydown))
   }
 
   override disconnectedCallback() {
@@ -319,6 +356,16 @@ export class SnippetSidebar extends LitElement {
     }
   }
 
+  private _toggleFav(id: string) {
+    const idx = this._favorites.indexOf(id)
+    if (idx >= 0) {
+      this._favorites = this._favorites.filter(f => f !== id)
+    } else if (this._favorites.length < MAX_FAVS) {
+      this._favorites = [...this._favorites, id]
+    }
+    saveFavorites(this._favorites)
+  }
+
   // ── Render ────────────────────────────────────────────────────
 
   override render() {
@@ -326,18 +373,25 @@ export class SnippetSidebar extends LitElement {
   }
 
   private _renderCollapsed() {
+    const favSnips = this._favorites
+      .map((id, slot) => ({ snip: SNIPPETS[parseInt(id, 10)], slot }))
+      .filter(x => x.snip != null)
+
     return html`
       <div class="sb-header">
         <button class="sb-toggle" title="Expandir panel" @click="${this._toggle}">›</button>
       </div>
       <div class="sb-quick">
-        ${QUICK_SNIPS.map(s => html`
+        ${favSnips.map(({ snip, slot }) => html`
           <button
             class="sb-quick-btn"
-            title="${s.label}"
+            title="${slot < 10 ? `Ctrl+Shift+${slot} · ` : ''}${snip.label}"
             @mousedown="${(e: Event) => e.preventDefault()}"
-            @click="${() => this._onSnipClick(s.t)}"
-          >${s.icon}</button>
+            @click="${() => this._onSnipClick(snip.t)}"
+          >
+            ${slot < 10 ? html`<span class="sb-quick-badge">${slot}</span>` : ''}
+            ${snip.icon}
+          </button>
         `)}
       </div>
     `
@@ -351,6 +405,10 @@ export class SnippetSidebar extends LitElement {
       return catOk && searchOk
     })
 
+    const favSnips = this._favorites
+      .map((id, slot) => ({ id, snip: SNIPPETS[parseInt(id, 10)], slot }))
+      .filter(x => x.snip != null)
+
     return html`
       <div class="sb-header">
         <button class="sb-toggle" title="Colapsar panel" @click="${this._toggle}">‹</button>
@@ -362,6 +420,34 @@ export class SnippetSidebar extends LitElement {
           @input="${(e: Event) => { this._search = (e.target as HTMLInputElement).value }}"
         />
       </div>
+
+      ${favSnips.length > 0 ? html`
+        <div class="sb-fav-section">
+          <div class="sb-fav-header">★ Favoritos</div>
+          <div class="sb-fav-grid">
+            ${favSnips.map(({ id, snip, slot }) => html`
+              <div class="sb-fav-pill-wrap">
+                <button
+                  class="sb-fav-pill"
+                  title="${slot < 10 ? `Ctrl+Shift+${slot} · ` : ''}${snip.label}"
+                  @mousedown="${(e: Event) => e.preventDefault()}"
+                  @click="${() => this._onSnipClick(snip.t)}"
+                >
+                  ${slot < 10 ? html`<span class="sb-fav-slot">${slot}</span>` : ''}
+                  <span class="sb-fav-icon">${snip.icon}</span>
+                </button>
+                <button
+                  class="sb-fav-remove"
+                  title="Quitar de favoritos"
+                  @mousedown="${(e: Event) => e.preventDefault()}"
+                  @click="${() => this._toggleFav(id)}"
+                >×</button>
+              </div>
+            `)}
+          </div>
+        </div>
+      ` : ''}
+
       <div class="sb-cats">
         ${CATS.map(c => html`
           <button
@@ -373,17 +459,30 @@ export class SnippetSidebar extends LitElement {
       <div class="sb-list">
         ${filtered.length === 0
           ? html`<p class="sb-empty">Sin resultados</p>`
-          : filtered.map(s => html`
-            <button
-              class="sb-snip"
-              title="${s.t}"
-              @mousedown="${(e: Event) => e.preventDefault()}"
-              @click="${() => this._onSnipClick(s.t)}"
-            >
-              <span class="sb-snip-icon">${s.icon}</span>
-              <span class="sb-snip-label">${s.label}</span>
-            </button>
-          `)
+          : filtered.map(s => {
+              const globalIdx = SNIPPETS.indexOf(s)
+              const id = String(globalIdx)
+              const isFav = this._favorites.includes(id)
+              return html`
+                <div class="sb-snip-row">
+                  <button
+                    class="sb-snip"
+                    title="${s.t}"
+                    @mousedown="${(e: Event) => e.preventDefault()}"
+                    @click="${() => this._onSnipClick(s.t)}"
+                  >
+                    <span class="sb-snip-icon">${s.icon}</span>
+                    <span class="sb-snip-label">${s.label}</span>
+                  </button>
+                  <button
+                    class="sb-snip-star${isFav ? ' is-fav' : ''}"
+                    title="${isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}"
+                    @mousedown="${(e: Event) => e.preventDefault()}"
+                    @click="${() => this._toggleFav(id)}"
+                  >${isFav ? '★' : '☆'}</button>
+                </div>
+              `
+            })
         }
       </div>
     `

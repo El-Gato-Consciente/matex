@@ -9,9 +9,11 @@ import {
   activeFormulaError,
   updateActiveFormula,
   deactivateNode,
+  cancelBackslashFormula,
   releaseFormulaSelection,
   focusEditor,
   getActiveFormulaDOM,
+  triggerSource,
 } from '@core/editor/EditorStore'
 import { renderableLatex } from '@core/math/latexUtils'
 
@@ -85,6 +87,22 @@ export class FloatingFormulaEditor extends LitElement {
       this._activeFormulaEl?.classList.add('is-editing')
 
       releaseFormulaSelection()
+
+      // Backslash trigger: force code mode, re-render, then focus textarea
+      if (triggerSource.value === 'backslash') {
+        this._editMode = 'code'
+        localStorage.setItem(MODE_KEY, 'code')
+        this._prevActive = this._active
+        this.requestUpdate()
+        this.updateComplete.then(() => {
+          const ta2 = this.querySelector<HTMLTextAreaElement>('.ff-textarea')
+          if (!ta2) return
+          ta2.value = '\\'
+          ta2.focus()
+          ta2.setSelectionRange(ta2.value.length, ta2.value.length)
+        })
+        return
+      }
 
       const formula = activeFormula.value
       const ta = panel.querySelector<HTMLTextAreaElement>('.ff-textarea')
@@ -207,7 +225,10 @@ export class FloatingFormulaEditor extends LitElement {
           autocapitalize="off"
         ></textarea>
         <div class="ff-hint">
-          <kbd>Esc</kbd> cerrar &nbsp;·&nbsp; <kbd>Enter</kbd> confirmar &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> nueva línea
+          ${triggerSource.value === 'backslash'
+            ? html`<kbd>Esc</kbd> cancelar e insertar \\ como texto &nbsp;·&nbsp; <kbd>Enter</kbd> confirmar`
+            : html`<kbd>Esc</kbd> cerrar &nbsp;·&nbsp; <kbd>Enter</kbd> confirmar &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> nueva línea`
+          }
         </div>
       </div>
     `
@@ -228,8 +249,12 @@ export class FloatingFormulaEditor extends LitElement {
   private _onMfKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
       e.preventDefault()
-      deactivateNode()
-      focusEditor()
+      if (e.key === 'Escape' && triggerSource.value === 'backslash') {
+        cancelBackslashFormula()
+      } else {
+        deactivateNode()
+        focusEditor()
+      }
       return
     }
     if (e.key === 'Enter' && e.shiftKey) {
@@ -260,8 +285,12 @@ export class FloatingFormulaEditor extends LitElement {
   private _onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault()
-      deactivateNode()
-      focusEditor()
+      if (triggerSource.value === 'backslash') {
+        cancelBackslashFormula()
+      } else {
+        deactivateNode()
+        focusEditor()
+      }
       return
     }
     if (e.key === 'Enter' && !e.shiftKey) {

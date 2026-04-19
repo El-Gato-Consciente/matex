@@ -250,18 +250,299 @@ fp-snippet-sidebar {
 .sb-quick-btn:hover:not(:disabled) { background: var(--bg); }
 .sb-quick-btn:disabled { opacity: .38; cursor: default; }
 
-/* ── Coach panel placeholder ─────────────────────────────────────── */
-
-#coach-panel {
-  padding: 10px 8px;
-}
-
-.cp-placeholder {
-  font: italic 12px var(--font-ui);
+.sb-quick-btn { position: relative; }
+.sb-quick-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font: 600 8px/1 var(--font-ui);
   color: var(--text-placeholder);
-  text-align: center;
-  margin-top: 20px;
 }
+
+/* ── Favorites section (expanded) ───────────────────────────────── */
+
+.sb-fav-section {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 5px 6px 6px;
+}
+
+.sb-fav-header {
+  font: 600 10px/1 var(--font-ui);
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  letter-spacing: .03em;
+}
+
+.sb-fav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.sb-fav-pill-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.sb-fav-pill-wrap:hover .sb-fav-remove { opacity: 1; }
+
+.sb-fav-pill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--accent);
+  font: 500 11px/1 var(--font-mono);
+  cursor: pointer;
+  transition: background .08s, border-color .08s;
+}
+.sb-fav-pill:hover { background: var(--bg); border-color: var(--accent); }
+
+.sb-fav-slot {
+  font: 600 8px/1 var(--font-ui);
+  color: var(--text-placeholder);
+  min-width: 7px;
+}
+
+.sb-fav-remove {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 11px/1 var(--font-ui);
+  color: var(--text-placeholder);
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity .1s, color .1s;
+  margin-left: 1px;
+}
+.sb-fav-remove:hover { color: var(--text); opacity: 1; }
+
+/* ── Star toggle in list items ──────────────────────────────────── */
+
+.sb-snip-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.sb-snip-row .sb-snip {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-snip-star {
+  flex-shrink: 0;
+  width: 24px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-placeholder);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .1s, color .1s;
+  padding: 0;
+}
+.sb-snip-row:hover .sb-snip-star { opacity: 1; }
+.sb-snip-star.is-fav { opacity: 1; color: #f59e0b; }
+.sb-snip-star:hover { color: #f59e0b; }
+
+/* ── Coach panel ─────────────────────────────────────────────────── */
+
+fp-coach-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.cp-header {
+  font: 600 11px/1 var(--font-ui);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 6px 6px 6px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cp-toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+.cp-toggle:hover { background: var(--bg); color: var(--text); }
+
+.cp-collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  gap: 8px;
+}
+
+.cp-collapsed-error {
+  font-size: 14px;
+  color: var(--error);
+  cursor: default;
+}
+
+.cp-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 0;
+}
+
+/* ── Sections ────────────────────────────────────────────────────── */
+
+.cp-section {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.cp-section:last-child { border-bottom: none; }
+
+.cp-section-title {
+  font: 600 10px/1 var(--font-ui);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cp-icon { font-style: normal; }
+
+/* ── Error section ───────────────────────────────────────────────── */
+
+.cp-section--error {
+  background: var(--error-bg);
+  border-left: 3px solid var(--error);
+  padding-left: 10px;
+}
+.cp-section--error .cp-section-title { color: var(--error); }
+
+.cp-error-type {
+  font: 400 11px/1 var(--font-ui);
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.cp-error-msg {
+  font: 400 11px/1.4 var(--font-mono);
+  color: var(--error);
+  word-break: break-word;
+}
+
+/* ── Ok section ──────────────────────────────────────────────────── */
+
+.cp-section--ok {
+  border-left: 3px solid #22c55e;
+  padding-left: 10px;
+}
+.cp-section--ok .cp-section-title { color: #16a34a; }
+body.dark .cp-section--ok .cp-section-title { color: #4ade80; }
+
+.cp-ok-msg {
+  font: 400 11px/1 var(--font-ui);
+  color: var(--text-muted);
+}
+
+/* ── Stats ───────────────────────────────────────────────────────── */
+
+.cp-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.cp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cp-stat-val {
+  font: 700 18px/1 var(--font-ui);
+  color: var(--text);
+}
+
+.cp-stat-lbl {
+  font: 400 10px/1 var(--font-ui);
+  color: var(--text-placeholder);
+}
+
+/* ── Shortcuts ───────────────────────────────────────────────────── */
+
+.cp-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-kbd {
+  font: 500 9px/1 var(--font-mono);
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #a5b4fc;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+body.dark .cp-kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a; }
+
+.cp-shortcut-desc {
+  font: 400 11px/1 var(--font-ui);
+  color: var(--text-muted);
+}
+
+/* ── Status bar extended ─────────────────────────────────────────── */
+
+.sb-formula-ok {
+  font: 400 11px/1 var(--font-ui);
+  color: #16a34a;
+}
+body.dark .sb-formula-ok { color: #4ade80; }
 
 /* ── Floating formula editor ─────────────────────────────────────── */
 

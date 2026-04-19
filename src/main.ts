@@ -12,6 +12,7 @@ import { MathDisplay }       from '@core/editor/extensions/MathDisplay'
 import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
 import { TheoremEnvTitle }   from '@core/editor/extensions/TheoremEnvTitle'
 import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
+import { BackslashTrigger }  from '@core/editor/extensions/BackslashTrigger'
 import { SlashCommands }    from '@core/editor/extensions/SlashCommands'
 import { setEditor }         from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
@@ -22,6 +23,7 @@ import '@ui/toolbar/Toolbar'
 import '@ui/status-bar/StatusBar'
 import '@features/formula-editor/FloatingFormulaEditor'
 import '@features/formula-editor/SnippetSidebar'
+import '@features/coach/CoachPanel'
 import '@features/export/ExportModal'
 
 // ── Persistence ─────────────────────────────────────────────────────
@@ -47,6 +49,7 @@ const editor: Editor = new Editor({
     TheoremEnvTitle,
     TheoremEnv,
     FormulaNavigation,
+    BackslashTrigger,
     SlashCommands,
   ],
   content: (currentDoc ? fromStorage(currentDoc) : { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
@@ -84,6 +87,7 @@ sidebar.innerHTML = ''
 sidebar.appendChild(document.createElement('fp-snippet-sidebar'))
 
 const coach = document.getElementById('coach-panel')!
-coach.innerHTML = '<div class="cp-placeholder">Coach<br>(Phase 3)</div>'
+coach.innerHTML = ''
+coach.appendChild(document.createElement('fp-coach-panel'))
 
 console.log('Formalia — Phase 1 loaded')

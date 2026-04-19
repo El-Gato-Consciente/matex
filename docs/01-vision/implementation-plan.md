@@ -349,149 +349,74 @@ Extraer el sistema de tokens dark del demo3 a `src/design/themes/dark.css`.
 
 ---
 
-## Fase 3 — Pipeline AST y Normalización
+## Fase 3 — CoachPanel y Status Bar
 
-**Duración estimada:** 2–3 semanas  
-**Criterio de salida:** tres reglas de normalización funcionando; CoachPanel muestra cambios; el `.tex` exportado es LaTeX canónico según las specs.
+**Criterio de salida:** CoachPanel funcional como superficie de feedback contextual;
+status bar enriquecida e integrada con el coach.
 
-### Por qué el AST pipeline va en Fase 3, no antes
+### Por qué se reformuló esta fase
 
-El normalizer requiere MathJSON de MathLive (`mf.getValue('math-json')`), que solo está
-disponible en modo Visual. En modo Código (textarea) se opera sobre strings crudos.
-La Fase 3 asume que el MathLive de Fase 2 está estable.
+La especificación original de Fase 3 (Pipeline AST + Normalizer) fue descartada por
+dos razones fundamentales:
 
-### Módulos a construir
+1. **Acoplamiento a MathLive**: el ASTParser dependía de `mf.getValue('math-json')`,
+   disponible solo en modo Visual. En modo Código el normalizer no podía funcionar,
+   lo que lo convertía en una feature de segunda clase.
 
-#### 3.1 — MathAST types
+2. **Invasividad**: un sistema que corrige fórmulas automáticamente sin pedirle permiso
+   explícito al usuario rompe el flow de escritura. Los usuarios target (gente que ya
+   sabe LaTeX) no necesitan que el editor les corrija el `dx`.
 
-`src/core/math/MathAST.ts`
+El Normalizer y el AST pipeline quedan como **deuda técnica pendiente** para una fase
+futura, si se encuentra un enfoque que no dependa de MathLive y que sea genuinamente
+opt-in. Ver `docs/03-engine-specs/normalization.md` para la spec original.
 
-Tipos del AST interno de Formalia. No es MathJSON directamente — es una representación
-simplificada y tipada que las reglas del normalizer pueden navegar:
+### Lo que sí se construye
 
-```typescript
-type MathNode =
-  | { kind: 'num';     value: string }
-  | { kind: 'sym';     name: string }          // variable o constante
-  | { kind: 'op';      op: string; args: MathNode[] }
-  | { kind: 'frac';    num: MathNode; den: MathNode }
-  | { kind: 'int';     integrand: MathNode; differential: MathNode; limits?: [MathNode, MathNode] }
-  | { kind: 'delim';   open: string; close: string; body: MathNode }
-  | { kind: 'text';    content: string }
-  | { kind: 'raw';     latex: string }         // fallback para nodos no mapeados
-```
-
-#### 3.2 — ASTParser
-
-`src/core/math/ASTParser.ts`
-
-```typescript
-// parse(mathJson: MathJsonExpression): MathAST
-// Recibe mf.getValue('math-json') y produce MathAST
-// Nodos no reconocidos → MathNode { kind: 'raw', latex: string }
-// Los nodos 'raw' pasan por el serializer sin modificación (safe fallback)
-```
-
-Estrategia de robustez: el parser nunca lanza excepciones. Todo lo desconocido
-cae en `raw`. Esto garantiza que el normalizer no rompa fórmulas válidas que
-no maneja.
-
-#### 3.3 — Normalizer (3 reglas Phase 3)
-
-`src/core/math/normalizer/Normalizer.ts`  
-`src/core/math/normalizer/rules/AutoDelimiters.ts`  
-`src/core/math/normalizer/rules/DxSpacing.ts`  
-`src/core/math/normalizer/rules/MacroExpansion.ts`
-
-Implementar exactamente según `03-engine-specs/normalization.md`.
-La interface `NormalizerRule` y `NormalizerResult` ya están definidas ahí.
-
-Integración en EditorStore:
-```typescript
-// updateActiveFormula() ahora llama al normalizer si las reglas aplican
-// Las NormalizerChanges se emiten como signal → CoachPanel las consume
-```
-
-#### 3.4 — ASTSerializer
-
-`src/core/math/ASTSerializer.ts`
-
-```typescript
-// serialize(ast: MathAST): string
-// Produce canonical LaTeX desde el AST normalizado
-// Los nodos 'raw' se emiten verbatim
-```
-
-#### 3.5 — CoachPanel
+#### 3.1 — CoachPanel
 
 `src/features/coach/CoachPanel.ts`
 
-Componente Lit que consume el signal `coachChanges`:
+Componente Lit que ocupa el panel derecho (`#coach-panel`). No consume el normalizer —
+consume señales del editor y expone feedback contextual útil.
 
-Phase 3a (read-only):
-- Lista de cards: cada card muestra `change.before` → `change.after` con `change.description`
-- Badge de severidad (required / preferred / opinionated)
-- Sin botones de acción todavía
+**Contenido inicial:**
+- Error KaTeX de la fórmula activa (hoy solo visible en la status bar — pasa al coach)
+- Contadores del documento: nº de fórmulas inline, display, theorem envs
+- Atajos de teclado relevantes al contexto actual
+- Superficie para futuras integraciones (macros personalizadas, cross-refs, linter)
 
-Phase 3b (accept/revert):
-- Botón Accept en cada card: aplica el cambio al nodo activo en TipTap
-- Botón Revert: deshace el cambio y marca la regla como silenciada para esta sesión
-- Botón "Apply all required" en el header del panel
+El panel es **read-only en esta fase** — muestra información, no propone cambios.
 
-#### 3.6 — Reglas adicionales
+#### 3.2 — Status bar enriquecida
 
-`src/core/math/normalizer/rules/TextInMath.ts`  
-`src/core/math/normalizer/rules/AlignedSteps.ts`  
-`src/core/math/normalizer/rules/DisplayThreshold.ts`  
-`src/core/math/normalizer/rules/ForbiddenSyntax.ts`
+`src/ui/status-bar/StatusBar.ts` (extender el componente existente)
 
-Implementar según specs. `ForbiddenSyntax` bloquea la serialización — necesita
-integrarse con el export flow.
+La status bar actual solo muestra errores KaTeX. Se enriquece para mostrar:
+- Estado del documento: nº de palabras, nº de fórmulas
+- Fórmula activa: tipo (inline/display) + indicador de error si lo hay
+- Modo de edición activo (Visual / Código)
+- Coordinación con CoachPanel: la status bar muestra el resumen; el coach muestra el detalle
+
+#### 3.3 — Integración entre ambos
+
+La status bar y el CoachPanel comparten señales del EditorStore. La status bar
+es el resumen siempre visible; el CoachPanel es el detalle expandido en el panel lateral.
+Misma información, dos niveles de granularidad.
 
 ---
 
-## Fase 4 — ManifestEngine, templates y multi-documento
+## Fase 4 — Multi-documento
 
-**Duración estimada:** 1.5–2 semanas  
-**Criterio de salida:** el usuario puede elegir tipo de documento al inicio; hay múltiples documentos abiertos; el `.tex` exportado usa los paquetes correctos según el perfil.
+**Criterio de salida:** el usuario puede gestionar múltiples documentos (crear, renombrar, duplicar, eliminar) con persistencia correcta en localStorage.
+
+> Los ítems originales de esta fase (ManifestEngine, Template selector, ExportOverride UI)
+> fueron postergados por ser over-engineering para el estado actual.
+> Ver detalle y motivación en [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md).
 
 ### Módulos a construir
 
-#### 4.1 — ManifestEngine
-
-`src/core/manifests/ManifestEngine.ts`
-
-```typescript
-// buildEffectiveConfig(profileId: string, override?: ExportOverride): EffectiveConfig
-// Lee profile.json + manifest.json de src/core/manifests/profiles/<id>/
-// Aplica ExportOverride si existe
-// Retorna EffectiveConfig (plain serializable object)
-```
-
-Conectar al TexSerializer: Phase 1 usaba un wrapper hardcoded. Ahora el serializer
-recibe `EffectiveConfig` y genera el preamble dinámicamente según
-`manifest.json → packages` + `profile.json → macros` + `profile.json → theoremDefs`.
-
-Los archivos `article-pro/profile.json` y `article-pro/manifest.json` ya están
-especificados en `03-engine-specs/`. Crearlos en esta fase.
-
-#### 4.2 — Template selector
-
-`src/features/templates/TemplateSelector.ts`
-
-Pantalla de inicio (si no hay documento en localStorage):
-
-| Template | Profile | Estructura inicial |
-|---|---|---|
-| Guía de ejercicios | `article-pro` | Heading + 3 TheoremEnv(exercise) |
-| Apunte de clase | `article-pro` | Heading + def + example + remark |
-| Resolución de TP | `article-pro` | Heading + paragraphs con display math |
-| Resumen de teoría | `article-pro` | Heading + lista de defs + tabla de fórmulas |
-| Documento en blanco | `article-pro` | Solo heading |
-
-Los contenidos de los templates vienen de `formalia-content-design.md § 5`.
-
-#### 4.3 — Multi-documento
+#### 4.1 — Multi-documento
 
 `src/features/documents/DocumentManager.ts`
 
@@ -501,18 +426,12 @@ Los contenidos de los templates vienen de `formalia-content-design.md § 5`.
 - Crear / renombrar / duplicar / eliminar documento
 - Auto-save cada 30 segundos + en blur
 
-#### 4.4 — ExportOverride UI
-
-`src/features/export/ExportOverridePanel.ts`
-
-Panel colapsable en el modal de export para usuarios intermedios:
-- Toggle por paquete (amsmath, mathtools, etc.)
-- Campo de macros adicionales
-- Ver `03-engine-specs/export-override.md`
-
 ---
 
 ## Fase 5 — Robustez y producción
+
+> Antes de arrancar esta fase, revisar [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md)
+> para evaluar si ManifestEngine, Template selector o ExportOverride UI ya tienen justificación.
 
 **Duración estimada:** 3 semanas  
 **Criterio de salida:** producto desplegable, con tests de las reglas críticas, con importación básica de `.tex`.
@@ -640,9 +559,10 @@ El CoachPanel explica la diferencia. Esta es la propuesta de valor central de Fo
 | **0** | Proyecto Vite+TS levanta, estructura de directorios | — |
 | **1** | Editor funcional modo Código + .tex exportable | Fase 0 |
 | **2** | MathLive integrado + TheoremEnv + SnippetSidebar | Fase 1 |
-| **3** | Normalizer + CoachPanel (3 reglas → 7 reglas) | Fase 2 |
+| **3** | CoachPanel + Status bar enriquecida | Fase 2 |
 | **4** | ManifestEngine + templates + multi-doc | Fase 3 |
 | **5** | .tex import + tests + SemanticLinter + deploy | Fase 4 |
 
-**MVP demos-able:** fin de Fase 2 (editor completo, sin normalizer todavía).  
-**MVP con propuesta de valor diferenciada:** fin de Fase 3 (normalizer + Coach Panel).
+**MVP demos-able:** fin de Fase 2 (editor completo). ✓ alcanzado  
+**MVP con feedback contextual:** fin de Fase 3 (CoachPanel + status bar).  
+**Normalizer/AST:** postergado indefinidamente — ver nota en Fase 3.

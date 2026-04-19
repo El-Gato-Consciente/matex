@@ -19,6 +19,17 @@ import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
 
 const storage = new LocalStorageAdapter()
 
+const ZOOM_KEY   = 'formalia:zoom'
+const ZOOM_MIN   = 0.5
+const ZOOM_MAX   = 2.0
+const ZOOM_STEP  = 0.1
+const ZOOM_DEF   = 1.0
+
+function loadZoom(): number {
+  const v = parseFloat(localStorage.getItem(ZOOM_KEY) ?? '')
+  return isNaN(v) ? ZOOM_DEF : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v))
+}
+
 @customElement('fp-toolbar')
 export class Toolbar extends LitElement {
 
@@ -27,9 +38,11 @@ export class Toolbar extends LitElement {
   @state() private _highlight      = storage.loadHighlight()
   @state() private _thmStyle       = storage.loadThmStyle()
   @state() private _openDropdown: string | null = null
+  @state() private _zoom           = loadZoom()
 
   private _disposes: (() => void)[] = []
   private _closeHandler: (e: Event) => void = () => {}
+  private _keyHandler:   (e: KeyboardEvent) => void = () => {}
 
   override createRenderRoot() { return this }
 
@@ -44,14 +57,22 @@ export class Toolbar extends LitElement {
     this._applyTheme(this._isDark)
     this._applyHighlight(this._highlight)
     this._applyThmStyle(this._thmStyle)
+    this._applyZoom(this._zoom)
 
-    // Close any open dropdown when clicking outside the toolbar
     this._closeHandler = (e: Event) => {
       if (this._openDropdown && !this.contains(e.target as Node)) {
         this._openDropdown = null
       }
     }
     document.addEventListener('click', this._closeHandler)
+
+    this._keyHandler = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      if (e.key === '=' || e.key === '+') { e.preventDefault(); this._zoomIn() }
+      if (e.key === '-')                  { e.preventDefault(); this._zoomOut() }
+      if (e.key === '0')                  { e.preventDefault(); this._zoomReset() }
+    }
+    document.addEventListener('keydown', this._keyHandler)
   }
 
   override disconnectedCallback() {
@@ -59,6 +80,7 @@ export class Toolbar extends LitElement {
     this._disposes.forEach(d => d())
     this._disposes = []
     document.removeEventListener('click', this._closeHandler)
+    document.removeEventListener('keydown', this._keyHandler)
   }
 
   // ── Render ──────────────────────────────────────────────────────
@@ -138,19 +160,40 @@ export class Toolbar extends LitElement {
         <!-- Push right -->
         <div class="sep push"></div>
 
+        <!-- Zoom -->
+        <button class="tbtn" ?disabled="${this._zoom <= ZOOM_MIN}" @click="${this._zoomOut}" title="Zoom out (Ctrl+−)">−</button>
+        <button class="tbtn zoom-label" @click="${this._zoomReset}" title="Restablecer zoom (Ctrl+0)">${Math.round(this._zoom * 100)}%</button>
+        <button class="tbtn" ?disabled="${this._zoom >= ZOOM_MAX}" @click="${this._zoomIn}"  title="Zoom in (Ctrl+=)">+</button>
+
+        <div class="sep"></div>
+
         <button class="tbtn" @click="${loadExample}" title="Load example document">Ejemplo</button>
         <button class="tbtn" @click="${this._confirmClear}" title="Clear document" style="color:var(--error)">Limpiar</button>
         <div class="sep"></div>
         <button class="tbtn" @click="${this._export}" title="Export LaTeX (.tex)">Export .tex</button>
         <div class="sep"></div>
-        <button class="tbtn" @click="${this._cycleHighlight}"
-          title="${{ strong: 'Fórmulas: resaltado fuerte', soft: 'Fórmulas: resaltado suave', none: 'Fórmulas: sin resaltado' }[this._highlight]}"
-          style="font-size:13px; min-width:32px; color:#4f46e5">${{ strong: '●f', soft: '◎f', none: '○f' }[this._highlight]}</button>
-        <button class="tbtn" @click="${this._cycleThmStyle}"
-          title="${{ strong: 'Entornos: caja completa', soft: 'Entornos: borde suave', none: 'Entornos: solo barra' }[this._thmStyle]}"
-          style="font-size:13px; min-width:32px; color:#059669">${{ strong: '●e', soft: '◎e', none: '○e' }[this._thmStyle]}</button>
-        <button class="tbtn" @click="${this._toggleTheme}" title="Toggle dark mode"
-          style="font-size:16px; min-width:32px">${this._isDark ? '☀' : '☾'}</button>
+        <!-- Appearance dropdown -->
+        <div class="tbtn-drop">
+          <button class="tbtn" title="Apariencia"
+            @click="${(e: Event) => this._toggleDropdown('appearance', e)}">Ap ▾</button>
+          ${this._openDropdown === 'appearance' ? html`
+            <div class="tbtn-menu" style="right:0;left:auto;min-width:180px">
+              <button class="tbtn" @click="${this._cycleHighlight}"
+                style="color:#4f46e5">
+                ${{ strong: '●', soft: '◎', none: '○' }[this._highlight]}
+                Fórmulas: ${{ strong: 'fuerte', soft: 'suave', none: 'sin resaltado' }[this._highlight]}
+              </button>
+              <button class="tbtn" @click="${this._cycleThmStyle}"
+                style="color:#059669">
+                ${{ strong: '●', soft: '◎', none: '○' }[this._thmStyle]}
+                Entornos: ${{ strong: 'caja', soft: 'suave', none: 'solo barra' }[this._thmStyle]}
+              </button>
+              <button class="tbtn" @click="${this._toggleTheme}">
+                ${this._isDark ? '☀ Modo claro' : '☾ Modo oscuro'}
+              </button>
+            </div>
+          ` : ''}
+        </div>
 
       </div>
     `
@@ -191,6 +234,25 @@ export class Toolbar extends LitElement {
     if (confirm('¿Borrar todo el contenido del documento?')) {
       clearDocument()
     }
+  }
+
+  private _zoomIn = () => {
+    this._setZoom(Math.min(ZOOM_MAX, parseFloat((this._zoom + ZOOM_STEP).toFixed(1))))
+  }
+  private _zoomOut = () => {
+    this._setZoom(Math.max(ZOOM_MIN, parseFloat((this._zoom - ZOOM_STEP).toFixed(1))))
+  }
+  private _zoomReset = () => { this._setZoom(ZOOM_DEF) }
+
+  private _setZoom(z: number) {
+    this._zoom = z
+    localStorage.setItem(ZOOM_KEY, String(z))
+    this._applyZoom(z)
+  }
+
+  private _applyZoom(z: number) {
+    const el = document.getElementById('editor')
+    if (el) (el.style as any).zoom = String(z)
   }
 
   private _applyTheme(dark: boolean) {

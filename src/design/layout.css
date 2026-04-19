@@ -264,7 +264,7 @@ body.dark .math-display:hover { background: #223050; border-color: #4f63bf; }
 .theorem-env {
   margin: 1.4em 0;
   padding: 12px 16px 14px;
-  border-left: 3px solid var(--thm-theorem);
+  border-left: 1px solid var(--thm-theorem);
   border-radius: 0 var(--r-md) var(--r-md) 0;
   background: var(--thm-env-bg);
   border-top: 1px solid var(--thm-env-border-color);
@@ -403,6 +403,11 @@ body.dark .math-display:hover { background: #223050; border-color: #4f63bf; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width .18s ease;
+}
+
+#coach-panel.collapsed {
+  width: 44px;
 }
 
 /* ── Status bar ──────────────────────────────────────────────────── */

@@ -1,19 +1,20 @@
 import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { effect } from '@preact/signals-core'
-import { activeFormulaError } from '@core/editor/EditorStore'
-
-/* ─────────────────────────────────────────────────────────────────
-   StatusBar — thin footer bar that shows KaTeX parse errors.
-   When a formula is being edited and the LaTeX is invalid,
-   FloatingFormulaEditor writes to activeFormulaError and this
-   component displays it. Cleared when the editor closes.
-   ───────────────────────────────────────────────────────────────── */
+import {
+  activeFormulaError,
+  activeFormulaType,
+  activeNodePos,
+  docStats,
+} from '@core/editor/EditorStore'
 
 @customElement('fp-status-bar')
 export class StatusBar extends LitElement {
 
-  @state() private _error: string | null = null
+  @state() private _error:  string | null = null
+  @state() private _type:   'inline' | 'display' | null = null
+  @state() private _active: boolean = false
+  @state() private _stats = { words: 0, mathInline: 0, mathDisplay: 0, theoremEnv: 0 }
 
   private _disposes: (() => void)[] = []
 
@@ -22,10 +23,10 @@ export class StatusBar extends LitElement {
   override connectedCallback() {
     super.connectedCallback()
     this._disposes.push(
-      effect(() => {
-        this._error = activeFormulaError.value
-        this.requestUpdate()
-      })
+      effect(() => { this._error  = activeFormulaError.value;    this.requestUpdate() }),
+      effect(() => { this._type   = activeFormulaType.value;     this.requestUpdate() }),
+      effect(() => { this._active = activeNodePos.value !== null; this.requestUpdate() }),
+      effect(() => { this._stats  = docStats.value;              this.requestUpdate() }),
     )
   }
 
@@ -36,10 +37,30 @@ export class StatusBar extends LitElement {
   }
 
   override render() {
+    if (this._active) return this._renderActiveFormula()
+    return this._renderIdle()
+  }
+
+  private _renderIdle() {
+    const { words, mathInline, mathDisplay, theoremEnv } = this._stats
+    const formulas = mathInline + mathDisplay
+    const parts: string[] = [`${words} pal.`]
+    if (formulas > 0) parts.push(`${formulas} fórmulas`)
+    if (theoremEnv > 0) parts.push(`${theoremEnv} entornos`)
+    return html`<span class="sb-idle">${parts.join(' · ')}</span>`
+  }
+
+  private _renderActiveFormula() {
+    const label = this._type === 'display' ? 'display' : 'inline'
     if (this._error) {
-      return html`<span class="sb-error"><span class="sb-error-icon">⚠</span>${this._error}</span>`
+      return html`
+        <span class="sb-error">
+          <span class="sb-error-icon">⚠</span>
+          fórmula ${label} · ${this._error}
+        </span>
+      `
     }
-    return html`<span class="sb-idle">Formalia</span>`
+    return html`<span class="sb-formula-ok">fórmula ${label} · ✓</span>`
   }
 }
 
