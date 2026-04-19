@@ -13,6 +13,7 @@ import {
   focusEditor,
   getActiveFormulaDOM,
 } from '@core/editor/EditorStore'
+import { renderableLatex } from '@core/math/latexUtils'
 
 const MODE_KEY = 'formalia:formula-mode'
 
@@ -22,10 +23,10 @@ export class FloatingFormulaEditor extends LitElement {
   @state() private _active = false
   @state() private _editMode: 'visual' | 'code' =
     (localStorage.getItem(MODE_KEY) === 'code' ? 'code' : 'visual')
-  @state() private _inLatexMode = false
 
   private _prevActive = false
   private _skipMfReload = false
+  private _activeFormulaEl: Element | null = null
   private _disposes: (() => void)[] = []
 
   override createRenderRoot() { return this }
@@ -50,6 +51,8 @@ export class FloatingFormulaEditor extends LitElement {
       // Clicking a formula node: activateNode() will fire shortly after,
       // reopening the panel. Don't deactivate — avoid the close/reopen flash.
       if ((e.target as Element)?.closest?.('.math-inline, .math-display')) return
+      // Clicking the snippet sidebar inserts into the active formula — keep open.
+      if ((e.target as Element)?.closest?.('fp-snippet-sidebar')) return
       deactivateNode()
     }
     document.addEventListener('pointerdown', onPointerdown, true)
@@ -64,8 +67,10 @@ export class FloatingFormulaEditor extends LitElement {
 
   override updated() {
     if (!this._active) {
+      // Panel just closed — remove editing marker from formula DOM
+      this._activeFormulaEl?.classList.remove('is-editing')
+      this._activeFormulaEl = null
       this._prevActive = false
-      this._inLatexMode = false
       return
     }
 
@@ -75,6 +80,10 @@ export class FloatingFormulaEditor extends LitElement {
     this._positionPanel(panel)
 
     if (!this._prevActive) {
+      // Panel just opened — mark formula DOM so it stays visually active
+      this._activeFormulaEl = getActiveFormulaDOM()
+      this._activeFormulaEl?.classList.add('is-editing')
+
       releaseFormulaSelection()
 
       const formula = activeFormula.value
@@ -89,11 +98,7 @@ export class FloatingFormulaEditor extends LitElement {
         mf.smartMode = false
         mf.defaultMode = 'math'
         mf.mathVirtualKeyboardPolicy = 'off'
-        mf.popoverPolicy = 'auto'
-
-        mf.addEventListener('mode-change', () => {
-          this._inLatexMode = mf.mode === 'latex'
-        })
+        mf.popoverPolicy = 'off'
 
         this._skipMfReload = true
         mf.insert(formula, { insertionMode: 'replaceAll', selectionMode: 'after' })
@@ -116,10 +121,6 @@ export class FloatingFormulaEditor extends LitElement {
   }
 
   private _setMode(mode: 'visual' | 'code') {
-    const mf = this.querySelector<any>('math-field')
-    // Exit latex sub-mode before switching
-    if (mf?.mode === 'latex') mf.executeCommand(['complete', 'reject'])
-    this._inLatexMode = false
     this._editMode = mode
     localStorage.setItem(MODE_KEY, mode)
 
@@ -141,13 +142,6 @@ export class FloatingFormulaEditor extends LitElement {
         ta.setSelectionRange(ta.value.length, ta.value.length)
       }
     })
-  }
-
-  private _activateLatexMode = () => {
-    const mf = this.querySelector<any>('math-field')
-    if (!mf) return
-    mf.executeCommand(['switchMode', 'latex', '', '\\'])
-    mf.focus()
   }
 
   private _positionPanel(panel: HTMLElement): void {
@@ -194,18 +188,9 @@ export class FloatingFormulaEditor extends LitElement {
               @click="${() => this._setMode('code')}"
             >Código</button>
           </div>
-          ${isVisual ? html`
-            <button
-              class="ff-latex-btn${this._inLatexMode ? ' active' : ''}"
-              tabindex="-1"
-              title="Modo LaTeX — Enter confirma · Tab autocompleta · Esc cancela"
-              @mousedown="${this._onModeBtnMousedown}"
-              @click="${this._activateLatexMode}"
-            ><span class="ff-bslash">\</span> LaTeX</button>
-          ` : ''}
         </div>
         <math-field
-          class="ff-mathfield${isVisual ? '' : ' ff-hidden'}${this._inLatexMode ? ' latex-mode' : ''}"
+          class="ff-mathfield${isVisual ? '' : ' ff-hidden'}"
           math-virtual-keyboard-policy="off"
           default-mode="math"
           @input="${this._onMfInput}"
@@ -221,17 +206,9 @@ export class FloatingFormulaEditor extends LitElement {
           autocorrect="off"
           autocapitalize="off"
         ></textarea>
-        ${this._inLatexMode ? html`
-          <div class="ff-latex-hint">
-            Modo LaTeX — <kbd>Enter</kbd> confirma &nbsp;·&nbsp;
-            <kbd>Tab</kbd> autocompleta &nbsp;·&nbsp; <kbd>Esc</kbd> cancela
-          </div>
-        ` : html`
-          <div class="ff-hint">
-            <kbd>Esc</kbd> cerrar
-            ${!isVisual ? html`&nbsp;·&nbsp; <kbd>Enter</kbd> confirmar &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> nueva línea` : ''}
-          </div>
-        `}
+        <div class="ff-hint">
+          <kbd>Esc</kbd> cerrar &nbsp;·&nbsp; <kbd>Enter</kbd> confirmar &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> nueva línea
+        </div>
       </div>
     `
   }
@@ -241,20 +218,23 @@ export class FloatingFormulaEditor extends LitElement {
   private _onMfInput = (e: Event) => {
     if (this._skipMfReload) return
     const mf = e.target as any
-    const latex = (mf.getValue?.('latex') ?? mf.value ?? '') as string
+    const raw = (mf.getValue?.('latex') ?? mf.value ?? '') as string
     const ta = this.querySelector<HTMLTextAreaElement>('.ff-textarea')
-    if (ta) ta.value = latex
-    updateActiveFormula(latex)
-    this._validateLatex(latex)
+    if (ta) ta.value = raw
+    updateActiveFormula(raw)
+    this._validateLatex(renderableLatex(raw))
   }
 
   private _onMfKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      const mf = e.target as any
-      if (mf.mode === 'latex') return  // mathlive handles: exits latex sub-mode
+    if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
       e.preventDefault()
       deactivateNode()
       focusEditor()
+      return
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault()
+      ;(e.target as any).insert?.('\\\\')
     }
   }
 

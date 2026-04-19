@@ -124,7 +124,7 @@ body.dark .tbtn kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width .18s;
+  transition: width .18s ease;
 }
 
 #snippet-sidebar.collapsed {
@@ -139,6 +139,7 @@ body.dark .tbtn kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a
   padding: 48px 24px;
   display: flex;
   justify-content: center;
+  transition: flex .18s ease;
 }
 
 #editor {
@@ -156,6 +157,7 @@ body.dark .tbtn kbd { background: #1e2a5e; color: #93c5fd; border-color: #2d4a7a
   caret-color: var(--text);
 }
 body.dark .ProseMirror { caret-color: #93c5fd; }
+body.dark .ProseMirror-gapcursor:after { border-top-color: #93c5fd; }
 
 .ProseMirror > * + * { margin-top: .6em; }
 
@@ -218,14 +220,10 @@ body.dark .ProseMirror code { background: var(--panel-bg); }
 .math-inline:hover { background: #dbeafe; border-color: #93c5fd; }
 body.dark .math-inline:hover { background: #253354; border-color: #3b82f6; }
 
-.math-inline.ProseMirror-selectednode {
+.math-inline.ProseMirror-selectednode,
+.math-inline.is-editing {
   background: var(--accent-light);
   border-color: var(--accent);
-  outline: 2px solid rgba(37,99,235,.3);
-  outline-offset: 1px;
-}
-body.dark .math-inline.ProseMirror-selectednode {
-  outline-color: rgba(96,165,250,.55);
 }
 .math-inline.has-error { background: var(--error-bg); border-color: #fca5a5; }
 
@@ -245,14 +243,10 @@ body.dark .math-inline.ProseMirror-selectednode {
 .math-display:hover { background: #eff3ff; border-color: #a5b4fc; }
 body.dark .math-display:hover { background: #223050; border-color: #4f63bf; }
 
-.math-display.ProseMirror-selectednode {
+.math-display.ProseMirror-selectednode,
+.math-display.is-editing {
   background: var(--accent-light);
   border-color: var(--accent);
-  outline: 2px solid rgba(37,99,235,.3);
-  outline-offset: 2px;
-}
-body.dark .math-display.ProseMirror-selectednode {
-  outline-color: rgba(96,165,250,.55);
 }
 .math-display.has-error { background: var(--error-bg); border-color: #fca5a5; }
 

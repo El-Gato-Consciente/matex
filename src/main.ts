@@ -21,6 +21,7 @@ import { toStorage, fromStorage } from '@features/documents/DocumentSerializer'
 import '@ui/toolbar/Toolbar'
 import '@ui/status-bar/StatusBar'
 import '@features/formula-editor/FloatingFormulaEditor'
+import '@features/formula-editor/SnippetSidebar'
 import '@features/export/ExportModal'
 
 // ── Persistence ─────────────────────────────────────────────────────
@@ -77,9 +78,10 @@ document.body.appendChild(floatingEditor)
 const statusBarEl = document.getElementById('status-bar')!
 statusBarEl.appendChild(document.createElement('fp-status-bar'))
 
-// Sidebar + coach placeholders (Phase 2 / 3 will replace these)
+// Sidebar
 const sidebar = document.getElementById('snippet-sidebar')!
-sidebar.innerHTML = '<div class="sb-placeholder">Snippets<br>(Phase 2)</div>'
+sidebar.innerHTML = ''
+sidebar.appendChild(document.createElement('fp-snippet-sidebar'))
 
 const coach = document.getElementById('coach-panel')!
 coach.innerHTML = '<div class="cp-placeholder">Coach<br>(Phase 3)</div>'

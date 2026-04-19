@@ -1,6 +1,7 @@
 import type { Node } from '@tiptap/pm/model'
 import katex from 'katex'
 import { activateNode } from '../EditorStore'
+import { renderableLatex } from '@core/math/latexUtils'
 
 /* ─────────────────────────────────────────────────────────────────
    MathDisplayView — ProseMirror NodeView for mathDisplay nodes.
@@ -55,7 +56,7 @@ export class MathDisplayView {
   }
 
   private _render(): void {
-    const latex = (this._node.attrs['latex'] as string) ?? ''
+    const latex = renderableLatex((this._node.attrs['latex'] as string) ?? '')
 
     if (!latex.trim()) {
       this.dom.innerHTML = '<span class="math-empty">fórmula vacía — click para editar</span>'
