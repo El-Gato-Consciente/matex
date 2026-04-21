@@ -1,5 +1,5 @@
 import { Extension, Node, mergeAttributes } from '@tiptap/core'
-import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state'
+import { Plugin, PluginKey, TextSelection, Selection } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 /* ─────────────────────────────────────────────────────────────────
@@ -259,23 +259,26 @@ export const MathInputAutoCommit = Extension.create({
     return [
       new Plugin({
         key: new PluginKey('mathInputAutoCommit'),
-        appendTransaction(transactions, _, newState) {
-          // Only check if selection has actually changed
-          const selectionChanged = transactions.some(tr => tr.selectionSet)
-          if (!selectionChanged) return null
-
+        appendTransaction(_, __, newState) {
           const tr = newState.tr
           let modified = false
 
           // We look for any mathInput nodes that do NOT contain the current selection.
-          // In practice, there's usually only one at a time.
           newState.doc.descendants((node, pos) => {
             if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
               const { selection } = newState
-              // Check if selection is within the node boundaries [pos, pos + size]
-              const isInside = selection.from > pos && selection.to < pos + node.nodeSize
+              
+              // Structural check: Is the current node an ancestor of the selection?
+              // This is much more robust than numerical range checks for block nodes.
+              let selectionIsInside = false
+              for (let i = 0; i <= selection.$from.depth; i++) {
+                if (selection.$from.node(i) === node) {
+                  selectionIsInside = true
+                  break
+                }
+              }
 
-              if (!isInside) {
+              if (!selectionIsInside) {
                 const latex = node.textContent
                 const isDisplay = node.type.name === 'mathDisplayInput'
                 
@@ -317,20 +320,35 @@ export const MathInputTrigger = Extension.create({
             const { $from } = selection
 
             // Case 1: We are ALREADY inside a mathInput node.
-            if ($from.parent.type.name === 'mathInput') {
+            const parentType = $from.parent.type.name
+            if (parentType === 'mathInput' || parentType === 'mathDisplayInput') {
               const textBefore = $from.parent.textContent.substring(0, $from.parentOffset)
               if (textBefore.endsWith('\\')) {
                 // If it's escaped like \$, do not close the formula, just let Prosemirror insert the $ char as text
                 return false
               }
 
-              const mathInputNode = $from.parent
-              const latexContent = mathInputNode.textContent
+              const latexContent = $from.parent.textContent
               const pos = $from.before()
               const endpos = $from.after()
-
               const tr = state.tr
-              tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex: latexContent }))
+
+              // Special Case: $$ sequence
+              // If we are in an EMPTY mathInput and type $, transform to block editor
+              if (parentType === 'mathInput' && !latexContent.trim()) {
+                tr.replaceWith(pos, endpos, state.schema.nodes.mathDisplayInput.create())
+                // Selection.near is more robust than TextSelection for block nodes
+                tr.setSelection(Selection.near(tr.doc.resolve(pos + 1)))
+                view.dispatch(tr)
+                return true
+              }
+
+              // Otherwise, commit the formula
+              const nodeType = (parentType === 'mathDisplayInput')
+                ? state.schema.nodes.mathDisplay
+                : state.schema.nodes.mathInline
+
+              tr.replaceWith(pos, endpos, nodeType.create({ latex: latexContent }))
               view.dispatch(tr)
               return true // consume the $
             }
@@ -360,6 +378,8 @@ export const MathDisplayInputNode = Node.create({
   group: 'block',
   content: 'text*',
   selectable: true,
+  defining: true,
+  isolating: true,
 
   parseHTML() {
     return [
