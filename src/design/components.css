@@ -709,6 +709,11 @@ fp-math-preview-tooltip .tooltip-body::after {
   border-bottom: 1px solid var(--border-strong);
 }
 
+/* Eliminar el margen gigante por defecto de las fórmulas display de KaTeX */
+fp-math-preview-tooltip .katex-display {
+  margin: 0;
+}
+
 fp-math-preview-tooltip .has-error {
   color: var(--error);
   font-family: var(--font-mono);

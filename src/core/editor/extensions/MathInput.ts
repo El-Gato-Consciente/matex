@@ -22,7 +22,12 @@ export const MathInputNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['span', mergeAttributes(HTMLAttributes, { class: 'math-input-node' }), 0]
+    return [
+      'span', mergeAttributes(HTMLAttributes, { class: 'math-input-node' }),
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B'],
+      ['span', { class: 'math-input-content' }, 0],
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B']
+    ]
   },
 
   addProseMirrorPlugins() {
@@ -49,7 +54,6 @@ export const MathInputNode = Node.create({
   addKeyboardShortcuts() {
     return {
       'Enter': () => {
-        // Find if we are currently inside a mathInput
         const { state, view } = this.editor
         const { selection } = state
         const { $from } = selection
@@ -57,28 +61,25 @@ export const MathInputNode = Node.create({
 
         if (node.type.name === 'mathInput') {
           const text = node.textContent
-          // Re-create as mathInline
           const tr = state.tr
           const pos = $from.before()
           const endpos = $from.after()
 
-          tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex: text }))
+          if (!text.trim()) {
+            tr.delete(pos, endpos)
+          } else {
+            tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex: text }))
+          }
           view.dispatch(tr)
-          // Do not open regular popup, we're committing it
           return true
         }
         return false
       },
       'Shift-Enter': () => {
-        // Inside mathInput we allow inserting new line but ProseMirror text nodes 
-        // normally don't map Enter to \n. Better to insert a text \n or just let it be.
-        // Actually, Tiptap's hardBreak will trigger if we don't handle it, 
-        // but mathInput only accepts text. We can manually insert \n if we want.
         const { state, view } = this.editor
         const { selection } = state
         const { $from } = selection
         if ($from.parent.type.name === 'mathInput') {
-          // just insert a newline character
           view.dispatch(state.tr.insertText('\n'))
           return true
         }
@@ -93,11 +94,91 @@ export const MathInputNode = Node.create({
         if (node.type.name === 'mathInput') {
           const pos = $from.before()
           const endpos = $from.after()
-          // Abort: delete the node entirely (or replace with text). User asked: "que se anule y desaparezca"
           view.dispatch(state.tr.delete(pos, endpos))
           view.focus()
           return true
         }
+        return false
+      },
+      'ArrowRight': () => {
+        const { state, view } = this.editor
+        const { selection } = state
+        const { $from, empty } = selection
+        if (!empty) return false
+
+        // 1. Escaping mathInput to the right
+        if ($from.parent.type.name === 'mathInput') {
+          const size = $from.parent.content.size
+          if ($from.parentOffset === size) {
+            const latex = $from.parent.textContent
+            const pos = $from.before()
+            const endpos = $from.after()
+            const tr = state.tr
+            if (!latex.trim()) {
+              tr.delete(pos, endpos)
+            } else {
+              tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex }))
+            }
+            view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+            return true
+          } else if ($from.parentOffset === size - 1) {
+            view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.pos + 1)))
+            return true
+          }
+        }
+
+        // 2. Entering mathInline from the left
+        const nodeAfter = $from.nodeAfter
+        if (nodeAfter && nodeAfter.type.name === 'mathInline') {
+          const latex = nodeAfter.attrs.latex || ''
+          const pos = $from.pos
+          const tr = state.tr
+          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          tr.replaceWith(pos, pos + nodeAfter.nodeSize, newNode)
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+          return true
+        }
+        
+        return false
+      },
+      'ArrowLeft': () => {
+        const { state, view } = this.editor
+        const { selection } = state
+        const { $from, empty } = selection
+        if (!empty) return false
+
+        // 1. Escaping mathInput to the left
+        if ($from.parent.type.name === 'mathInput') {
+          if ($from.parentOffset === 0) {
+            const latex = $from.parent.textContent
+            const pos = $from.before()
+            const endpos = $from.after()
+            const tr = state.tr
+            if (!latex.trim()) {
+              tr.delete(pos, endpos)
+            } else {
+              tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex }))
+            }
+            view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos)))
+            return true
+          } else if ($from.parentOffset === 1) {
+            view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.pos - 1)))
+            return true
+          }
+        }
+
+        // 2. Entering mathInline from the right
+        const nodeBefore = $from.nodeBefore
+        if (nodeBefore && nodeBefore.type.name === 'mathInline') {
+          const latex = nodeBefore.attrs.latex || ''
+          const pos = $from.pos - nodeBefore.nodeSize
+          const tr = state.tr
+          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          tr.replaceWith(pos, $from.pos, newNode)
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1 + latex.length)))
+          return true
+        }
+
         return false
       }
     }
@@ -122,6 +203,12 @@ export const MathInputTrigger = Extension.create({
 
             // Case 1: We are ALREADY inside a mathInput node.
             if ($from.parent.type.name === 'mathInput') {
+              const textBefore = $from.parent.textContent.substring(0, $from.parentOffset)
+              if (textBefore.endsWith('\\')) {
+                // If it's escaped like \$, do not close the formula, just let Prosemirror insert the $ char as text
+                return false
+              }
+
               const mathInputNode = $from.parent
               const latexContent = mathInputNode.textContent
               const pos = $from.before()
