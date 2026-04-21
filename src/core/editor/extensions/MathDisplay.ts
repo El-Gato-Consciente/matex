@@ -31,6 +31,7 @@ export const MathDisplay = Node.create({
       numbered: { default: false },
       aligned:  { default: false },
       label:    { default: '' },
+      activationToken: { default: null },
     }
   },
 

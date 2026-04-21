@@ -25,10 +25,11 @@ export class MathInlineView {
 
     this._render()
 
-    // SELF-ACTIVATION: If we were just created via shift+M or toolbar, 
-    // activate ourselves immediately so the popover can target our DOM.
-    if (pendingActivationSignal.value) {
-      pendingActivationSignal.value = false
+    // SELF-ACTIVATION HANDSHAKE: Only activate if our token matches the pending signal.
+    // This prevents greedy neighbor formulas from stealing focus when they re-mount.
+    const token = this._node.attrs['activationToken']
+    if (token && token === pendingActivationSignal.value) {
+      pendingActivationSignal.value = null
       const pos = this._getPos()
       if (pos !== undefined) {
         activateNode(pos, this._node.attrs['latex'] as string, this.dom, triggerSource.value)

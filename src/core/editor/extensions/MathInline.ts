@@ -19,6 +19,7 @@ export const MathInline = Node.create({
   addAttributes() {
     return {
       latex: { default: '' },
+      activationToken: { default: null },
     }
   },
 

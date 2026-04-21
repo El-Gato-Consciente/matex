@@ -42,10 +42,10 @@ export const activeFormulaType = signal<'inline' | 'display' | null>(null)
 export const docStats = signal({ words: 0, mathInline: 0, mathDisplay: 0, theoremEnv: 0 })
 
 /** 
- * Flag used to signal that the next formula node view to be created 
+ * Unique identifier used to signal that a specific formula node view 
  * should automatically activate itself. Used for keyboard/toolbar insertions.
  */
-export const pendingActivationSignal = signal<boolean>(false)
+export const pendingActivationSignal = signal<string | null>(null)
 
 /** Toolbar / mark active states, updated on every editor transaction. */
 export const editorFmtState = signal({
@@ -214,12 +214,16 @@ export function insertNewFormulaAndActivate(latex: string, displayMode: boolean,
     ? { latex, numbered: false, aligned: false, label: '' }
     : { latex }
 
-  // 1. SIGNAL: The next formula view to mount should activate itself
-  pendingActivationSignal.value = true
+  // 1. SIGNAL: Generate a unique token for this specific insertion
+  const token = Math.random().toString(36).substring(2)
+  pendingActivationSignal.value = token
   triggerSource.value = source
 
+  // Add the token to the node attributes so the View can recognize it
+  const attrsWithToken = { ...attrs, activationToken: token }
+
   // 2. INSERT: TipTap creates the node and triggers the NodeView constructor
-  _editor.chain().focus().insertContent({ type: typeName, attrs }).run()
+  _editor.chain().focus().insertContent({ type: typeName, attrs: attrsWithToken }).run()
 }
 
 /**
