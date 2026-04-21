@@ -557,7 +557,11 @@ fp-floating-formula {
   background: var(--surface);
   border: 1.5px solid var(--accent);
   border-radius: var(--r-md);
-  box-shadow: 0 8px 28px rgba(0,0,0,.14), 0 2px 8px rgba(37,99,235,.12);
+  /* Premium multi-layered shadow for high elevation and priority */
+  box-shadow: 
+    0 12px 44px rgba(0, 0, 0, 0.22), 
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    0 0 1px rgba(37,99,235, 0.2);
   padding: 4px;
   display: flex;
   flex-direction: row;
