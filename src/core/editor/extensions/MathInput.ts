@@ -95,11 +95,34 @@ export const MathInputNode = Node.create({
         const { $from } = selection
         const node = $from.parent
 
-        if (node.type.name === 'mathInput') {
+        if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
+          const isDisplay = node.type.name === 'mathDisplayInput'
           const pos = $from.before()
           const endpos = $from.after()
-          view.dispatch(state.tr.delete(pos, endpos))
+          
+          // Revert to literal $ or $$
+          const text = isDisplay ? '$$' : '$'
+          const tr = state.tr.replaceWith(pos, endpos, state.schema.text(text))
+          
+          // Move cursor after the inserted text
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + text.length)))
           view.focus()
+          return true
+        }
+        return false
+      },
+      'Space': () => {
+        const { state, view } = this.editor
+        const { selection } = state
+        const { $from } = selection
+        const node = $from.parent
+
+        // Case: $ + Space while empty => Revert to literal "$ "
+        if (node.type.name === 'mathInput' && node.textContent.length === 0) {
+          const pos = $from.before()
+          const endpos = $from.after()
+          const tr = state.tr.replaceWith(pos, endpos, state.schema.text('$ '))
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 2)))
           return true
         }
         return false
