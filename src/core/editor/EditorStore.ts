@@ -91,8 +91,10 @@ function _syncFmtState(): void {
   // Sync internal mathInput state for tooltip
   const { state, view } = _editor
   const { $from } = state.selection
-  if ($from.parent.type.name === 'mathInput') {
+  const parentType = $from.parent.type.name
+  if (parentType === 'mathInput' || parentType === 'mathDisplayInput') {
     activeMathInputText.value = $from.parent.textContent
+    activeFormulaType.value = (parentType === 'mathDisplayInput') ? 'display' : 'inline'
     const startPos = $from.before()
     let el = view.nodeDOM(startPos)
     // Tiptap might return the text node inside the inline wrapper
@@ -109,6 +111,7 @@ function _syncFmtState(): void {
   } else {
     activeMathInputText.value = null
     activeMathInputRect.value = null
+    // activeFormulaType.value is handled by deactivateNode or NodeViews
   }
 
   _syncDocStats()

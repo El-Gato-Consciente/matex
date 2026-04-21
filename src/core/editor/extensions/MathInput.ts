@@ -38,7 +38,7 @@ export const MathInputNode = Node.create({
           decorations(state) {
             const decorations: Decoration[] = []
             state.doc.descendants((node, pos) => {
-              if (node.type.name === 'mathInput' && node.textContent.length === 0) {
+              if ((node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') && node.textContent.length === 0) {
                 decorations.push(Decoration.node(pos, pos + node.nodeSize, {
                   class: 'is-empty'
                 }))
@@ -59,7 +59,8 @@ export const MathInputNode = Node.create({
         const { $from } = selection
         const node = $from.parent
 
-        if (node.type.name === 'mathInput') {
+        if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
+          const isDisplay = node.type.name === 'mathDisplayInput'
           const text = node.textContent
           const tr = state.tr
           const pos = $from.before()
@@ -68,7 +69,10 @@ export const MathInputNode = Node.create({
           if (!text.trim()) {
             tr.delete(pos, endpos)
           } else {
-            tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex: text }))
+            const newNode = isDisplay 
+              ? state.schema.nodes.mathDisplay.create({ latex: text })
+              : state.schema.nodes.mathInline.create({ latex: text })
+            tr.replaceWith(pos, endpos, newNode)
           }
           view.dispatch(tr)
           return true
@@ -165,10 +169,12 @@ export const MathInputNode = Node.create({
         // If it's a node selection of mathInline or mathDisplay
         if (sel.node && (sel.node.type.name === 'mathInline' || sel.node.type.name === 'mathDisplay')) {
           const node = sel.node
+          const isDisplay = node.type.name === 'mathDisplay'
           const pos = selection.from
           const latex = node.attrs.latex || ''
           const tr = state.tr
-          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          const newNodeType = isDisplay ? state.schema.nodes.mathDisplayInput : state.schema.nodes.mathInput
+          const newNode = newNodeType.create(null, latex ? state.schema.text(latex) : null)
           tr.replaceWith(pos, pos + node.nodeSize, newNode)
           view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
           return true
@@ -292,6 +298,28 @@ export const MathInputTrigger = Extension.create({
           },
         },
       }),
+    ]
+  },
+})
+
+export const MathDisplayInputNode = Node.create({
+  name: 'mathDisplayInput',
+  group: 'block',
+  content: 'text*',
+  selectable: true,
+
+  parseHTML() {
+    return [
+      { tag: 'div.math-display-input-node' },
+    ]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'div', mergeAttributes(HTMLAttributes, { class: 'math-display-input-node' }),
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B'],
+      ['span', { class: 'math-input-content' }, 0],
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B']
     ]
   },
 })

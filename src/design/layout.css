@@ -381,7 +381,11 @@ body.has-formula-popover .math-display:not(.is-editing) {
   pointer-events: none; /* Block interactions with others while editing */
 }
 
-.math-input-node {
+/* 
+   Math Input (In-Situ Editor) — Violet mono style 
+*/
+.math-input-node,
+.math-display-input-node {
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--latex-mode);
@@ -389,13 +393,25 @@ body.has-formula-popover .math-display:not(.is-editing) {
   border: 1px solid var(--latex-mode-bd);
   border-radius: var(--r-sm);
   padding: 1px 6px;
-  margin: 0 2px;
-  display: inline-block;
   min-width: 14px;
 }
 
+.math-input-node {
+  display: inline-block;
+  margin: 0 2px;
+}
 
-.math-input-node.is-empty::before {
+.math-display-input-node {
+  display: block;
+  text-align: center;
+  margin: 1.2em auto;
+  width: fit-content;
+  min-width: 100px;
+  padding: 8px 16px;
+}
+
+.math-input-node.is-empty::before,
+.math-display-input-node.is-empty::before {
   content: "$";
   color: var(--text-placeholder);
   opacity: 0.5;
