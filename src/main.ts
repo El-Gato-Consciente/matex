@@ -13,7 +13,7 @@ import { MathDisplay }       from '@core/editor/extensions/MathDisplay'
 import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
 import { TheoremEnvTitle }   from '@core/editor/extensions/TheoremEnvTitle'
 import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
-import { MathInputNode, MathDisplayInputNode, MathInputTrigger } from '@core/editor/extensions/MathInput'
+import { MathInputNode, MathDisplayInputNode, MathInputTrigger, MathInputAutoCommit } from '@core/editor/extensions/MathInput'
 import { SlashCommands }    from '@core/editor/extensions/SlashCommands'
 import { setEditor }         from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
@@ -53,6 +53,7 @@ const editor: Editor = new Editor({
     FormulaNavigation,
     MathInputNode,
     MathDisplayInputNode,
+    MathInputAutoCommit,
     MathInputTrigger,
     SlashCommands,
   ],

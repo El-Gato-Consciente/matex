@@ -247,6 +247,59 @@ export const MathInputNode = Node.create({
   }
 })
 
+/**
+ * MathInputAutoCommit — Extension that monitors the cursor.
+ * If the selection leaves an input node (click outside, keyboard jump),
+ * it automatically commits the input into a real formula.
+ */
+export const MathInputAutoCommit = Extension.create({
+  name: 'mathInputAutoCommit',
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('mathInputAutoCommit'),
+        appendTransaction(transactions, _, newState) {
+          // Only check if selection has actually changed
+          const selectionChanged = transactions.some(tr => tr.selectionSet)
+          if (!selectionChanged) return null
+
+          const tr = newState.tr
+          let modified = false
+
+          // We look for any mathInput nodes that do NOT contain the current selection.
+          // In practice, there's usually only one at a time.
+          newState.doc.descendants((node, pos) => {
+            if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
+              const { selection } = newState
+              // Check if selection is within the node boundaries [pos, pos + size]
+              const isInside = selection.from > pos && selection.to < pos + node.nodeSize
+
+              if (!isInside) {
+                const latex = node.textContent
+                const isDisplay = node.type.name === 'mathDisplayInput'
+                
+                if (!latex.trim()) {
+                  tr.delete(pos, pos + node.nodeSize)
+                } else {
+                  const nodeType = isDisplay 
+                    ? newState.schema.nodes.mathDisplay 
+                    : newState.schema.nodes.mathInline
+                  
+                  tr.replaceWith(pos, pos + node.nodeSize, nodeType.create({ latex }))
+                }
+                modified = true
+              }
+            }
+          })
+
+          return modified ? tr : null
+        }
+      })
+    ]
+  }
+})
+
 // Extension to handle the $ text input dynamically
 export const MathInputTrigger = Extension.create({
   name: 'mathInputTrigger',
