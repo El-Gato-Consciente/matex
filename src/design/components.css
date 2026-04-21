@@ -719,15 +719,41 @@ fp-math-preview-tooltip .tooltip-body::after {
   border-bottom: 1px solid var(--border-strong);
 }
 
-/* Eliminar el margen gigante por defecto de las fórmulas display de KaTeX */
 fp-math-preview-tooltip .katex-display {
   margin: 0;
 }
 
 fp-math-preview-tooltip .has-error {
+  /* Error in tooltip is also silent memory, but we keep the style for fallback if no memory exists */
   color: var(--error);
   font-family: var(--font-mono);
   font-size: 12px;
+}
+
+/* 
+   State for broken formulas outside of editing mode. 
+   Features a subtle red highlight (glow) and monospaced code.
+*/
+.math-node-error {
+  color: var(--error) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.9em;
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.08); /* Sutil iluminación roja */
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: inline-block;
+}
+
+.math-display.math-node-error {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+  padding: 12px;
 }
 
 fp-math-preview-tooltip .empty {

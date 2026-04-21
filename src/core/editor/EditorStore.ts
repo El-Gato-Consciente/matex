@@ -5,8 +5,9 @@
    never the TipTap Editor object directly.
    ───────────────────────────────────────────────────────────────── */
 
-import { signal } from '@preact/signals-core'
+import { signal, effect } from '@preact/signals-core'
 import type { Editor } from '@tiptap/core'
+import katex from 'katex'
 import { TextSelection, Selection } from '@tiptap/pm/state'
 import type { NormalizerChange } from '@core/math/types'
 
@@ -296,3 +297,23 @@ export function getEditorJSON(): object | null {
 export function getEditorDoc() {
   return _editor?.state.doc ?? null
 }
+
+// ── Validation logic (Auto-updates activeFormulaError) ─────────────
+
+effect(() => {
+  const text = activeMathInputText.value
+  // We only handle inline validation here. 
+  // FloatingFormulaEditor still handles its own for now to maintain its local state logic.
+  if (text !== null) {
+    if (!text.trim()) {
+      activeFormulaError.value = null
+      return
+    }
+    try {
+      katex.renderToString(text, { throwOnError: true })
+      activeFormulaError.value = null
+    } catch (err) {
+      activeFormulaError.value = (err as Error).message.replace(/^KaTeX parse error: /, '')
+    }
+  }
+})

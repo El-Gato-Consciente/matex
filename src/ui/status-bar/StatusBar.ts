@@ -5,6 +5,7 @@ import {
   activeFormulaError,
   activeFormulaType,
   activeNodePos,
+  activeMathInputText,
   docStats,
 } from '@core/editor/EditorStore'
 
@@ -25,7 +26,7 @@ export class StatusBar extends LitElement {
     this._disposes.push(
       effect(() => { this._error  = activeFormulaError.value;    this.requestUpdate() }),
       effect(() => { this._type   = activeFormulaType.value;     this.requestUpdate() }),
-      effect(() => { this._active = activeNodePos.value !== null; this.requestUpdate() }),
+      effect(() => { this._active = (activeNodePos.value !== null || activeMathInputText.value !== null); this.requestUpdate() }),
       effect(() => { this._stats  = docStats.value;              this.requestUpdate() }),
     )
   }

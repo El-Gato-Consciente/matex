@@ -11,6 +11,7 @@ export class MathPreviewTooltip extends LitElement {
 
   @state() private _latex: string | null = null
   @state() private _rect: DOMRect | null = null
+  @state() private _lastValidHtml: string | null = null
 
   private _disposes: (() => void)[] = []
 
@@ -18,8 +19,19 @@ export class MathPreviewTooltip extends LitElement {
     super.connectedCallback()
     this._disposes.push(
       effect(() => {
-        this._latex = activeMathInputText.value
+        const text = activeMathInputText.value
+        this._latex = text
         this._rect  = activeMathInputRect.value
+
+        // Update memory immediately if valid
+        if (text && text.trim()) {
+          try {
+            const htmlStr = katex.renderToString(text, { throwOnError: true, displayMode: true })
+            this._lastValidHtml = htmlStr
+          } catch {
+            // Keep previous valid HTML
+          }
+        }
       })
     )
   }
@@ -45,24 +57,42 @@ export class MathPreviewTooltip extends LitElement {
       return html`<div class="tooltip-body empty">fórmula vacía</div>`
     }
 
+    let isValid = true
     try {
       katex.renderToString(this._latex, { throwOnError: true })
-      return html`<div class="tooltip-body katex-container"></div>`
-    } catch (e) {
-      const errStr = (e as Error).message.replace(/^KaTeX parse error: /, '')
+    } catch {
+      isValid = false
+    }
+
+    // If invalid, we show from memory. NO extra styles like 'is-stale'
+    if (!isValid && !this._lastValidHtml) {
+      // Fallback to error message only if we have NO memory at all
+      const errStr = 'error de sintaxis' 
       return html`<div class="tooltip-body has-error">${errStr}</div>`
     }
+
+    return html`
+      <div class="tooltip-body katex-container"></div>
+    `
   }
 
   override updated() {
-    if (this._latex && this._rect) {
+    if (this._rect) {
       const container = this.renderRoot.querySelector('.katex-container')
-      if (container && this._latex.trim()) {
+      if (container) {
+        let isValid = true
+        let currentHtml: string | null = null
         try {
-          const htmlStr = katex.renderToString(this._latex, { throwOnError: true, displayMode: true })
-          container.innerHTML = htmlStr
+          if (this._latex) {
+            currentHtml = katex.renderToString(this._latex, { throwOnError: true, displayMode: true })
+          }
         } catch {
-          // Fallback to error handled in render
+          isValid = false
+        }
+
+        const htmlToShow = isValid ? currentHtml : this._lastValidHtml
+        if (htmlToShow) {
+          container.innerHTML = htmlToShow
         }
       }
     }
