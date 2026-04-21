@@ -127,6 +127,8 @@ export function activateNode(pos: number, latex: string, source: TriggerSource =
   if (_editor) {
     const node = _editor.state.doc.nodeAt(pos)
     activeFormulaType.value = node?.type.name === 'mathDisplay' ? 'display' : 'inline'
+    // Blur editor immediately so the cursor doesn't flash on the canvas
+    _editor.view.dom.blur()
   }
 }
 

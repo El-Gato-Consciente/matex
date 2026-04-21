@@ -25,8 +25,10 @@ export class MathDisplayView {
 
     this._render()
 
-    // Click → open floating editor immediately (no Enter needed)
-    this.dom.addEventListener('click', () => {
+    // mousedown → open floating editor immediately.
+    // By using preventDefault, we stop the editor from grabbing focus.
+    this.dom.addEventListener('mousedown', (e) => {
+      e.preventDefault()
       const pos = this._getPos()
       if (pos !== undefined) {
         activateNode(pos, this._node.attrs['latex'] as string)

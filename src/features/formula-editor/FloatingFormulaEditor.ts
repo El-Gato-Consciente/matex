@@ -24,7 +24,7 @@ export class FloatingFormulaEditor extends LitElement {
   @state() private _editMode: 'visual' | 'code' =
     (localStorage.getItem(MODE_KEY) === 'code' ? 'code' : 'visual')
 
-  private _prevActive = false
+  private _lastActivePos: number | null = null
   private _skipMfReload = false
   private _activeFormulaEl: Element | null = null
   private _disposes: (() => void)[] = []
@@ -70,21 +70,28 @@ export class FloatingFormulaEditor extends LitElement {
       // Panel just closed — remove editing marker from formula DOM
       this._activeFormulaEl?.classList.remove('is-editing')
       this._activeFormulaEl = null
-      this._prevActive = false
+      this._lastActivePos = null
       return
     }
 
     const panel = this.querySelector<HTMLElement>('.ff-panel')
     if (!panel) return
 
-    if (!this._prevActive) {
-      // Panel just opened — mark formula DOM so it stays visually active
+    const currentPos = activeNodePos.value
+    const isNewNode  = this._lastActivePos !== currentPos
+
+    if (isNewNode) {
+      this._lastActivePos = currentPos
+      
+      // Mark current formula DOM so it stays visually highlighted
+      this._activeFormulaEl?.classList.remove('is-editing')
       this._activeFormulaEl = getActiveFormulaDOM()
       this._activeFormulaEl?.classList.add('is-editing')
 
+      // Move TipTap selection to neutralize it
       releaseFormulaSelection()
 
-
+      // Synchronize values to the new formula's content
       const formula = activeFormula.value
       const ta = panel.querySelector<HTMLTextAreaElement>('.ff-textarea')
       const mf = panel.querySelector<any>('math-field')
@@ -95,7 +102,7 @@ export class FloatingFormulaEditor extends LitElement {
       }
 
       if (mf) {
-        // Configure on each creation (panel is torn down when inactive)
+        // Cleanup MathLive state for the new formula
         mf.menuItems = []
         mf.smartMode = false
         mf.defaultMode = 'math'
@@ -106,22 +113,29 @@ export class FloatingFormulaEditor extends LitElement {
         mf.insert(formula, { insertionMode: 'replaceAll', selectionMode: 'after' })
         this._skipMfReload = false
       }
-
-      if (this._editMode === 'visual' && mf) {
-        mf.focus()
-      } else if (ta) {
-        ta.focus()
-        ta.setSelectionRange(ta.value.length, ta.value.length)
-      }
     }
 
-    // Defer positioning to next frame to allow MathLive to layout
+    // Defer both positioning and focus to the same frame
     requestAnimationFrame(() => {
       const p = this.querySelector<HTMLElement>('.ff-panel')
-      if (p) this._positionPanel(p)
-    })
+      if (!p) return
 
-    this._prevActive = this._active
+      // 1. Position and make visible
+      this._positionPanel(p)
+
+      // 2. Focus
+      if (isNewNode) {
+        const ta = p.querySelector<HTMLTextAreaElement>('.ff-textarea')
+        const mf = p.querySelector<any>('math-field')
+
+        if (this._editMode === 'visual' && mf) {
+          mf.focus()
+        } else if (this._editMode === 'code' && ta) {
+          ta.focus()
+          ta.setSelectionRange(ta.value.length, ta.value.length)
+        }
+      }
+    })
   }
 
   private _onModeBtnMousedown = (e: Event) => {
