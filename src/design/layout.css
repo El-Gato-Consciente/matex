@@ -255,6 +255,23 @@ body.dark .math-display:hover { background: #223050; border-color: #4f63bf; }
 }
 .math-display.has-error { background: var(--error-bg); border-color: #fca5a5; }
 
+/* 
+   UNIVERSAL SHIELD: When a formula popover is active, we force all OTHER formulas 
+   to ignore hover and selection highlights. This prevents "bleeding" when nodes 
+   are dense or when TipTap's selection logic catches the wrong node.
+*/
+body.has-formula-popover .math-inline:not(.is-editing),
+body.has-formula-popover .math-display:not(.is-editing) {
+  background: var(--math-inline-bg) !important;
+  border-color: var(--math-inline-bd) !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+body.has-formula-popover .math-display:not(.is-editing) {
+  background: var(--math-display-bg) !important;
+  border-color: var(--math-display-bd) !important;
+}
+
 .math-input-node {
   font-family: var(--font-mono);
   font-size: 14px;

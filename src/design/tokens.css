@@ -65,6 +65,9 @@
 
   /* Spacing */
   --toolbar-height: 38px;
+
+  /* Layers */
+  --z-popover: 1000;
 }
 
 /* ── Dark theme ──────────────────────────────────────────────────── */

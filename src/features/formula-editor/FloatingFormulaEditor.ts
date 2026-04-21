@@ -9,6 +9,7 @@ import {
   activeFormulaError,
   updateActiveFormula,
   deactivateNode,
+  activeNodeDOM,
   releaseFormulaSelection,
   focusEditor,
   getActiveFormulaDOM,
@@ -67,12 +68,20 @@ export class FloatingFormulaEditor extends LitElement {
 
   override updated() {
     if (!this._active) {
-      // Panel just closed — remove editing marker from formula DOM
-      this._activeFormulaEl?.classList.remove('is-editing')
+      // Panel just closed — perform a full visual and selection cleanup
+      document.body.classList.remove('has-formula-popover')
+      document.querySelectorAll('.is-editing').forEach(el => el.classList.remove('is-editing'))
+      
+      // Neutralize TipTap selection so nothing stays "lit" on the canvas
+      // Passing the last known position ensures the cursor stays local.
+      releaseFormulaSelection(this._lastActivePos)
+
       this._activeFormulaEl = null
       this._lastActivePos = null
       return
     }
+
+    document.body.classList.add('has-formula-popover')
 
     const panel = this.querySelector<HTMLElement>('.ff-panel')
     if (!panel) return
@@ -83,10 +92,9 @@ export class FloatingFormulaEditor extends LitElement {
     if (isNewNode) {
       this._lastActivePos = currentPos
       
-      // Mark current formula DOM so it stays visually highlighted
+      // Clear previous highlight immediately
       this._activeFormulaEl?.classList.remove('is-editing')
-      this._activeFormulaEl = getActiveFormulaDOM()
-      this._activeFormulaEl?.classList.add('is-editing')
+      this._activeFormulaEl = null
 
       // Move TipTap selection to neutralize it
       releaseFormulaSelection()
@@ -121,7 +129,20 @@ export class FloatingFormulaEditor extends LitElement {
       if (!p) return
 
       // 1. Position and make visible
-      this._positionPanel(p)
+      const targetEl = activeNodeDOM.value || getActiveFormulaDOM()
+      
+      // GLOBAL CLEANUP: Remove 'is-editing' from any element that might have it.
+      // We do this document-wide to handle cases where TipTap re-rendered a node
+      // and we lost the specific reference to the old DOM element.
+      document.querySelectorAll('.is-editing').forEach(el => el.classList.remove('is-editing'))
+
+      if (targetEl) {
+        this._activeFormulaEl = targetEl
+        this._activeFormulaEl.classList.add('is-editing')
+        this._positionPanel(p, targetEl)
+      } else {
+        p.style.visibility = 'visible'
+      }
 
       // 2. Focus
       if (isNewNode) {
@@ -183,8 +204,8 @@ export class FloatingFormulaEditor extends LitElement {
     return Math.max(40, ...lines.map(l => this._measureCtx!.measureText(l).width))
   }
 
-  private _positionPanel(panel: HTMLElement): void {
-    const formulaEl = getActiveFormulaDOM()
+  private _positionPanel(panel: HTMLElement, targetEl?: Element): void {
+    const formulaEl = targetEl || getActiveFormulaDOM()
     if (!formulaEl) return
 
     const rect = formulaEl.getBoundingClientRect()

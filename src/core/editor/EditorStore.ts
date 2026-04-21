@@ -7,7 +7,7 @@
 
 import { signal } from '@preact/signals-core'
 import type { Editor } from '@tiptap/core'
-import { TextSelection } from '@tiptap/pm/state'
+import { TextSelection, Selection } from '@tiptap/pm/state'
 import type { NormalizerChange } from '@core/math/types'
 
 // ── Signals ──────────────────────────────────────────────────────
@@ -17,6 +17,9 @@ export const activeFormula = signal<string>('')
 
 /** ProseMirror position of the currently active formula node, or null. */
 export const activeNodePos = signal<number | null>(null)
+
+/** The exact DOM element of the currently active formula node. */
+export const activeNodeDOM = signal<Element | null>(null)
 
 /** Pending normalizer suggestions (Phase 3). Empty in Phase 1. */
 export const coachChanges = signal<NormalizerChange[]>([])
@@ -120,9 +123,10 @@ function _syncDocStats(): void {
 
 // ── Node activation (called from NodeView click handlers) ─────────
 
-export function activateNode(pos: number, latex: string, source: TriggerSource = 'click'): void {
+export function activateNode(pos: number, latex: string, dom: Element | null = null, source: TriggerSource = 'click'): void {
   activeNodePos.value = pos
   activeFormula.value = latex
+  activeNodeDOM.value = dom
   triggerSource.value = source
   if (_editor) {
     const node = _editor.state.doc.nodeAt(pos)
@@ -134,6 +138,7 @@ export function activateNode(pos: number, latex: string, source: TriggerSource =
 
 export function deactivateNode(): void {
   activeNodePos.value = null
+  activeNodeDOM.value = null
   activeFormula.value = ''
   activeFormulaError.value = null
   activeFormulaType.value = null
@@ -147,15 +152,24 @@ export function deactivateNode(): void {
  * editor opens so ProseMirror stops trying to re-assert the NodeSelection
  * (which would steal focus from the textarea on every setNodeMarkup dispatch).
  */
-export function releaseFormulaSelection(): void {
-  if (!_editor || activeNodePos.value === null) return
+export function releaseFormulaSelection(atPos?: number | null): void {
+  if (!_editor) return
   const { state } = _editor
-  const pos  = activeNodePos.value
+  
+  const pos = atPos ?? activeNodePos.value
+  if (pos === null) {
+    // Fallback to start if no position is known
+    _editor.view.dispatch(state.tr.setSelection(TextSelection.atStart(state.doc)))
+    return
+  }
+
   const node = state.doc.nodeAt(pos)
-  if (!node) return
-  const afterPos = Math.min(pos + node.nodeSize, state.doc.content.size)
-  const $after   = state.doc.resolve(afterPos)
-  const sel      = TextSelection.near($after, 1)
+  const afterPos = Math.min(pos + (node?.nodeSize || 0), state.doc.content.size)
+  const $after = state.doc.resolve(afterPos)
+
+  // Use Selection.near to find the closest valid spot (like a GapCursor)
+  // but without a heavy bias that would jump into the next node.
+  const sel = Selection.near($after, -1)
   _editor.view.dispatch(state.tr.setSelection(sel))
 }
 
@@ -204,7 +218,7 @@ export function insertNewFormulaAndActivate(latex: string, displayMode: boolean,
 
   // Strategy 1: nodeBefore (inline atom — TipTap leaves cursor right after it)
   if ($from.nodeBefore?.type.name === typeName) {
-    activateNode($from.pos - $from.nodeBefore.nodeSize, latex, source)
+    activateNode($from.pos - $from.nodeBefore.nodeSize, latex, null, source)
     return
   }
 
@@ -213,7 +227,7 @@ export function insertNewFormulaAndActivate(latex: string, displayMode: boolean,
   doc.nodesBetween(insertFrom, Math.min(insertFrom + 200, doc.content.size), (node, pos) => {
     if (found) return false
     if (node.type.name === typeName) {
-      activateNode(pos, latex, source)
+      activateNode(pos, latex, null, source)
       found = true
       return false
     }

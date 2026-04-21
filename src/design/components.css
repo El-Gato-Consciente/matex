@@ -546,6 +546,11 @@ body.dark .sb-formula-ok { color: #4ade80; }
 
 /* ── Floating formula editor ─────────────────────────────────────── */
 
+fp-floating-formula {
+  position: relative;
+  z-index: var(--z-popover);
+}
+
 .ff-panel {
   position: fixed;
   pointer-events: all;
@@ -560,6 +565,7 @@ body.dark .sb-formula-ok { color: #4ade80; }
   gap: 0;
   width: fit-content;
   min-width: 120px;
+  z-index: var(--z-popover);
 }
 
 .ff-hidden { display: none !important; }

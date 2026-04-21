@@ -31,7 +31,7 @@ export class MathInlineView {
       e.preventDefault()
       const pos = this._getPos()
       if (pos !== undefined) {
-        activateNode(pos, this._node.attrs['latex'] as string)
+        activateNode(pos, this._node.attrs['latex'] as string, this.dom)
       }
     })
   }
