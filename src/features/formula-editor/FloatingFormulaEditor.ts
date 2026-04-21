@@ -9,11 +9,9 @@ import {
   activeFormulaError,
   updateActiveFormula,
   deactivateNode,
-  cancelBackslashFormula,
   releaseFormulaSelection,
   focusEditor,
   getActiveFormulaDOM,
-  triggerSource,
 } from '@core/editor/EditorStore'
 import { renderableLatex } from '@core/math/latexUtils'
 
@@ -86,23 +84,6 @@ export class FloatingFormulaEditor extends LitElement {
 
       releaseFormulaSelection()
 
-      // Backslash trigger: force code mode, re-render, then focus textarea
-      if (triggerSource.value === 'backslash') {
-        this._editMode = 'code'
-        localStorage.setItem(MODE_KEY, 'code')
-        this._prevActive = this._active
-        this.requestUpdate()
-        this.updateComplete.then(() => {
-          const ta2 = this.querySelector<HTMLTextAreaElement>('.ff-textarea')
-          if (!ta2) return
-          ta2.value = '\\'
-          this._autoResizeTextarea(ta2)
-          ta2.focus()
-          ta2.setSelectionRange(ta2.value.length, ta2.value.length)
-          this._positionPanel(panel)
-        })
-        return
-      }
 
       const formula = activeFormula.value
       const ta = panel.querySelector<HTMLTextAreaElement>('.ff-textarea')
@@ -295,12 +276,8 @@ export class FloatingFormulaEditor extends LitElement {
   private _onMfKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
       e.preventDefault()
-      if (e.key === 'Escape' && triggerSource.value === 'backslash') {
-        cancelBackslashFormula()
-      } else {
-        deactivateNode()
-        focusEditor()
-      }
+      deactivateNode()
+      focusEditor()
       return
     }
     if (e.key === 'Enter' && e.shiftKey) {
@@ -344,12 +321,8 @@ export class FloatingFormulaEditor extends LitElement {
   private _onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault()
-      if (triggerSource.value === 'backslash') {
-        cancelBackslashFormula()
-      } else {
-        deactivateNode()
-        focusEditor()
-      }
+      deactivateNode()
+      focusEditor()
       return
     }
     if (e.key === 'Enter' && !e.shiftKey) {

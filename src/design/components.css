@@ -669,3 +669,55 @@ body.dark .ff-mathfield {
 }
 .ff-textarea::placeholder { color: var(--text-placeholder); }
 
+/* ── Math Preview Tooltip ─────────────────────────────────────────── */
+
+fp-math-preview-tooltip {
+  display: block;
+  position: fixed;
+  pointer-events: none;
+  z-index: 500;
+  visibility: hidden;
+  transform: translate(-50%, -100%);
+  transition: top 0.1s, left 0.1s;
+}
+
+fp-math-preview-tooltip .tooltip-body {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  padding: 6px 12px;
+  margin-bottom: 8px; /* space for pointer */
+  position: relative;
+  font-size: 16px;
+  color: var(--text);
+  max-width: 400px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+fp-math-preview-tooltip .tooltip-body::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+fp-math-preview-tooltip .has-error {
+  color: var(--error);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+fp-math-preview-tooltip .empty {
+  color: var(--text-placeholder);
+  font-family: var(--font-ui);
+  font-style: italic;
+  font-size: 13px;
+}

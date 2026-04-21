@@ -250,6 +250,31 @@ body.dark .math-display:hover { background: #223050; border-color: #4f63bf; }
 }
 .math-display.has-error { background: var(--error-bg); border-color: #fca5a5; }
 
+.math-input-node {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--latex-mode);
+  background: var(--latex-mode-bg);
+  border: 1px solid var(--latex-mode-bd);
+  border-radius: var(--r-sm);
+  padding: 1px 6px;
+  margin: 0 2px;
+  display: inline-block;
+  min-width: 14px;
+}
+
+.math-input-node.is-empty::before {
+  content: "$";
+  color: var(--text-placeholder);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Bulletproof fix for KaTeX double render (MathML vs HTML) */
+.katex-mathml {
+  display: none !important;
+}
+
 .math-empty {
   font: italic 12px var(--font-mono);
   color: var(--text-placeholder);

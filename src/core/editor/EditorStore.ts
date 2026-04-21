@@ -24,8 +24,12 @@ export const coachChanges = signal<NormalizerChange[]>([])
 /** KaTeX parse error for the formula currently open in FloatingFormulaEditor. */
 export const activeFormulaError = signal<string | null>(null)
 
+/** The raw text content of the currently active inline mathInput node. */
+export const activeMathInputText = signal<string | null>(null)
+export const activeMathInputRect = signal<DOMRect | null>(null)
+
 /** How the floating editor was opened — drives mode and Esc behaviour. */
-export type TriggerSource = 'click' | 'keyboard' | 'toolbar' | 'backslash'
+export type TriggerSource = 'click' | 'keyboard' | 'toolbar'
 export const triggerSource = signal<TriggerSource>('click')
 
 /** Type of the currently active formula node. */
@@ -73,6 +77,30 @@ function _syncFmtState(): void {
     canUndo:     _editor.can().undo(),
     canRedo:     _editor.can().redo(),
   }
+
+  // Sync internal mathInput state for tooltip
+  const { state, view } = _editor
+  const { $from } = state.selection
+  if ($from.parent.type.name === 'mathInput') {
+    activeMathInputText.value = $from.parent.textContent
+    const startPos = $from.before()
+    let el = view.nodeDOM(startPos)
+    // Tiptap might return the text node inside the inline wrapper
+    if (el && el.nodeType === Node.TEXT_NODE) el = el.parentElement
+    if (el instanceof Element) {
+      activeMathInputRect.value = el.getBoundingClientRect()
+    } else {
+      // Fallback to cursor pos if no element found
+      const coords = view.coordsAtPos($from.pos)
+      activeMathInputRect.value = {
+        top: coords.top, left: coords.left, width: 0, height: coords.bottom - coords.top, bottom: coords.bottom, right: coords.right, x: coords.left, y: coords.top, toJSON: () => {}
+      } as DOMRect
+    }
+  } else {
+    activeMathInputText.value = null
+    activeMathInputRect.value = null
+  }
+
   _syncDocStats()
 }
 
@@ -110,20 +138,6 @@ export function deactivateNode(): void {
   triggerSource.value = 'click'
 }
 
-/**
- * Called when the user Esc's out of a backslash-triggered formula editor.
- * Deletes the empty formula node and inserts a literal backslash in its place.
- */
-export function cancelBackslashFormula(): void {
-  if (!_editor || activeNodePos.value === null) return
-  const pos  = activeNodePos.value
-  const node = _editor.state.doc.nodeAt(pos)
-  deactivateNode()
-  if (!node) { _editor.view.focus(); return }
-  const tr = _editor.state.tr.replaceWith(pos, pos + node.nodeSize, _editor.state.schema.text('\\'))
-  _editor.view.dispatch(tr)
-  _editor.view.focus()
-}
 
 /**
  * Releases the ProseMirror NodeSelection on the active formula by switching

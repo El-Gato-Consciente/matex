@@ -2,6 +2,7 @@ import '@design/tokens.css'
 import '@design/layout.css'
 import '@design/components.css'
 import '/node_modules/mathlive/mathlive-static.css'
+import 'katex/dist/katex.min.css'
 
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
@@ -12,7 +13,7 @@ import { MathDisplay }       from '@core/editor/extensions/MathDisplay'
 import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
 import { TheoremEnvTitle }   from '@core/editor/extensions/TheoremEnvTitle'
 import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
-import { BackslashTrigger }  from '@core/editor/extensions/BackslashTrigger'
+import { MathInputNode, MathInputTrigger } from '@core/editor/extensions/MathInput'
 import { SlashCommands }    from '@core/editor/extensions/SlashCommands'
 import { setEditor }         from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
@@ -22,6 +23,7 @@ import { toStorage, fromStorage } from '@features/documents/DocumentSerializer'
 import '@ui/toolbar/Toolbar'
 import '@ui/status-bar/StatusBar'
 import '@features/formula-editor/FloatingFormulaEditor'
+import '@features/formula-editor/MathPreviewTooltip'
 import '@features/formula-editor/SnippetSidebar'
 import '@features/coach/CoachPanel'
 import '@features/export/ExportModal'
@@ -49,7 +51,8 @@ const editor: Editor = new Editor({
     TheoremEnvTitle,
     TheoremEnv,
     FormulaNavigation,
-    BackslashTrigger,
+    MathInputNode,
+    MathInputTrigger,
     SlashCommands,
   ],
   content: (currentDoc ? fromStorage(currentDoc) : { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
@@ -76,6 +79,10 @@ document.body.appendChild(modal)
 // FloatingFormulaEditor — fixed-position overlay, appended to body
 const floatingEditor = document.createElement('fp-floating-formula')
 document.body.appendChild(floatingEditor)
+
+// Tooltip para inline $ math preview
+const mathTooltip = document.createElement('fp-math-preview-tooltip')
+document.body.appendChild(mathTooltip)
 
 // StatusBar
 const statusBarEl = document.getElementById('status-bar')!
