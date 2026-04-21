@@ -20,7 +20,6 @@ export const FormulaNavigation = Extension.create({
       // ── Enter on a selected formula → open floating editor ────────
       'Enter': () => {
         const { selection } = this.editor.state
-        // Duck-type NodeSelection: it exposes a `.node` property
         const sel = selection as { node?: { type: { name: string }; attrs: Record<string, unknown> }; from: number }
         if (!sel.node || !MATH_NODES.has(sel.node.type.name)) return false
 

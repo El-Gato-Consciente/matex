@@ -157,6 +157,24 @@ export const MathInputNode = Node.create({
 
         return false
       },
+      'Alt-Enter': () => {
+        const { state, view } = this.editor
+        const { selection } = state
+        const sel = selection as any
+
+        // If it's a node selection of mathInline or mathDisplay
+        if (sel.node && (sel.node.type.name === 'mathInline' || sel.node.type.name === 'mathDisplay')) {
+          const node = sel.node
+          const pos = selection.from
+          const latex = node.attrs.latex || ''
+          const tr = state.tr
+          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          tr.replaceWith(pos, pos + node.nodeSize, newNode)
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+          return true
+        }
+        return false
+      },
       'Alt-ArrowRight': () => {
         const { state, view } = this.editor
         const { selection } = state
