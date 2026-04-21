@@ -41,6 +41,12 @@ export const activeFormulaType = signal<'inline' | 'display' | null>(null)
 /** Live document statistics, updated on every editor transaction. */
 export const docStats = signal({ words: 0, mathInline: 0, mathDisplay: 0, theoremEnv: 0 })
 
+/** 
+ * Flag used to signal that the next formula node view to be created 
+ * should automatically activate itself. Used for keyboard/toolbar insertions.
+ */
+export const pendingActivationSignal = signal<boolean>(false)
+
 /** Toolbar / mark active states, updated on every editor transaction. */
 export const editorFmtState = signal({
   bold:        false,
@@ -208,30 +214,12 @@ export function insertNewFormulaAndActivate(latex: string, displayMode: boolean,
     ? { latex, numbered: false, aligned: false, label: '' }
     : { latex }
 
-  // Save position before insert — used as search start for block nodes
-  const insertFrom = _editor.state.selection.from
+  // 1. SIGNAL: The next formula view to mount should activate itself
+  pendingActivationSignal.value = true
+  triggerSource.value = source
 
+  // 2. INSERT: TipTap creates the node and triggers the NodeView constructor
   _editor.chain().focus().insertContent({ type: typeName, attrs }).run()
-
-  const { selection, doc } = _editor.state
-  const { $from } = selection
-
-  // Strategy 1: nodeBefore (inline atom — TipTap leaves cursor right after it)
-  if ($from.nodeBefore?.type.name === typeName) {
-    activateNode($from.pos - $from.nodeBefore.nodeSize, latex, null, source)
-    return
-  }
-
-  // Strategy 2: scan forward from insert position (block node case)
-  let found = false
-  doc.nodesBetween(insertFrom, Math.min(insertFrom + 200, doc.content.size), (node, pos) => {
-    if (found) return false
-    if (node.type.name === typeName) {
-      activateNode(pos, latex, null, source)
-      found = true
-      return false
-    }
-  })
 }
 
 /**

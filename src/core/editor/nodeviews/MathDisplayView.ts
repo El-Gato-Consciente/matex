@@ -1,6 +1,6 @@
 import type { Node } from '@tiptap/pm/model'
 import katex from 'katex'
-import { activateNode } from '../EditorStore'
+import { activateNode, pendingActivationSignal, triggerSource } from '../EditorStore'
 import { renderableLatex } from '@core/math/latexUtils'
 
 /* ─────────────────────────────────────────────────────────────────
@@ -24,6 +24,16 @@ export class MathDisplayView {
     this.dom.setAttribute('contenteditable', 'false')
 
     this._render()
+
+    // SELF-ACTIVATION: If we were just created via shift+M or toolbar, 
+    // activate ourselves immediately so the popover can target our DOM.
+    if (pendingActivationSignal.value) {
+      pendingActivationSignal.value = false
+      const pos = this._getPos()
+      if (pos !== undefined) {
+        activateNode(pos, this._node.attrs['latex'] as string, this.dom, triggerSource.value)
+      }
+    }
 
     // mousedown → open floating editor immediately.
     // By using preventDefault, we stop the editor from grabbing focus.
