@@ -126,18 +126,6 @@ export const MathInputNode = Node.create({
             return true
           }
         }
-
-        // 2. Entering mathInline from the left
-        const nodeAfter = $from.nodeAfter
-        if (nodeAfter && nodeAfter.type.name === 'mathInline') {
-          const latex = nodeAfter.attrs.latex || ''
-          const pos = $from.pos
-          const tr = state.tr
-          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
-          tr.replaceWith(pos, pos + nodeAfter.nodeSize, newNode)
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
-          return true
-        }
         
         return false
       },
@@ -167,7 +155,58 @@ export const MathInputNode = Node.create({
           }
         }
 
-        // 2. Entering mathInline from the right
+        return false
+      },
+      'Alt-ArrowRight': () => {
+        const { state, view } = this.editor
+        const { selection } = state
+        
+        // If it's a node selection
+        if ((selection as any).node?.type.name === 'mathInline') {
+          const node = (selection as any).node
+          const pos = selection.from
+          const latex = node.attrs.latex || ''
+          const tr = state.tr
+          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          tr.replaceWith(pos, pos + node.nodeSize, newNode)
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+          return true
+        }
+
+        // If it's a cursor next to it
+        const { $from, empty } = selection
+        if (!empty) return false
+        const nodeAfter = $from.nodeAfter
+        if (nodeAfter && nodeAfter.type.name === 'mathInline') {
+          const latex = nodeAfter.attrs.latex || ''
+          const pos = $from.pos
+          const tr = state.tr
+          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          tr.replaceWith(pos, pos + nodeAfter.nodeSize, newNode)
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+          return true
+        }
+        return false
+      },
+      'Alt-ArrowLeft': () => {
+        const { state, view } = this.editor
+        const { selection } = state
+
+        // If it's a node selection
+        if ((selection as any).node?.type.name === 'mathInline') {
+          const node = (selection as any).node
+          const pos = selection.from
+          const latex = node.attrs.latex || ''
+          const tr = state.tr
+          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
+          tr.replaceWith(pos, pos + node.nodeSize, newNode)
+          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1 + latex.length)))
+          return true
+        }
+
+        // If it's a cursor next to it
+        const { $from, empty } = selection
+        if (!empty) return false
         const nodeBefore = $from.nodeBefore
         if (nodeBefore && nodeBefore.type.name === 'mathInline') {
           const latex = nodeBefore.attrs.latex || ''
@@ -178,7 +217,6 @@ export const MathInputNode = Node.create({
           view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1 + latex.length)))
           return true
         }
-
         return false
       }
     }

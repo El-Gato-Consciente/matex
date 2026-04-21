@@ -14,6 +14,7 @@ export const MathInline = Node.create({
   group:  'inline',
   inline: true,
   atom:   true,   // non-editable leaf; cursor jumps over it
+  selectable: true,
 
   addAttributes() {
     return {
