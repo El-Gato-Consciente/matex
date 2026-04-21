@@ -79,8 +79,6 @@ export class FloatingFormulaEditor extends LitElement {
     const panel = this.querySelector<HTMLElement>('.ff-panel')
     if (!panel) return
 
-    this._positionPanel(panel)
-
     if (!this._prevActive) {
       // Panel just opened — mark formula DOM so it stays visually active
       this._activeFormulaEl = getActiveFormulaDOM()
@@ -98,8 +96,10 @@ export class FloatingFormulaEditor extends LitElement {
           const ta2 = this.querySelector<HTMLTextAreaElement>('.ff-textarea')
           if (!ta2) return
           ta2.value = '\\'
+          this._autoResizeTextarea(ta2)
           ta2.focus()
           ta2.setSelectionRange(ta2.value.length, ta2.value.length)
+          this._positionPanel(panel)
         })
         return
       }
@@ -108,7 +108,10 @@ export class FloatingFormulaEditor extends LitElement {
       const ta = panel.querySelector<HTMLTextAreaElement>('.ff-textarea')
       const mf = panel.querySelector<any>('math-field')
 
-      if (ta) ta.value = formula
+      if (ta) {
+        ta.value = formula
+        this._autoResizeTextarea(ta)
+      }
 
       if (mf) {
         // Configure on each creation (panel is torn down when inactive)
@@ -130,6 +133,12 @@ export class FloatingFormulaEditor extends LitElement {
         ta.setSelectionRange(ta.value.length, ta.value.length)
       }
     }
+
+    // Defer positioning to next frame to allow MathLive to layout
+    requestAnimationFrame(() => {
+      const p = this.querySelector<HTMLElement>('.ff-panel')
+      if (p) this._positionPanel(p)
+    })
 
     this._prevActive = this._active
   }
@@ -156,22 +165,54 @@ export class FloatingFormulaEditor extends LitElement {
         mf2.focus()
       } else if (ta) {
         ta.value = val
+        this._autoResizeTextarea(ta)
         ta.focus()
         ta.setSelectionRange(ta.value.length, ta.value.length)
       }
+      
+      // Let layout catch up before positioning
+      requestAnimationFrame(() => this._positionPanel(panel))
     })
+  }
+
+  private _measureCtx: CanvasRenderingContext2D | null = null
+
+  /** Measure the pixel width of the longest line in a text string */
+  private _measureTextWidth(text: string): number {
+    if (!this._measureCtx) {
+      const canvas = document.createElement('canvas')
+      this._measureCtx = canvas.getContext('2d')!
+    }
+    this._measureCtx.font = '13px "JetBrains Mono", "Fira Code", monospace'
+    const lines = text.split('\n')
+    return Math.max(40, ...lines.map(l => this._measureCtx!.measureText(l).width))
   }
 
   private _positionPanel(panel: HTMLElement): void {
     const formulaEl = getActiveFormulaDOM()
     if (!formulaEl) return
 
-    const rect   = formulaEl.getBoundingClientRect()
-    const vw     = window.innerWidth
-    const vh     = window.innerHeight
-    const panelH = 150
+    const rect = formulaEl.getBoundingClientRect()
+    const vw   = window.innerWidth
+    const vh   = window.innerHeight
 
-    const panelW = Math.min(Math.max(320, rect.width + 48), vw - 16)
+    // For code mode: size textarea to its text content
+    if (this._editMode === 'code') {
+      const ta = this.querySelector<HTMLTextAreaElement>('.ff-textarea')
+      if (ta) {
+        const textW = this._measureTextWidth(ta.value)
+        ta.style.width = `${Math.ceil(textW) + 14}px` // +padding
+      }
+    }
+
+    // Viewport cap
+    panel.style.maxWidth = `${vw - 16}px`
+
+    // Measure actual rendered size (panel is fit-content)
+    const panelRect = panel.getBoundingClientRect()
+    const panelW = panelRect.width
+    const panelH = panelRect.height
+
     const idealLeft = rect.left + rect.width / 2 - panelW / 2
     const left = Math.max(8, Math.min(idealLeft, vw - panelW - 8))
     const top  = (vh - rect.bottom >= panelH + 10)
@@ -179,7 +220,6 @@ export class FloatingFormulaEditor extends LitElement {
       : rect.top - panelH - 8
 
     panel.style.left       = `${left}px`
-    panel.style.width      = `${panelW}px`
     panel.style.top        = `${top}px`
     panel.style.visibility = 'visible'
   }
@@ -191,44 +231,50 @@ export class FloatingFormulaEditor extends LitElement {
     const isVisual = this._editMode === 'visual'
     return html`
       <div class="ff-panel" style="visibility:hidden">
-        <div class="ff-mode-bar">
-          <div class="ff-mode-toggle">
-            <button
-              class="ff-mode-btn ${isVisual ? 'active' : ''}"
-              tabindex="-1"
-              @mousedown="${this._onModeBtnMousedown}"
-              @click="${() => this._setMode('visual')}"
-            >Visual</button>
-            <button
-              class="ff-mode-btn ${!isVisual ? 'active' : ''}"
-              tabindex="-1"
-              @mousedown="${this._onModeBtnMousedown}"
-              @click="${() => this._setMode('code')}"
-            >Código</button>
-          </div>
+        <div class="ff-body">
+          <math-field
+            class="ff-mathfield${isVisual ? '' : ' ff-hidden'}"
+            math-virtual-keyboard-policy="off"
+            default-mode="math"
+            @input="${this._onMfInput}"
+            @keydown="${this._onMfKeyDown}"
+          ></math-field>
+          <textarea
+            class="ff-textarea${isVisual ? ' ff-hidden' : ''}"
+            placeholder="\\frac{a}{b}"
+            rows="2"
+            @input="${this._onInput}"
+            @keydown="${this._onKeyDown}"
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
         </div>
-        <math-field
-          class="ff-mathfield${isVisual ? '' : ' ff-hidden'}"
-          math-virtual-keyboard-policy="off"
-          default-mode="math"
-          @input="${this._onMfInput}"
-          @keydown="${this._onMfKeyDown}"
-        ></math-field>
-        <textarea
-          class="ff-textarea${isVisual ? ' ff-hidden' : ''}"
-          placeholder="\\frac{a}{b}"
-          rows="2"
-          @input="${this._onInput}"
-          @keydown="${this._onKeyDown}"
-          spellcheck="false"
-          autocorrect="off"
-          autocapitalize="off"
-        ></textarea>
-        <div class="ff-hint">
-          ${triggerSource.value === 'backslash'
-            ? html`<kbd>Esc</kbd> cancelar e insertar \\ como texto &nbsp;·&nbsp; <kbd>Enter</kbd> confirmar`
-            : html`<kbd>Esc</kbd> cerrar &nbsp;·&nbsp; <kbd>Enter</kbd> confirmar &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> nueva línea`
-          }
+        <div class="ff-mode-toggle">
+          <button
+            class="ff-mode-btn ${isVisual ? 'active' : ''}"
+            title="Vista visual"
+            tabindex="-1"
+            @mousedown="${this._onModeBtnMousedown}"
+            @click="${() => this._setMode('visual')}"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+          <button
+            class="ff-mode-btn ${!isVisual ? 'active' : ''}"
+            title="Código LaTeX"
+            tabindex="-1"
+            @mousedown="${this._onModeBtnMousedown}"
+            @click="${() => this._setMode('code')}"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </button>
         </div>
       </div>
     `
@@ -264,9 +310,22 @@ export class FloatingFormulaEditor extends LitElement {
   }
 
   private _onInput = (e: Event) => {
-    const latex = (e.target as HTMLTextAreaElement).value
+    const ta = e.target as HTMLTextAreaElement
+    const latex = ta.value
+    this._autoResizeTextarea(ta)
+    // Re-measure width and reposition panel
+    const textW = this._measureTextWidth(latex)
+    ta.style.width = `${Math.ceil(textW) + 14}px`
+    const panel = this.querySelector<HTMLElement>('.ff-panel')
+    if (panel) this._positionPanel(panel)
     updateActiveFormula(latex)
     this._validateLatex(latex)
+  }
+
+  /** Fit textarea height to its content so the popover auto-sizes */
+  private _autoResizeTextarea(ta: HTMLTextAreaElement) {
+    ta.style.height = '0'
+    ta.style.height = `${ta.scrollHeight}px`
   }
 
   private _validateLatex(latex: string) {
