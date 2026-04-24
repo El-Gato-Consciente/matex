@@ -61,6 +61,109 @@
   padding: 0 10px;
 }
 
+.tbtn-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 4px;
+}
+
+/* ── Env dropdown ────────────────────────────────────────────────── */
+
+.tbtn-menu--env {
+  min-width: 180px;
+}
+
+.env-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0 10px;
+}
+
+.env-label {
+  text-align: left;
+  flex: 1;
+  font-size: 12px;
+}
+
+/* ── LaTeX dropdown ───────────────────────────────────────────────── */
+
+.tbtn-menu--latex {
+  min-width: 220px;
+  padding: 4px;
+}
+
+.tbtn-menu--latex .tbtn {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.lm-icon {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--latex-mode);
+  text-align: center;
+}
+
+.lm-label {
+  text-align: left;
+}
+
+.lm-kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.lm-help-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  padding: 4px 10px 2px;
+}
+
+.lm-help-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.lm-help-row .lm-kbd {
+  flex-shrink: 0;
+  min-width: 56px;
+  text-align: center;
+}
+
+.lm-help-row--sub {
+  padding-left: 14px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.lm-help-row--inner {
+  padding-left: 24px;
+  font-size: 11px;
+  opacity: .8;
+}
+
+.lm-help-row--inner .lm-kbd {
+  min-width: 46px;
+}
+
 /* ── Toolbar buttons (shared) ────────────────────────────────────── */
 
 .tbtn {
@@ -147,9 +250,9 @@ body.dark .tbtn kbd {
   overflow: hidden;
 }
 
-/* ── Snippet sidebar ─────────────────────────────────────────────── */
+/* ── Doc panel (left) ────────────────────────────────────────────── */
 
-#snippet-sidebar {
+#doc-panel {
   width: 220px;
   flex-shrink: 0;
   background: var(--panel-bg);
@@ -160,8 +263,30 @@ body.dark .tbtn kbd {
   transition: width .18s ease;
 }
 
+#doc-panel.collapsed {
+  width: 44px;
+}
+
+/* ── Snippet sidebar (right) ─────────────────────────────────────── */
+
+#snippet-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width .18s ease;
+}
+
 #snippet-sidebar.collapsed {
   width: 44px;
+}
+
+/* Snippet sidebar: collapse toggle flips direction (now on right) */
+#snippet-sidebar .sb-toggle-btn {
+  /* chevron faces left when expanded (to collapse rightward) */
 }
 
 /* ── Editor canvas ───────────────────────────────────────────────── */
@@ -171,11 +296,13 @@ body.dark .tbtn kbd {
   overflow-y: auto;
   padding: 48px 24px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   transition: flex .18s ease;
 }
 
-#editor {
+#editor,
+fp-doc-header {
   width: 100%;
   max-width: 700px;
 }
@@ -221,6 +348,16 @@ body.dark .ProseMirror-gapcursor:after {
   font-weight: 600;
   line-height: 1.4;
   margin-top: .8em;
+}
+
+/* ── Section numbering via PM decorations (data-num set per transaction) ── */
+
+body.num-h1 .ProseMirror h1[data-num]::before,
+body.num-h2 .ProseMirror h2[data-num]::before,
+body.num-h3 .ProseMirror h3[data-num]::before {
+  content: attr(data-num) " ";
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .ProseMirror strong {
@@ -357,12 +494,26 @@ body.dark .math-display:hover {
   border-color: #fca5a5;
 }
 
-/* 
+/*
    UNIVERSAL SHIELD & SUBTLE FOCUS MODE:
    Optimized for sub-millisecond response. Uses global opacity to "fade" the background.
 */
 body.has-formula-popover #editor-wrap {
-  opacity: 0.7; /* Subtle dimming, very fast */
+  opacity: 0.7;
+}
+
+body.has-inline-edit #editor-wrap {
+  opacity: 0.82;
+}
+
+body.has-inline-edit .math-input-node,
+body.has-inline-edit .math-display-input-node {
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25), 0 4px 20px rgba(124, 58, 237, 0.12);
+}
+
+body.dark.has-inline-edit .math-input-node,
+body.dark.has-inline-edit .math-display-input-node {
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.3), 0 4px 20px rgba(167, 139, 250, 0.15);
 }
 
 /* Ensure the formula being edited and the popover feel "above" the wash */
@@ -657,22 +808,7 @@ body.has-formula-popover .math-display:not(.is-editing) {
   clear: left;
 }
 
-/* ── Coach panel ─────────────────────────────────────────────────── */
-
-#coach-panel {
-  width: 260px;
-  flex-shrink: 0;
-  background: var(--panel-bg);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: width .18s ease;
-}
-
-#coach-panel.collapsed {
-  width: 44px;
-}
+/* (coach-panel removed — replaced by doc-panel + status-bar) */
 
 /* ── Status bar ──────────────────────────────────────────────────── */
 

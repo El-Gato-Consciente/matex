@@ -6,8 +6,8 @@
   <title>Formalia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index-GjOu8JMT.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BjGnCopH.css">
+  <script type="module" crossorigin src="/assets/index-DhU8y3j5.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BtVHyhnf.css">
 </head>
 <body>
 
@@ -15,14 +15,14 @@
     Layout structure:
 
     ┌──────────────────────────────────────────────────────────────┐
-    │  #app-toolbar  (2 rows: format | structure+math)             │
-    ├──────────────────────────────────────────────────────────────┤
-    │  #formula-panel  (always visible; FormulaPanel component)    │
+    │  #app-toolbar                                                │
     ├──────────────┬───────────────────────────────┬───────────────┤
-    │  #snippet-   │  #editor-wrap                 │  #coach-      │
-    │  sidebar     │  (TipTap canvas)              │  panel        │
-    │  (collaps.)  │                               │               │
-    └──────────────┴───────────────────────────────┴───────────────┘
+    │  #doc-panel  │  #editor-wrap                 │  #snippet-   │
+    │  (doc info,  │  (TipTap canvas)              │  sidebar     │
+    │   stats…)    │                               │  (snippets)  │
+    ├──────────────┴───────────────────────────────┴───────────────┤
+    │  #status-bar                                                 │
+    └──────────────────────────────────────────────────────────────┘
   -->
 
   <div id="app">
@@ -42,9 +42,9 @@
     <!-- ── Main area ────────────────────────────────────────────── -->
     <main id="main-area">
 
-      <!-- Snippet sidebar (left) -->
-      <aside id="snippet-sidebar">
-        <!-- populated by SnippetSidebar component -->
+      <!-- Doc panel (left) -->
+      <aside id="doc-panel">
+        <!-- populated by DocPanel component -->
       </aside>
 
       <!-- Editor canvas (center) -->
@@ -52,9 +52,9 @@
         <div id="editor"></div>
       </div>
 
-      <!-- Coach panel (right) -->
-      <aside id="coach-panel">
-        <!-- populated by CoachPanel component -->
+      <!-- Snippet sidebar (right) -->
+      <aside id="snippet-sidebar">
+        <!-- populated by SnippetSidebar component -->
       </aside>
 
     </main>

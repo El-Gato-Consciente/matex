@@ -1,5 +1,6 @@
 import type { Node, Fragment } from '@tiptap/pm/model'
 import { getLatexSerializer, type LatexSerializerContext } from './LatexSerializerRegistry'
+import type { DocMeta } from '@core/editor/EditorStore'
 
 /* ─────────────────────────────────────────────────────────────────
    TexSerializer — Phase 1
@@ -10,39 +11,80 @@ import { getLatexSerializer, type LatexSerializerContext } from './LatexSerializ
 
 export class TexSerializer {
 
-  serialize(doc: Node): string {
+  serialize(doc: Node, meta?: Partial<DocMeta>): string {
     const body = this._serializeFragment(doc.content)
-    return this._wrapDocument(body)
+    return this._wrapDocument(body, meta)
   }
 
   // ── Document wrapper ────────────────────────────────────────────
 
-  private _wrapDocument(body: string): string {
+  private _wrapDocument(body: string, meta?: Partial<DocMeta>): string {
+    const lang = meta?.language ?? 'es'
+    const isEs = lang === 'es'
+
+    // Theorem environment names
+    const T = isEs
+      ? { theorem: 'Teorema', lemma: 'Lema', proposition: 'Proposición', corollary: 'Corolario',
+          definition: 'Definición', example: 'Ejemplo', exercise: 'Ejercicio',
+          remark: 'Observación', note: 'Nota' }
+      : { theorem: 'Theorem', lemma: 'Lemma', proposition: 'Proposition', corollary: 'Corollary',
+          definition: 'Definition', example: 'Example', exercise: 'Exercise',
+          remark: 'Remark', note: 'Note' }
+
+    // Author block — append email as \thanks{} and institution as \\ line
+    let authorBlock = ''
+    if (meta?.author) {
+      authorBlock = this._escapeLatex(meta.author)
+      if (meta?.email) authorBlock += `\\thanks{\\texttt{${this._escapeLatex(meta.email)}}}`
+      if (meta?.institution) authorBlock += `\\\\\n\\small ${this._escapeLatex(meta.institution)}`
+    }
+
+    const metaLines: string[] = []
+    if (meta?.title)  metaLines.push(`\\title{${this._escapeLatex(meta.title)}}`)
+    if (authorBlock)  metaLines.push(`\\author{${authorBlock}}`)
+    if (meta?.date)   metaLines.push(`\\date{${this._escapeLatex(meta.date)}}`)
+    else if (meta?.title) metaLines.push('\\date{\\today}')
+    const hasMaketitle = metaLines.length > 0
+
+    const bodyLines: string[] = []
+    if (hasMaketitle) bodyLines.push('\\maketitle', '')
+    if (meta?.abstract?.trim()) {
+      bodyLines.push('\\begin{abstract}', meta.abstract.trim(), '\\end{abstract}', '')
+    }
+    if (meta?.keywords?.trim()) {
+      const kwLabel = isEs ? 'Palabras clave' : 'Keywords'
+      bodyLines.push(`\\noindent\\textbf{${kwLabel}:} ${this._escapeLatex(meta.keywords)}`, '', '')
+    }
+    bodyLines.push(body.trim())
+
     return [
       '\\documentclass{article}',
       '\\usepackage[utf8]{inputenc}',
       '\\usepackage[T1]{fontenc}',
+      `\\usepackage[${isEs ? 'spanish' : 'english'}]{babel}`,
       '\\usepackage{amsmath,amssymb,amsthm}',
       '\\usepackage{mathtools}',
       '\\usepackage{hyperref}',
       '',
       '% Theorem environments',
       '\\theoremstyle{plain}',
-      '\\newtheorem{theorem}{Theorem}',
-      '\\newtheorem{lemma}[theorem]{Lemma}',
-      '\\newtheorem{proposition}[theorem]{Proposition}',
-      '\\newtheorem{corollary}[theorem]{Corollary}',
+      `\\newtheorem{theorem}{${T.theorem}}`,
+      `\\newtheorem{lemma}[theorem]{${T.lemma}}`,
+      `\\newtheorem{proposition}[theorem]{${T.proposition}}`,
+      `\\newtheorem{corollary}[theorem]{${T.corollary}}`,
       '\\theoremstyle{definition}',
-      '\\newtheorem{definition}[theorem]{Definition}',
-      '\\newtheorem{example}[theorem]{Example}',
-      '\\newtheorem{exercise}[theorem]{Exercise}',
+      `\\newtheorem{definition}[theorem]{${T.definition}}`,
+      `\\newtheorem{example}[theorem]{${T.example}}`,
+      `\\newtheorem{exercise}[theorem]{${T.exercise}}`,
       '\\theoremstyle{remark}',
-      '\\newtheorem*{remark}{Remark}',
-      '\\newtheorem*{note}{Note}',
+      `\\newtheorem*{remark}{${T.remark}}`,
+      `\\newtheorem*{note}{${T.note}}`,
+      '',
+      ...metaLines,
       '',
       '\\begin{document}',
       '',
-      body.trim(),
+      ...bodyLines,
       '',
       '\\end{document}',
     ].join('\n')

@@ -303,6 +303,7 @@ function insertSnippet(latex: string): void {
 export class SnippetSidebar extends LitElement {
 
   @state() private _collapsed = localStorage.getItem(SB_KEY) === '1'
+  @state() private _shortcutsOpen = false
   @state() private _search = ''
   @state() private _activeCat = 'all'
   @state() private _formulaActive = false
@@ -379,8 +380,17 @@ export class SnippetSidebar extends LitElement {
 
     return html`
       <div class="sb-header">
-        <button class="sb-toggle" title="Expandir panel" @click="${this._toggle}">›</button>
+        <button class="sb-toggle" title="Expandir panel" @click="${this._toggle}">‹</button>
       </div>
+      <div class="sb-collapsed-insert">
+        <button class="sb-insert-btn" title="Nueva fórmula inline (Ctrl+M)"
+          @mousedown="${(e: Event) => e.preventDefault()}"
+          @click="${() => insertNewFormulaAndActivate('', false)}">$</button>
+        <button class="sb-insert-btn" title="Nueva fórmula en bloque (Ctrl+Shift+M)"
+          @mousedown="${(e: Event) => e.preventDefault()}"
+          @click="${() => insertNewFormulaAndActivate('', true)}">$$</button>
+      </div>
+      <div class="sb-collapsed-sep"></div>
       <div class="sb-quick">
         ${favSnips.map(({ snip, slot }) => html`
           <button
@@ -411,11 +421,55 @@ export class SnippetSidebar extends LitElement {
 
     return html`
       <div class="sb-header">
-        <button class="sb-toggle" title="Colapsar panel" @click="${this._toggle}">‹</button>
+        <span class="sb-header-title">LaTeX</span>
+        <button class="sb-toggle" title="Colapsar panel" @click="${this._toggle}">›</button>
+      </div>
+
+      <!-- Insertar -->
+      <div class="sb-section">
+        <div class="sb-section-title">Insertar</div>
+        <div class="sb-insert-row">
+          <button class="sb-insert-wide" title="Nueva fórmula inline (Ctrl+M)"
+            @mousedown="${(e: Event) => e.preventDefault()}"
+            @click="${() => insertNewFormulaAndActivate('', false)}">
+            <span class="sb-insert-icon">$</span> Inline
+          </button>
+          <button class="sb-insert-wide" title="Nueva fórmula en bloque (Ctrl+Shift+M)"
+            @mousedown="${(e: Event) => e.preventDefault()}"
+            @click="${() => insertNewFormulaAndActivate('', true)}">
+            <span class="sb-insert-icon">$$</span> Bloque
+          </button>
+        </div>
+      </div>
+
+      <!-- Atajos (colapsable) -->
+      <div class="sb-section sb-shortcuts">
+        <button class="sb-section-toggle" @click="${() => { this._shortcutsOpen = !this._shortcutsOpen }}">
+          <span class="sb-section-title">Atajos</span>
+          <span class="sb-section-arrow">${this._shortcutsOpen ? '▾' : '▸'}</span>
+        </button>
+        ${this._shortcutsOpen ? html`
+          <div class="sb-shortcut-group-label">Insitu</div>
+          <div class="sb-shortcut-row"><kbd class="sb-kbd">$</kbd><span>nueva inline</span></div>
+          <div class="sb-shortcut-row"><kbd class="sb-kbd">$$</kbd><span>nuevo bloque</span></div>
+          <div class="sb-shortcut-row"><kbd class="sb-kbd">Alt+Enter</kbd><span>editar existente</span></div>
+          <div class="sb-shortcut-group-label">Popover</div>
+          <div class="sb-shortcut-row"><kbd class="sb-kbd">Ctrl+M</kbd><span>nueva inline</span></div>
+          <div class="sb-shortcut-row"><kbd class="sb-kbd">Ctrl+⇧M</kbd><span>nuevo bloque</span></div>
+          <div class="sb-shortcut-row"><kbd class="sb-kbd">Enter</kbd><span>editar existente</span></div>
+          <div class="sb-shortcut-group-label" style="padding-left:10px;font-size:9px">dentro del popover</div>
+          <div class="sb-shortcut-row sb-shortcut-row--inner"><kbd class="sb-kbd">Enter</kbd><span>confirmar</span></div>
+          <div class="sb-shortcut-row sb-shortcut-row--inner"><kbd class="sb-kbd">Esc</kbd><span>cerrar</span></div>
+          <div class="sb-shortcut-row sb-shortcut-row--inner"><kbd class="sb-kbd">⇧Enter</kbd><span>nueva línea</span></div>
+        ` : ''}
+      </div>
+
+      <!-- Búsqueda -->
+      <div class="sb-search-row">
         <input
           class="sb-search"
           type="text"
-          placeholder="Buscar…"
+          placeholder="Buscar snippet…"
           .value="${this._search}"
           @input="${(e: Event) => { this._search = (e.target as HTMLInputElement).value }}"
         />

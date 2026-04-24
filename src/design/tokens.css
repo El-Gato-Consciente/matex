@@ -11,9 +11,11 @@
   --panel-bg:        #f4f3f0;
   --border:          #e4e2dd;
   --border-strong:   #c9c6c0;
+  --hover-bg:        #f0ede8;
 
   /* Colors — text */
   --text:            #1a1917;
+  --text-secondary:  #3d3a34;
   --text-muted:      #6b6757;
   --text-placeholder:#b5b2ab;
 
@@ -78,8 +80,10 @@ body.dark {
   --panel-bg:        #1e1d1b;
   --border:          #48443e;
   --border-strong:   #5e5a53;
+  --hover-bg:        #2e2c29;
 
   --text:            #e8e6e0;
+  --text-secondary:  #c8c4bc;
   --text-muted:      #a8a29a;
   --text-placeholder:#6a655e;
 

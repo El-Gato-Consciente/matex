@@ -6,7 +6,7 @@ import {
   toggleBold, toggleItalic, toggleCode,
   setHeading, toggleBulletList, toggleOrderedList,
   undo, redo,
-  insertNewFormulaAndActivate, insertTheoremEnv,
+  insertTheoremEnv,
   loadExample, clearDocument,
 } from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
@@ -116,9 +116,18 @@ export class Toolbar extends LitElement {
 
         <div class="sep"></div>
 
-        <!-- Lists -->
-        <button class="tbtn ${f.bulletList  ? 'active':''}" @click="${toggleBulletList}"  title="Bullet list">• —</button>
-        <button class="tbtn ${f.orderedList ? 'active':''}" @click="${toggleOrderedList}" title="Numbered list">1.</button>
+        <!-- Lists dropdown -->
+        <div class="tbtn-drop">
+          <button class="tbtn ${f.bulletList || f.orderedList ? 'active':''}"
+            @click="${(e: Event) => this._toggleDropdown('list', e)}"
+            title="Listas">≡ ▾</button>
+          ${this._openDropdown === 'list' ? html`
+            <div class="tbtn-menu">
+              <button class="tbtn ${f.bulletList  ? 'active':''}" @click="${() => { toggleBulletList();  this._openDropdown = null }}" title="Lista con viñetas">• Lista</button>
+              <button class="tbtn ${f.orderedList ? 'active':''}" @click="${() => { toggleOrderedList(); this._openDropdown = null }}" title="Lista numerada">1. Numerada</button>
+            </div>
+          ` : ''}
+        </div>
 
         <div class="sep"></div>
 
@@ -128,31 +137,30 @@ export class Toolbar extends LitElement {
 
         <div class="sep"></div>
 
-        <!-- Math insert -->
-        <button class="tbtn math" @click="${() => insertNewFormulaAndActivate('', false)}"
-          title="Insert inline formula (Ctrl+M)">$ inline</button>
-        <button class="tbtn math" @click="${() => insertNewFormulaAndActivate('', true)}"
-          title="Insert display formula (Ctrl+Shift+M)">$$ display</button>
-
-        <div class="sep"></div>
-
         <!-- Theorem environments dropdown -->
         <div class="tbtn-drop">
           <button class="tbtn"
             @click="${(e: Event) => this._toggleDropdown('env', e)}"
             title="Theorem environments">Env ▾</button>
           ${this._openDropdown === 'env' ? html`
-            <div class="tbtn-menu">
-              <button class="tbtn" style="color:var(--thm-theorem)"     @click="${() => { insertTheoremEnv('theorem');     this._openDropdown = null }}">Thm</button>
-              <button class="tbtn" style="color:var(--thm-definition)"  @click="${() => { insertTheoremEnv('definition');  this._openDropdown = null }}">Def</button>
-              <button class="tbtn" style="color:var(--thm-lemma)"       @click="${() => { insertTheoremEnv('lemma');       this._openDropdown = null }}">Lem</button>
-              <button class="tbtn" style="color:var(--thm-proposition)" @click="${() => { insertTheoremEnv('proposition'); this._openDropdown = null }}">Prop</button>
-              <button class="tbtn" style="color:var(--thm-corollary)"   @click="${() => { insertTheoremEnv('corollary');   this._openDropdown = null }}">Cor</button>
-              <button class="tbtn" style="color:var(--thm-example)"     @click="${() => { insertTheoremEnv('example');     this._openDropdown = null }}">Ex</button>
-              <button class="tbtn" style="color:var(--thm-exercise)"    @click="${() => { insertTheoremEnv('exercise');    this._openDropdown = null }}">Exr</button>
-              <button class="tbtn" style="color:var(--thm-remark)"      @click="${() => { insertTheoremEnv('remark');      this._openDropdown = null }}">Rmk</button>
-              <button class="tbtn" style="color:var(--thm-note)"        @click="${() => { insertTheoremEnv('note');        this._openDropdown = null }}">Note</button>
-              <button class="tbtn" style="color:var(--thm-proof)"       @click="${() => { insertTheoremEnv('proof');       this._openDropdown = null }}">Proof</button>
+            <div class="tbtn-menu tbtn-menu--env">
+              ${([
+                { env: 'theorem',     label: 'Teorema',      color: 'var(--thm-theorem)',     kbd: '/thm'   },
+                { env: 'definition',  label: 'Definición',   color: 'var(--thm-definition)',  kbd: '/def'   },
+                { env: 'lemma',       label: 'Lema',         color: 'var(--thm-lemma)',       kbd: '/lem'   },
+                { env: 'proposition', label: 'Proposición',  color: 'var(--thm-proposition)', kbd: '/prop'  },
+                { env: 'corollary',   label: 'Corolario',    color: 'var(--thm-corollary)',   kbd: '/cor'   },
+                { env: 'example',     label: 'Ejemplo',      color: 'var(--thm-example)',     kbd: '/ex'    },
+                { env: 'exercise',    label: 'Ejercicio',    color: 'var(--thm-exercise)',    kbd: '/exr'   },
+                { env: 'remark',      label: 'Observación',  color: 'var(--thm-remark)',      kbd: '/rmk'   },
+                { env: 'note',        label: 'Nota',         color: 'var(--thm-note)',        kbd: '/note'  },
+                { env: 'proof',       label: 'Demostración', color: 'var(--thm-proof)',       kbd: '/proof' },
+              ] as const).map(({ env, label, color, kbd }) => html`
+                <button class="tbtn env-row" @click="${() => { insertTheoremEnv(env); this._openDropdown = null }}">
+                  <span class="env-label" style="color:${color}">${label}</span>
+                  <kbd class="lm-kbd">${kbd}</kbd>
+                </button>
+              `)}
             </div>
           ` : ''}
         </div>
@@ -167,10 +175,22 @@ export class Toolbar extends LitElement {
 
         <div class="sep"></div>
 
-        <button class="tbtn" @click="${loadExample}" title="Load example document">Ejemplo</button>
-        <button class="tbtn" @click="${this._confirmClear}" title="Clear document" style="color:var(--error)">Limpiar</button>
-        <div class="sep"></div>
-        <button class="tbtn" @click="${this._export}" title="Export LaTeX (.tex)">Export .tex</button>
+        <!-- Archivo dropdown -->
+        <div class="tbtn-drop">
+          <button class="tbtn"
+            @click="${(e: Event) => this._toggleDropdown('archivo', e)}"
+            title="Archivo">Archivo ▾</button>
+          ${this._openDropdown === 'archivo' ? html`
+            <div class="tbtn-menu" style="right:0;left:auto;min-width:160px">
+              <button class="tbtn" @click="${() => { this._newDocument();   this._openDropdown = null }}">Nuevo</button>
+              <button class="tbtn" @click="${() => { loadExample();         this._openDropdown = null }}">Cargar ejemplo</button>
+              <div class="tbtn-menu-sep"></div>
+              <button class="tbtn" @click="${() => { this._export();        this._openDropdown = null }}">Exportar .tex</button>
+              <div class="tbtn-menu-sep"></div>
+              <button class="tbtn" style="color:var(--error)" @click="${() => { this._confirmClear(); this._openDropdown = null }}">Limpiar</button>
+            </div>
+          ` : ''}
+        </div>
         <div class="sep"></div>
         <!-- Appearance dropdown -->
         <div class="tbtn-drop">
@@ -208,6 +228,10 @@ export class Toolbar extends LitElement {
 
   private _export = () => {
     window.dispatchEvent(new CustomEvent('formalia:export'))
+  }
+
+  private _newDocument = () => {
+    window.dispatchEvent(new CustomEvent('formalia:new'))
   }
 
   private _toggleTheme = () => {

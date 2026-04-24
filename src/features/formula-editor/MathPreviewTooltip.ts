@@ -6,7 +6,7 @@ import { activeMathInputText, activeMathInputRect } from '@core/editor/EditorSto
 
 @customElement('fp-math-preview-tooltip')
 export class MathPreviewTooltip extends LitElement {
-  
+
   override createRenderRoot() { return this }
 
   @state() private _latex: string | null = null
@@ -19,18 +19,18 @@ export class MathPreviewTooltip extends LitElement {
     super.connectedCallback()
     this._disposes.push(
       effect(() => {
-        const text = activeMathInputText.value
-        this._latex = text
+        this._latex = activeMathInputText.value
         this._rect  = activeMathInputRect.value
 
-        // Update memory immediately if valid
+        const text = this._latex
         if (text && text.trim()) {
           try {
-            const htmlStr = katex.renderToString(text, { throwOnError: true, displayMode: true })
-            this._lastValidHtml = htmlStr
+            this._lastValidHtml = katex.renderToString(text, { throwOnError: true, displayMode: true })
           } catch {
-            // Keep previous valid HTML
+            // keep previous valid HTML
           }
+        } else if (!text) {
+          this._lastValidHtml = null
         }
       })
     )
@@ -42,59 +42,26 @@ export class MathPreviewTooltip extends LitElement {
     this._disposes = []
   }
 
+  // render() is pure — no side effects, only HTML structure
   override render() {
-    if (this._latex === null || this._rect === null) {
-      this.style.visibility = 'hidden'
-      return html``
-    }
-
-    // Position tooltip above the center of the text node
-    this.style.visibility = 'visible'
-    this.style.left = `${this._rect.left + (this._rect.width / 2)}px`
-    this.style.top  = `${this._rect.top}px`
-
-    if (!this._latex.trim()) {
-      return html`<div class="tooltip-body empty">fórmula vacía</div>`
-    }
-
-    let isValid = true
-    try {
-      katex.renderToString(this._latex, { throwOnError: true })
-    } catch {
-      isValid = false
-    }
-
-    // If invalid, we show from memory. NO extra styles like 'is-stale'
-    if (!isValid && !this._lastValidHtml) {
-      // Fallback to error message only if we have NO memory at all
-      const errStr = 'error de sintaxis' 
-      return html`<div class="tooltip-body has-error">${errStr}</div>`
-    }
-
-    return html`
-      <div class="tooltip-body katex-container"></div>
-    `
+    if (!this._latex || this._rect === null) return html``
+    if (!this._latex.trim()) return html`<div class="tooltip-body empty">fórmula vacía</div>`
+    if (!this._lastValidHtml) return html`<div class="tooltip-body has-error">error de sintaxis</div>`
+    return html`<div class="tooltip-body katex-container"></div>`
   }
 
+  // updated() handles all side effects: positioning, visibility, KaTeX injection
   override updated() {
-    if (this._rect) {
-      const container = this.renderRoot.querySelector('.katex-container')
-      if (container) {
-        let isValid = true
-        let currentHtml: string | null = null
-        try {
-          if (this._latex) {
-            currentHtml = katex.renderToString(this._latex, { throwOnError: true, displayMode: true })
-          }
-        } catch {
-          isValid = false
-        }
+    const visible = this._latex !== null && this._rect !== null
+    this.style.visibility = visible ? 'visible' : 'hidden'
+    if (!visible || !this._rect) return
 
-        const htmlToShow = isValid ? currentHtml : this._lastValidHtml
-        if (htmlToShow) {
-          container.innerHTML = htmlToShow
-        }
-      }
+    this.style.left = `${this._rect.left + this._rect.width / 2}px`
+    this.style.top  = `${this._rect.top}px`
+
+    const container = this.querySelector<HTMLElement>('.katex-container')
+    if (container && this._lastValidHtml) {
+      container.innerHTML = this._lastValidHtml
     }
   }
 }

@@ -10,11 +10,7 @@ export const EXAMPLE_DOCUMENT = {
   type: 'doc',
   content: [
 
-    // ── Título ────────────────────────────────────────────────────
-    {
-      type: 'heading', attrs: { level: 1 },
-      content: [{ type: 'text', text: 'Análisis Real — Continuidad y Derivada' }]
-    },
+    // ── Intro ─────────────────────────────────────────────────────
     {
       type: 'paragraph',
       content: [
@@ -32,8 +28,8 @@ export const EXAMPLE_DOCUMENT = {
 
     // ── Sección 1 ─────────────────────────────────────────────────
     {
-      type: 'heading', attrs: { level: 2 },
-      content: [{ type: 'text', text: '1. Continuidad' }]
+      type: 'heading', attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Continuidad' }]
     },
 
     // Definición con inline math y display math
@@ -150,8 +146,8 @@ export const EXAMPLE_DOCUMENT = {
 
     // ── Sección 2 ─────────────────────────────────────────────────
     {
-      type: 'heading', attrs: { level: 2 },
-      content: [{ type: 'text', text: '2. Diferenciabilidad' }]
+      type: 'heading', attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Diferenciabilidad' }]
     },
 
     // Definición de derivada
@@ -209,8 +205,8 @@ export const EXAMPLE_DOCUMENT = {
 
     // ── Sección 3 ─────────────────────────────────────────────────
     {
-      type: 'heading', attrs: { level: 2 },
-      content: [{ type: 'text', text: '3. Reglas de derivación' }]
+      type: 'heading', attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Reglas de derivación' }]
     },
 
     // Display math con reglas
@@ -282,7 +278,7 @@ export const EXAMPLE_DOCUMENT = {
 
     // Lista de conjuntos numéricos
     {
-      type: 'heading', attrs: { level: 3 },
+      type: 'heading', attrs: { level: 2 },
       content: [{ type: 'text', text: 'Conjuntos numéricos usados' }]
     },
     {

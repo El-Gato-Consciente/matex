@@ -42,6 +42,23 @@ export const activeFormulaType = signal<'inline' | 'display' | null>(null)
 /** Live document statistics, updated on every editor transaction. */
 export const docStats = signal({ words: 0, mathInline: 0, mathDisplay: 0, theoremEnv: 0 })
 
+/** Flat list of headings for the document outline, updated on every transaction. */
+export interface OutlineItem { level: 1 | 2 | 3; text: string; pos: number; num: string }
+export const docOutline = signal<OutlineItem[]>([])
+
+/** Document identity metadata. */
+export interface DocMeta {
+  title:       string
+  author:      string
+  email:       string
+  date:        string
+  institution: string
+  abstract:    string
+  keywords:    string
+  language:    'es' | 'en'
+}
+export const docMeta = signal<DocMeta>({ title: '', author: '', email: '', date: '', institution: '', abstract: '', keywords: '', language: 'es' })
+
 /** 
  * Unique identifier used to signal that a specific formula node view 
  * should automatically activate itself. Used for keyboard/toolbar insertions.
@@ -102,11 +119,8 @@ function _syncFmtState(): void {
     if (el instanceof Element) {
       activeMathInputRect.value = el.getBoundingClientRect()
     } else {
-      // Fallback to cursor pos if no element found
       const coords = view.coordsAtPos($from.pos)
-      activeMathInputRect.value = {
-        top: coords.top, left: coords.left, width: 0, height: coords.bottom - coords.top, bottom: coords.bottom, right: coords.right, x: coords.left, y: coords.top, toJSON: () => {}
-      } as DOMRect
+      activeMathInputRect.value = new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top)
     }
   } else {
     activeMathInputText.value = null
@@ -121,15 +135,30 @@ function _syncDocStats(): void {
   if (!_editor) return
   const doc = _editor.state.doc
   let mathInline = 0, mathDisplay = 0, theoremEnv = 0
-  doc.descendants(node => {
+  const outline: OutlineItem[] = []
+  let c1 = 0, c2 = 0, c3 = 0
+
+  doc.descendants((node, pos) => {
     if      (node.type.name === 'mathInline')  mathInline++
     else if (node.type.name === 'mathDisplay') mathDisplay++
     else if (node.type.name === 'theoremEnv')  theoremEnv++
+    else if (node.type.name === 'heading') {
+      const level = node.attrs['level'] as 1 | 2 | 3
+      const text  = node.textContent.trim()
+      let num: string
+      if (level === 1)      { c1++; c2 = 0; c3 = 0; num = `${c1}` }
+      else if (level === 2) { c2++; c3 = 0;          num = `${c1}.${c2}` }
+      else                  { c3++;                   num = `${c1}.${c2}.${c3}` }
+      if (text) outline.push({ level, text, pos, num })
+    }
   })
+
   const text  = doc.textContent.trim()
   const words = text ? text.split(/\s+/).length : 0
-  docStats.value = { words, mathInline, mathDisplay, theoremEnv }
+  docStats.value   = { words, mathInline, mathDisplay, theoremEnv }
+  docOutline.value = outline
 }
+
 
 // ── Node activation (called from NodeView click handlers) ─────────
 
@@ -186,6 +215,21 @@ export function releaseFormulaSelection(atPos?: number | null): void {
 /** Returns focus to the editor canvas (called when closing the floating editor). */
 export function focusEditor(): void {
   _editor?.view.focus()
+}
+
+/** Scrolls the editor to the heading at the given ProseMirror position. */
+export function scrollToHeading(pos: number): void {
+  if (!_editor) return
+  const { state, view } = _editor
+  const $pos = state.doc.resolve(pos + 1)
+  const sel  = Selection.near($pos)
+  view.dispatch(state.tr.setSelection(sel))
+  view.focus()
+  requestAnimationFrame(() => {
+    const dom = view.nodeDOM(pos)
+    const el = dom instanceof Element ? dom : (dom as Node | null)?.parentElement
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  })
 }
 
 // ── Formula mutations (called from FormulaPanel) ──────────────────
@@ -274,6 +318,7 @@ export function redo():              void { _editor?.chain().focus().redo().run(
 export function clearDocument(): void {
   if (!_editor) return
   deactivateNode()
+  docMeta.value = { title: '', author: '', email: '', date: '', institution: '', abstract: '', keywords: '', language: 'es' }
   _editor.commands.setContent(
     { type: 'doc', content: [{ type: 'paragraph' }] },
     /* emitUpdate */ true
@@ -285,8 +330,17 @@ export function loadExample(): void {
   import('@features/documents/exampleDocument').then(({ EXAMPLE_DOCUMENT }) => {
     if (!_editor) return
     deactivateNode()
+    docMeta.value = {
+      title:       'Análisis Real — Continuidad y Derivada',
+      author:      'Formalia',
+      email:       '',
+      date:        '',
+      institution: '',
+      abstract:    '',
+      keywords:    'análisis real, continuidad, derivada',
+      language:    'es',
+    }
     _editor.commands.setContent(EXAMPLE_DOCUMENT as never, /* emitUpdate */ true)
-    // Scroll back to top
     _editor.commands.focus('start')
   })
 }
@@ -299,6 +353,36 @@ export function getEditorJSON(): object | null {
 
 export function getEditorDoc() {
   return _editor?.state.doc ?? null
+}
+
+// ── Document metadata ─────────────────────────────────────────────
+
+export function initDocMeta(meta: Partial<DocMeta>): void {
+  docMeta.value = {
+    title:       meta.title       ?? '',
+    author:      meta.author      ?? '',
+    email:       meta.email       ?? '',
+    date:        meta.date        ?? '',
+    institution: meta.institution ?? '',
+    abstract:    meta.abstract    ?? '',
+    keywords:    meta.keywords    ?? '',
+    language:    meta.language    ?? 'es',
+  }
+}
+
+export function updateDocMeta(patch: Partial<DocMeta>): void {
+  docMeta.value = { ...docMeta.value, ...patch }
+}
+
+/**
+ * Replaces the entire editor content programmatically.
+ * Used by TemplateSelector when the user picks a new template.
+ */
+export function setDocumentContent(content: import('@tiptap/core').JSONContent): void {
+  if (!_editor) return
+  deactivateNode()
+  _editor.commands.setContent(content as never, /* emitUpdate */ true)
+  _editor.commands.focus('start')
 }
 
 // ── Validation logic (Auto-updates activeFormulaError) ─────────────

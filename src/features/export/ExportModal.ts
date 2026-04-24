@@ -1,7 +1,7 @@
 import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { TexSerializer } from '@core/serializer/TexSerializer'
-import { getEditorDoc } from '@core/editor/EditorStore'
+import { getEditorDoc, docMeta } from '@core/editor/EditorStore'
 
 /* ─────────────────────────────────────────────────────────────────
    ExportModal — Phase 1
@@ -30,7 +30,7 @@ export class ExportModal extends LitElement {
 
   open() {
     const doc = getEditorDoc()
-    this._tex    = doc ? this._serializer.serialize(doc) : '% (empty document)'
+    this._tex    = doc ? this._serializer.serialize(doc, docMeta.value) : '% (empty document)'
     this._copied = false
     this._dialog?.showModal()
   }

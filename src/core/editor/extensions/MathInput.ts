@@ -8,6 +8,54 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
    Inside the mathInput node, typing $ again commits it to a mathInline node.
    ───────────────────────────────────────────────────────────────── */
 
+// ── Shared helpers ────────────────────────────────────────────────
+
+/**
+ * Commits a mathInput node (inline) to a mathInline atom and moves the cursor.
+ * If the node is empty, it is deleted instead.
+ */
+function commitInlineAndMove(editor: any, side: 'left' | 'right'): boolean {
+  const { state, view } = editor
+  const { $from } = state.selection
+  const latex = $from.parent.textContent
+  const pos    = $from.before()
+  const endpos = $from.after()
+  const tr = state.tr
+
+  if (!latex.trim()) {
+    tr.delete(pos, endpos)
+  } else {
+    tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex }))
+  }
+  view.dispatch(tr.setSelection(TextSelection.create(tr.doc, side === 'right' ? pos + 1 : pos)))
+  return true
+}
+
+/**
+ * Replaces a committed mathInline/mathDisplay node with an editable
+ * mathInput/mathDisplayInput node, placing the cursor at start or end.
+ */
+function openNodeAsInput(
+  editor: any,
+  node: any,
+  pos: number,
+  endPos: number,
+  cursorAtEnd: boolean,
+  isDisplay = false,
+): void {
+  const { state, view } = editor
+  const latex: string = node.attrs.latex || ''
+  const inputType = isDisplay
+    ? state.schema.nodes.mathDisplayInput
+    : state.schema.nodes.mathInput
+  const newNode = inputType.create(null, latex ? state.schema.text(latex) : null)
+  const tr = state.tr.replaceWith(pos, endPos, newNode)
+  const cursorPos = cursorAtEnd ? pos + 1 + latex.length : pos + 1
+  view.dispatch(tr.setSelection(TextSelection.create(tr.doc, cursorPos)))
+}
+
+// ── MathInputNode ─────────────────────────────────────────────────
+
 export const MathInputNode = Node.create({
   name: 'mathInput',
   group: 'inline',
@@ -16,17 +64,15 @@ export const MathInputNode = Node.create({
   selectable: true,
 
   parseHTML() {
-    return [
-      { tag: 'span.math-input-node' },
-    ]
+    return [{ tag: 'span.math-input-node' }]
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
       'span', mergeAttributes(HTMLAttributes, { class: 'math-input-node' }),
-      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B'],
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '​'],
       ['span', { class: 'math-input-content' }, 0],
-      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B']
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '​'],
     ]
   },
 
@@ -38,16 +84,36 @@ export const MathInputNode = Node.create({
           decorations(state) {
             const decorations: Decoration[] = []
             state.doc.descendants((node, pos) => {
-              if ((node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') && node.textContent.length === 0) {
-                decorations.push(Decoration.node(pos, pos + node.nodeSize, {
-                  class: 'is-empty'
-                }))
+              if (
+                (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') &&
+                node.textContent.length === 0
+              ) {
+                decorations.push(Decoration.node(pos, pos + node.nodeSize, { class: 'is-empty' }))
               }
             })
             return DecorationSet.create(state.doc, decorations)
+          },
+        },
+      }),
+      new Plugin({
+        key: new PluginKey('mathInputFocusHighlight'),
+        view() {
+          return {
+            update(view) {
+              const { $from } = view.state.selection
+              let inside = false
+              for (let d = $from.depth; d >= 0; d--) {
+                const name = $from.node(d).type.name
+                if (name === 'mathInput' || name === 'mathDisplayInput') { inside = true; break }
+              }
+              document.body.classList.toggle('has-inline-edit', inside)
+            },
+            destroy() {
+              document.body.classList.remove('has-inline-edit')
+            },
           }
-        }
-      })
+        },
+      }),
     ]
   },
 
@@ -55,225 +121,181 @@ export const MathInputNode = Node.create({
     return {
       'Enter': () => {
         const { state, view } = this.editor
-        const { selection } = state
-        const { $from } = selection
+        const { $from } = state.selection
         const node = $from.parent
 
-        if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
-          const isDisplay = node.type.name === 'mathDisplayInput'
-          const text = node.textContent
-          const tr = state.tr
-          const pos = $from.before()
-          const endpos = $from.after()
+        if (node.type.name !== 'mathInput' && node.type.name !== 'mathDisplayInput') return false
 
-          if (!text.trim()) {
-            tr.delete(pos, endpos)
-          } else {
-            const newNode = isDisplay 
-              ? state.schema.nodes.mathDisplay.create({ latex: text })
-              : state.schema.nodes.mathInline.create({ latex: text })
-            tr.replaceWith(pos, endpos, newNode)
-          }
-          view.dispatch(tr)
-          return true
+        const isDisplay = node.type.name === 'mathDisplayInput'
+        const text   = node.textContent
+        const pos    = $from.before()
+        const endpos = $from.after()
+        const tr     = state.tr
+
+        if (!text.trim()) {
+          tr.delete(pos, endpos)
+        } else {
+          const newNode = isDisplay
+            ? state.schema.nodes.mathDisplay.create({ latex: text })
+            : state.schema.nodes.mathInline.create({ latex: text })
+          tr.replaceWith(pos, endpos, newNode)
         }
-        return false
+        view.dispatch(tr)
+        return true
       },
+
       'Shift-Enter': () => {
         const { state, view } = this.editor
-        const { selection } = state
-        const { $from } = selection
-        if ($from.parent.type.name === 'mathInput') {
-          view.dispatch(state.tr.insertText('\n'))
-          return true
-        }
-        return false
+        const { $from } = state.selection
+        if ($from.parent.type.name !== 'mathInput') return false
+        view.dispatch(state.tr.insertText('\n'))
+        return true
       },
+
       'Escape': () => {
         const { state, view } = this.editor
-        const { selection } = state
-        const { $from } = selection
+        const { $from } = state.selection
         const node = $from.parent
 
-        if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
-          const isDisplay = node.type.name === 'mathDisplayInput'
-          const pos = $from.before()
-          const endpos = $from.after()
-          
-          // Revert to literal $ or $$
-          const text = isDisplay ? '$$' : '$'
-          const tr = state.tr.replaceWith(pos, endpos, state.schema.text(text))
-          
-          // Move cursor after the inserted text
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + text.length)))
-          view.focus()
-          return true
+        if (node.type.name !== 'mathInput' && node.type.name !== 'mathDisplayInput') return false
+
+        const isDisplay = node.type.name === 'mathDisplayInput'
+        const text   = node.textContent
+        const pos    = $from.before()
+        const endpos = $from.after()
+        const tr     = state.tr
+
+        if (!text.trim()) {
+          // Empty inline → revert to literal "$". Empty display → just delete.
+          if (isDisplay) {
+            tr.delete(pos, endpos)
+            view.dispatch(tr)
+          } else {
+            tr.replaceWith(pos, endpos, state.schema.text('$'))
+            view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+          }
+        } else {
+          // Has content → commit as formula and exit
+          const newNode = isDisplay
+            ? state.schema.nodes.mathDisplay.create({ latex: text })
+            : state.schema.nodes.mathInline.create({ latex: text })
+          tr.replaceWith(pos, endpos, newNode)
+          view.dispatch(tr)
         }
-        return false
+        view.focus()
+        return true
       },
+
       'Space': () => {
         const { state, view } = this.editor
-        const { selection } = state
-        const { $from } = selection
-        const node = $from.parent
-
-        // Case: $ + Space while empty => Revert to literal "$ "
-        if (node.type.name === 'mathInput' && node.textContent.length === 0) {
-          const pos = $from.before()
-          const endpos = $from.after()
-          const tr = state.tr.replaceWith(pos, endpos, state.schema.text('$ '))
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 2)))
-          return true
-        }
-        return false
+        const { $from } = state.selection
+        // $ + Space while empty → revert to literal "$ "
+        if ($from.parent.type.name !== 'mathInput' || $from.parent.textContent.length !== 0) return false
+        const pos    = $from.before()
+        const endpos = $from.after()
+        const tr = state.tr.replaceWith(pos, endpos, state.schema.text('$ '))
+        view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 2)))
+        return true
       },
+
       'ArrowRight': () => {
-        const { state, view } = this.editor
-        const { selection } = state
-        const { $from, empty } = selection
-        if (!empty) return false
+        const { state } = this.editor
+        const { $from, empty } = state.selection
+        if (!empty || $from.parent.type.name !== 'mathInput') return false
 
-        // 1. Escaping mathInput to the right
-        if ($from.parent.type.name === 'mathInput') {
-          const size = $from.parent.content.size
-          if ($from.parentOffset === size) {
-            const latex = $from.parent.textContent
-            const pos = $from.before()
-            const endpos = $from.after()
-            const tr = state.tr
-            if (!latex.trim()) {
-              tr.delete(pos, endpos)
-            } else {
-              tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex }))
-            }
-            view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
-            return true
-          } else if ($from.parentOffset === size - 1) {
-            view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.pos + 1)))
-            return true
-          }
+        const size = $from.parent.content.size
+        if ($from.parentOffset === size) {
+          return commitInlineAndMove(this.editor, 'right')
         }
-        
+        if ($from.parentOffset === size - 1) {
+          this.editor.view.dispatch(
+            state.tr.setSelection(TextSelection.create(state.doc, $from.pos + 1))
+          )
+          return true
+        }
         return false
       },
+
       'ArrowLeft': () => {
-        const { state, view } = this.editor
-        const { selection } = state
-        const { $from, empty } = selection
-        if (!empty) return false
+        const { state } = this.editor
+        const { $from, empty } = state.selection
+        if (!empty || $from.parent.type.name !== 'mathInput') return false
 
-        // 1. Escaping mathInput to the left
-        if ($from.parent.type.name === 'mathInput') {
-          if ($from.parentOffset === 0) {
-            const latex = $from.parent.textContent
-            const pos = $from.before()
-            const endpos = $from.after()
-            const tr = state.tr
-            if (!latex.trim()) {
-              tr.delete(pos, endpos)
-            } else {
-              tr.replaceWith(pos, endpos, state.schema.nodes.mathInline.create({ latex }))
-            }
-            view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos)))
-            return true
-          } else if ($from.parentOffset === 1) {
-            view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.pos - 1)))
-            return true
-          }
+        if ($from.parentOffset === 0) {
+          return commitInlineAndMove(this.editor, 'left')
         }
-
+        if ($from.parentOffset === 1) {
+          this.editor.view.dispatch(
+            state.tr.setSelection(TextSelection.create(state.doc, $from.pos - 1))
+          )
+          return true
+        }
         return false
       },
+
       'Alt-Enter': () => {
-        const { state, view } = this.editor
-        const { selection } = state
-        const sel = selection as any
+        const { state } = this.editor
+        const sel = state.selection as any
+        if (!sel.node) return false
+        const node = sel.node
+        const name = node.type.name
+        if (name !== 'mathInline' && name !== 'mathDisplay') return false
 
-        // If it's a node selection of mathInline or mathDisplay
-        if (sel.node && (sel.node.type.name === 'mathInline' || sel.node.type.name === 'mathDisplay')) {
-          const node = sel.node
-          const isDisplay = node.type.name === 'mathDisplay'
-          const pos = selection.from
-          const latex = node.attrs.latex || ''
-          const tr = state.tr
-          const newNodeType = isDisplay ? state.schema.nodes.mathDisplayInput : state.schema.nodes.mathInput
-          const newNode = newNodeType.create(null, latex ? state.schema.text(latex) : null)
-          tr.replaceWith(pos, pos + node.nodeSize, newNode)
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
-          return true
-        }
-        return false
+        openNodeAsInput(this.editor, node, sel.from, sel.from + node.nodeSize, false, name === 'mathDisplay')
+        return true
       },
+
       'Alt-ArrowRight': () => {
-        const { state, view } = this.editor
-        const { selection } = state
-        
-        // If it's a node selection
-        if ((selection as any).node?.type.name === 'mathInline') {
-          const node = (selection as any).node
-          const pos = selection.from
-          const latex = node.attrs.latex || ''
-          const tr = state.tr
-          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
-          tr.replaceWith(pos, pos + node.nodeSize, newNode)
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+        const { state } = this.editor
+        const sel = state.selection as any
+
+        // Node selection of mathInline → open at start
+        if (sel.node?.type.name === 'mathInline') {
+          openNodeAsInput(this.editor, sel.node, sel.from, sel.from + sel.node.nodeSize, false)
           return true
         }
 
-        // If it's a cursor next to it
-        const { $from, empty } = selection
+        // Cursor right before a mathInline → open at start
+        const { $from, empty } = state.selection
         if (!empty) return false
         const nodeAfter = $from.nodeAfter
-        if (nodeAfter && nodeAfter.type.name === 'mathInline') {
-          const latex = nodeAfter.attrs.latex || ''
-          const pos = $from.pos
-          const tr = state.tr
-          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
-          tr.replaceWith(pos, pos + nodeAfter.nodeSize, newNode)
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)))
+        if (nodeAfter?.type.name === 'mathInline') {
+          openNodeAsInput(this.editor, nodeAfter, $from.pos, $from.pos + nodeAfter.nodeSize, false)
           return true
         }
         return false
       },
-      'Alt-ArrowLeft': () => {
-        const { state, view } = this.editor
-        const { selection } = state
 
-        // If it's a node selection
-        if ((selection as any).node?.type.name === 'mathInline') {
-          const node = (selection as any).node
-          const pos = selection.from
-          const latex = node.attrs.latex || ''
-          const tr = state.tr
-          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
-          tr.replaceWith(pos, pos + node.nodeSize, newNode)
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1 + latex.length)))
+      'Alt-ArrowLeft': () => {
+        const { state } = this.editor
+        const sel = state.selection as any
+
+        // Node selection of mathInline → open at end
+        if (sel.node?.type.name === 'mathInline') {
+          openNodeAsInput(this.editor, sel.node, sel.from, sel.from + sel.node.nodeSize, true)
           return true
         }
 
-        // If it's a cursor next to it
-        const { $from, empty } = selection
+        // Cursor right after a mathInline → open at end
+        const { $from, empty } = state.selection
         if (!empty) return false
         const nodeBefore = $from.nodeBefore
-        if (nodeBefore && nodeBefore.type.name === 'mathInline') {
-          const latex = nodeBefore.attrs.latex || ''
+        if (nodeBefore?.type.name === 'mathInline') {
           const pos = $from.pos - nodeBefore.nodeSize
-          const tr = state.tr
-          const newNode = state.schema.nodes.mathInput.create(null, latex ? state.schema.text(latex) : null)
-          tr.replaceWith(pos, $from.pos, newNode)
-          view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1 + latex.length)))
+          openNodeAsInput(this.editor, nodeBefore, pos, $from.pos, true)
           return true
         }
         return false
-      }
+      },
     }
-  }
+  },
 })
 
+// ── MathInputAutoCommit ───────────────────────────────────────────
+
 /**
- * MathInputAutoCommit — Extension that monitors the cursor.
- * If the selection leaves an input node (click outside, keyboard jump),
- * it automatically commits the input into a real formula.
+ * Monitors the cursor. If the selection leaves a mathInput node
+ * (click outside, keyboard jump), auto-commits it to a real formula.
  */
 export const MathInputAutoCommit = Extension.create({
   name: 'mathInputAutoCommit',
@@ -286,47 +308,44 @@ export const MathInputAutoCommit = Extension.create({
           const tr = newState.tr
           let modified = false
 
-          // We look for any mathInput nodes that do NOT contain the current selection.
           newState.doc.descendants((node, pos) => {
-            if (node.type.name === 'mathInput' || node.type.name === 'mathDisplayInput') {
-              const { selection } = newState
-              
-              // Structural check: Is the current node an ancestor of the selection?
-              // This is much more robust than numerical range checks for block nodes.
-              let selectionIsInside = false
-              for (let i = 0; i <= selection.$from.depth; i++) {
-                if (selection.$from.node(i) === node) {
-                  selectionIsInside = true
-                  break
-                }
-              }
+            if (node.type.name !== 'mathInput' && node.type.name !== 'mathDisplayInput') return
 
-              if (!selectionIsInside) {
-                const latex = node.textContent
-                const isDisplay = node.type.name === 'mathDisplayInput'
-                
-                if (!latex.trim()) {
-                  tr.delete(pos, pos + node.nodeSize)
-                } else {
-                  const nodeType = isDisplay 
-                    ? newState.schema.nodes.mathDisplay 
-                    : newState.schema.nodes.mathInline
-                  
-                  tr.replaceWith(pos, pos + node.nodeSize, nodeType.create({ latex }))
-                }
-                modified = true
+            // Structural check: is the selection inside this node?
+            const { selection } = newState
+            let selectionIsInside = false
+            for (let i = 0; i <= selection.$from.depth; i++) {
+              if (selection.$from.node(i) === node) {
+                selectionIsInside = true
+                break
               }
             }
+            if (selectionIsInside) return
+
+            const latex    = node.textContent
+            const isDisplay = node.type.name === 'mathDisplayInput'
+
+            if (!latex.trim()) {
+              tr.delete(pos, pos + node.nodeSize)
+            } else {
+              const nodeType = isDisplay
+                ? newState.schema.nodes.mathDisplay
+                : newState.schema.nodes.mathInline
+              tr.replaceWith(pos, pos + node.nodeSize, nodeType.create({ latex }))
+            }
+            modified = true
           })
 
           return modified ? tr : null
-        }
-      })
+        },
+      }),
     ]
-  }
+  },
 })
 
-// Extension to handle the $ text input dynamically
+// ── MathInputTrigger ──────────────────────────────────────────────
+
+/** Intercepts $ key to create/commit mathInput nodes. */
 export const MathInputTrigger = Extension.create({
   name: 'mathInputTrigger',
 
@@ -339,62 +358,51 @@ export const MathInputTrigger = Extension.create({
             if (text !== '$') return false
 
             const { state } = view
-            const { selection } = state
-            const { $from } = selection
-
-            // Case 1: We are ALREADY inside a mathInput node.
+            const { $from } = state.selection
             const parentType = $from.parent.type.name
+
+            // Inside a mathInput: $ closes/commits it
             if (parentType === 'mathInput' || parentType === 'mathDisplayInput') {
+              // Allow literal \$ inside the formula
               const textBefore = $from.parent.textContent.substring(0, $from.parentOffset)
-              if (textBefore.endsWith('\\')) {
-                // If it's escaped like \$, do not close the formula, just let Prosemirror insert the $ char as text
-                return false
-              }
+              if (textBefore.endsWith('\\')) return false
 
               const latexContent = $from.parent.textContent
-              const pos = $from.before()
+              const pos    = $from.before()
               const endpos = $from.after()
-              const tr = state.tr
+              const tr     = state.tr
 
-              // Special Case: $$ sequence
-              // If we are in an EMPTY mathInput and type $, transform to block editor
+              // Empty mathInput + $ → upgrade to block display input ($$)
               if (parentType === 'mathInput' && !latexContent.trim()) {
                 tr.replaceWith(pos, endpos, state.schema.nodes.mathDisplayInput.create())
-                // Selection.near is more robust than TextSelection for block nodes
                 tr.setSelection(Selection.near(tr.doc.resolve(pos + 1)))
                 view.dispatch(tr)
                 return true
               }
 
-              // Otherwise, commit the formula
-              const nodeType = (parentType === 'mathDisplayInput')
+              // Commit the formula
+              const nodeType = parentType === 'mathDisplayInput'
                 ? state.schema.nodes.mathDisplay
                 : state.schema.nodes.mathInline
-
               tr.replaceWith(pos, endpos, nodeType.create({ latex: latexContent }))
               view.dispatch(tr)
-              return true // consume the $
+              return true
             }
 
-            // Case 2: We are outside, user types $. Insert an empty mathInput node.
-            // Create start of mathInput node.
+            // Outside: $ → create a new empty inline input node
             const tr = state.tr
-            const emptyNode = state.schema.nodes.mathInput.create()
-            tr.replaceWith(from, to, emptyNode)
-            
-            // Move cursor inside the newly created node
-            // The node size of an empty inline text node container is usually bounds. 
-            const newPos = from + 1
-            tr.setSelection(TextSelection.create(tr.doc, newPos))
-            
+            tr.replaceWith(from, to, state.schema.nodes.mathInput.create())
+            tr.setSelection(TextSelection.create(tr.doc, from + 1))
             view.dispatch(tr)
-            return true // consume the $
+            return true
           },
         },
       }),
     ]
   },
 })
+
+// ── MathDisplayInputNode ──────────────────────────────────────────
 
 export const MathDisplayInputNode = Node.create({
   name: 'mathDisplayInput',
@@ -405,17 +413,15 @@ export const MathDisplayInputNode = Node.create({
   isolating: true,
 
   parseHTML() {
-    return [
-      { tag: 'div.math-display-input-node' },
-    ]
+    return [{ tag: 'div.math-display-input-node' }]
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
       'div', mergeAttributes(HTMLAttributes, { class: 'math-display-input-node' }),
-      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B'],
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '​'],
       ['span', { class: 'math-input-content' }, 0],
-      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '\u200B']
+      ['span', { class: 'math-input-boundary', contenteditable: 'false' }, '​'],
     ]
   },
 })

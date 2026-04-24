@@ -14,12 +14,17 @@ import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
 import { TheoremEnvTitle }   from '@core/editor/extensions/TheoremEnvTitle'
 import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
 import { MathInputNode, MathDisplayInputNode, MathInputTrigger, MathInputAutoCommit } from '@core/editor/extensions/MathInput'
-import { SlashCommands }    from '@core/editor/extensions/SlashCommands'
-import { setEditor }         from '@core/editor/EditorStore'
+import { SlashCommands }      from '@core/editor/extensions/SlashCommands'
+import { SectionNumbering }   from '@core/editor/extensions/SectionNumbering'
+import { setEditor, initDocMeta, docMeta } from '@core/editor/EditorStore'
+import { effect } from '@preact/signals-core'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
 import { toStorage, fromStorage } from '@features/documents/DocumentSerializer'
 
 // Register Lit components (side-effect imports)
+import '@features/documents/DocHeader'
+import '@features/documents/DocPanel'
+import '@features/documents/TemplateSelector'
 import '@ui/toolbar/Toolbar'
 import '@ui/status-bar/StatusBar'
 import '@features/formula-editor/FloatingFormulaEditor'
@@ -39,6 +44,20 @@ if (!editorEl) throw new Error('#editor element not found')
 
 let currentDoc = storage.loadDocument()
 
+// Initialize docMeta signal from persisted metadata
+if (currentDoc?.metadata) {
+  initDocMeta({
+    title:       currentDoc.metadata.title       ?? '',
+    author:      currentDoc.metadata.author      ?? '',
+    email:       currentDoc.metadata.email       ?? '',
+    date:        currentDoc.metadata.date        ?? '',
+    institution: currentDoc.metadata.institution ?? '',
+    abstract:    currentDoc.metadata.abstract    ?? '',
+    keywords:    currentDoc.metadata.keywords    ?? '',
+    language:    currentDoc.metadata.language    ?? 'es',
+  })
+}
+
 const editor: Editor = new Editor({
   element: editorEl,
   extensions: [
@@ -56,15 +75,31 @@ const editor: Editor = new Editor({
     MathInputAutoCommit,
     MathInputTrigger,
     SlashCommands,
+    SectionNumbering,
   ],
   content: (currentDoc ? fromStorage(currentDoc) : { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
   onUpdate({ editor: e }) {
-    currentDoc = toStorage(e.getJSON(), currentDoc ?? undefined)
-    storage.saveDocument(currentDoc)
+    currentDoc = _save(e.getJSON())
   },
 })
 
+function _save(json?: object) {
+  const prev: Parameters<typeof toStorage>[1] = {
+    ...currentDoc,
+    metadata: { ...currentDoc?.metadata, ...docMeta.value, savedAt: 0, createdAt: currentDoc?.metadata?.createdAt ?? 0 },
+  }
+  const doc = toStorage((json ?? editor.getJSON()) as never, prev)
+  storage.saveDocument(doc)
+  return doc
+}
+
 setEditor(editor)
+
+// Persist whenever metadata changes (title, author, date, institution)
+effect(() => {
+  docMeta.value  // subscribe
+  if (editor) _save()
+})
 
 // ── Inject Lit components into layout slots ─────────────────────────
 
@@ -73,6 +108,15 @@ const appToolbar = document.getElementById('app-toolbar')!
 appToolbar.innerHTML = ''
 const toolbar = document.createElement('fp-toolbar')
 appToolbar.appendChild(toolbar)
+
+// DocHeader — mounted above the editor canvas
+const editorWrap = document.getElementById('editor-wrap') ?? editorEl.parentElement!
+const docHeader = document.createElement('fp-doc-header')
+editorWrap.insertBefore(docHeader, editorEl)
+
+// TemplateSelector — appended to body, renders its own <dialog>
+const templateSelector = document.createElement('fp-template-selector')
+document.body.appendChild(templateSelector)
 
 // ExportModal — appended to body, renders its own <dialog>
 const modal = document.createElement('fp-export-modal')
@@ -90,13 +134,13 @@ document.body.appendChild(mathTooltip)
 const statusBarEl = document.getElementById('status-bar')!
 statusBarEl.appendChild(document.createElement('fp-status-bar'))
 
-// Sidebar
+// Doc panel (left)
+const docPanel = document.getElementById('doc-panel')!
+docPanel.appendChild(document.createElement('fp-doc-panel'))
+
+// Snippet sidebar (right)
 const sidebar = document.getElementById('snippet-sidebar')!
 sidebar.innerHTML = ''
 sidebar.appendChild(document.createElement('fp-snippet-sidebar'))
-
-const coach = document.getElementById('coach-panel')!
-coach.innerHTML = ''
-coach.appendChild(document.createElement('fp-coach-panel'))
 
 console.log('Formalia — Phase 1 loaded')

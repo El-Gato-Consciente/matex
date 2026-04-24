@@ -16,9 +16,16 @@ export interface LtxjDocument {
   normalizerMode: 'strict' | 'mixed' | 'suggestion'
   silencedRules:  string[]
   metadata: {
-    title:     string
-    savedAt:   number
-    createdAt: number
+    title:       string
+    author:      string
+    email:       string
+    date:        string
+    institution: string
+    abstract:    string
+    keywords:    string
+    language:    'es' | 'en'
+    savedAt:     number
+    createdAt:   number
   }
   content: JSONContent
 }
@@ -28,6 +35,19 @@ const DEFAULTS: Omit<LtxjDocument, 'content' | 'metadata'> = {
   profileId:      'article-pro',
   normalizerMode: 'mixed',
   silencedRules:  [],
+}
+
+/** Strips attrs that are only meaningful at runtime and must not be persisted. */
+function stripTransientAttrs(content: JSONContent): JSONContent {
+  const strip = (node: JSONContent): JSONContent => {
+    const { activationToken: _, ...cleanAttrs } = (node.attrs ?? {}) as Record<string, unknown>
+    return {
+      ...node,
+      attrs:   Object.keys(cleanAttrs).length > 0 ? cleanAttrs : undefined,
+      content: node.content?.map(strip),
+    }
+  }
+  return strip(content)
 }
 
 export function toStorage(
@@ -40,11 +60,18 @@ export function toStorage(
     ...prev,
     version:  1,
     metadata: {
-      title:     prev?.metadata?.title     ?? '',
-      createdAt: prev?.metadata?.createdAt ?? now,
-      savedAt:   now,
+      title:       prev?.metadata?.title       ?? '',
+      author:      prev?.metadata?.author      ?? '',
+      email:       prev?.metadata?.email       ?? '',
+      date:        prev?.metadata?.date        ?? '',
+      institution: prev?.metadata?.institution ?? '',
+      abstract:    prev?.metadata?.abstract    ?? '',
+      keywords:    prev?.metadata?.keywords    ?? '',
+      language:    prev?.metadata?.language    ?? 'es',
+      createdAt:   prev?.metadata?.createdAt   ?? now,
+      savedAt:     now,
     },
-    content,
+    content: stripTransientAttrs(content),
   }
 }
 

@@ -406,92 +406,146 @@ Misma información, dos niveles de granularidad.
 
 ---
 
-## Fase 4 — Multi-documento
+## Fase 4 — Identidad del documento y templates
 
-**Criterio de salida:** el usuario puede gestionar múltiples documentos (crear, renombrar, duplicar, eliminar) con persistencia correcta en localStorage.
-
-> Los ítems originales de esta fase (ManifestEngine, Template selector, ExportOverride UI)
-> fueron postergados por ser over-engineering para el estado actual.
-> Ver detalle y motivación en [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md).
+**Criterio de salida:** el documento tiene título, autor y fecha; el `.tex` exportado los refleja con `\maketitle`; el usuario puede elegir un template al crear un documento nuevo.
 
 ### Módulos a construir
 
-#### 4.1 — Multi-documento
+#### 4.1 — Metadata del documento
 
-`src/features/documents/DocumentManager.ts`
+- Panel de metadata colapsable integrado en el ExportModal o sobre el editor
+- Campos: título, autor, fecha, institución
+- Serializado dentro de `LtxjDocument.metadata` (ya existe el envelope)
+- Genera `\title`, `\author`, `\date`, `\maketitle` en el preámbulo LaTeX exportado
 
-- Lista de documentos en localStorage (índice: `formalia:docs:index`)
-- Cada doc: `formalia:doc:<uuid>` → JSON del estado TipTap + metadata
-- UI: sidebar de documentos (panel lateral izquierdo, colapsable)
-- Crear / renombrar / duplicar / eliminar documento
-- Auto-save cada 30 segundos + en blur
+#### 4.2 — Template selector
+
+Modal al crear un documento nuevo con las siguientes opciones:
+
+| Template | Estructura inicial |
+|---|---|
+| Documento en blanco | Solo párrafo vacío |
+| Guía de ejercicios | Heading + 3 TheoremEnv(exercise) |
+| Apunte de clase | Heading + definition + example + remark |
+| Resolución de TP | Heading + párrafos con display math |
+| Resumen de teoría | Heading + lista de definiciones |
+
+#### 4.3 — Ejemplo enriquecido
+
+Reemplazar el `exampleDocument` actual por uno que muestre el rango completo de capacidades: secciones, matrices, entornos de teorema, fórmulas display, referencias, listas.
 
 ---
 
-## Fase 5 — Robustez y producción
+## Fase 5 — Personalización matemática
 
-> Antes de arrancar esta fase, revisar [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md)
-> para evaluar si ManifestEngine, Template selector o ExportOverride UI ya tienen justificación.
-
-**Duración estimada:** 3 semanas  
-**Criterio de salida:** producto desplegable, con tests de las reglas críticas, con importación básica de `.tex`.
+**Criterio de salida:** el usuario puede definir sus propios snippets y macros LaTeX que sobreviven entre sesiones y se exportan correctamente al `.tex`.
 
 ### Módulos a construir
 
-#### 5.1 — Importación `.tex` (round-trip)
+#### 5.1 — Snippets personalizados
+
+`src/features/formula-editor/UserSnippets.ts`
+
+- Crear / editar / eliminar snippets propios con preview KaTeX en tiempo real
+- Persistencia: `formalia:user-snippets` en localStorage
+- Integración como ciudadanos de primera clase: aparecen en el sidebar, soportan favoritos y atajos Ctrl+Shift+N
+- Categoría "Mis snippets" al inicio de la lista expandida
+
+Ver spec completa en [`notes-man-ai/snippets-personalizados-macros.md`](../../notes-man-ai/snippets-personalizados-macros.md).
+
+#### 5.2 — Macros de usuario
+
+`src/features/formula-editor/UserMacros.ts`
+
+- Definir `\newcommand` con argumentos posicionales (`#1`, `#2`, …)
+- Se integran con KaTeX via la opción `macros` en todas las llamadas a `katex.render()`
+- Se emiten en el preámbulo del `.tex` exportado
+- Modal de creación con preview KaTeX en tiempo real sustituyendo valores de ejemplo
+
+Ver spec completa en [`notes-man-ai/snippets-personalizados-macros.md`](../../notes-man-ai/snippets-personalizados-macros.md).
+
+#### 5.3 — ManifestEngine mínimo
+
+Solo lo necesario para que las macros de usuario aparezcan en el preámbulo exportado. No incluye el sistema de perfiles completo (postergado — ver [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md)).
+
+---
+
+## Fase 6 — Multi-documento
+
+**Criterio de salida:** el usuario puede gestionar múltiples documentos (crear, renombrar, duplicar, eliminar) con persistencia correcta en localStorage.
+
+### Módulos a construir
+
+#### 6.1 — DocumentManager
+
+`src/features/documents/DocumentManager.ts`
+
+- Índice en localStorage: `formalia:docs:index`
+- Cada doc: `formalia:doc:<uuid>` → `LtxjDocument` completo
+- Migración automática del doc único actual al nuevo esquema al primer arranque
+
+#### 6.2 — UI de gestión
+
+- Modal "Mis documentos": crear, renombrar, duplicar, eliminar
+- Nombre del documento visible en la toolbar, clicable para renombrar inline
+- Indicador visual de "guardado" / "guardando…"
+
+#### 6.3 — Auto-save mejorado
+
+- Cada 30 segundos + en `visibilitychange` (tab pierde foco)
+- Reemplaza el auto-save por `onUpdate` actual (demasiado agresivo para multi-doc)
+
+---
+
+## Fase 7 — Robustez y producción
+
+> Antes de arrancar esta fase, revisar [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md)
+> para evaluar si ManifestEngine completo, Template selector avanzado o ExportOverride UI ya tienen justificación.
+
+**Criterio de salida:** producto desplegable, con tests de las partes críticas, con importación básica de `.tex`.
+
+### Módulos a construir
+
+#### 7.1 — Importación `.tex` (round-trip)
 
 `src/features/documents/TexImporter.ts`
 
 Parser ligero (no un compilador LaTeX completo):
 - Reconoce: `\section`, `\subsection`, `$...$`, `\[...\]`, `\begin{theorem}...\end{theorem}`,
   `\begin{equation}`, `\begin{align*}`, párrafos, `\textbf`, `\textit`
-- Lo no reconocido → `rawLatex` node con `reason: "imported verbatim"`
+- Lo no reconocido → nodo de texto plano con el contenido verbatim
 - Output: `LtxjDocument` para cargar en TipTap
 
-#### 5.2 — Tests
-
-```
-tests/
-├── normalizer/
-│   ├── AutoDelimiters.test.ts
-│   ├── DxSpacing.test.ts
-│   ├── MacroExpansion.test.ts
-│   ├── TextInMath.test.ts
-│   └── ForbiddenSyntax.test.ts
-├── serializer/
-│   └── TexSerializer.test.ts
-├── ast/
-│   ├── ASTParser.test.ts
-│   └── ASTSerializer.test.ts
-└── linter/
-    └── SemanticLinter.test.ts
-```
+#### 7.2 — Tests
 
 Framework: Vitest (integra con Vite sin configuración).
 
-Para cada regla del normalizer, como mínimo:
-1. Caso donde `applies()` retorna true y la transformación es correcta
-2. Caso donde `applies()` retorna false (falso positivo evitado)
-3. Caso con la excepción documentada en la spec
+```
+tests/
+├── serializer/
+│   └── TexSerializer.test.ts
+├── documents/
+│   └── DocumentSerializer.test.ts
+└── math/
+    └── latexUtils.test.ts
+```
 
-#### 5.3 — SemanticLinter
+#### 7.3 — SemanticLinter
 
 `src/core/linter/SemanticLinter.ts`
 
-Implementar según `03-engine-specs/semantic-linter.md`.
-Se ejecuta al intentar exportar — bloquea si hay errores `E0xx`.
+Se ejecuta al intentar exportar — bloquea si hay errores críticos (fórmulas vacías, entornos sin cerrar, etc.).
 
-#### 5.4 — IndexedDB para documentos grandes
+#### 7.4 — IndexedDB para documentos grandes
 
 `src/features/documents/IndexedDBAdapter.ts`
 
-Reemplaza a `LocalStorageAdapter` cuando el documento supera ~500KB.
-Misma interface (`IStorageAdapter`), implementación diferente.
+Reemplaza `LocalStorageAdapter` cuando el documento supera ~500 KB. Misma interface, implementación diferente.
 
-#### 5.5 — Deploy
+#### 7.5 — Deploy
 
-`vercel.json` o GitHub Actions (ya hay `.github/workflows/deploy.yml`).
-Revisar el workflow existente y completarlo.
+Revisar y completar `.github/workflows/deploy.yml` existente.
 
 ---
 
@@ -554,15 +608,18 @@ El CoachPanel explica la diferencia. Esta es la propuesta de valor central de Fo
 
 ## Resumen por fase
 
-| Fase | Entregable clave | Desbloqueado por |
+| Fase | Entregable clave | Estado |
 |---|---|---|
-| **0** | Proyecto Vite+TS levanta, estructura de directorios | — |
-| **1** | Editor funcional modo Código + .tex exportable | Fase 0 |
-| **2** | MathLive integrado + TheoremEnv + SnippetSidebar | Fase 1 |
-| **3** | CoachPanel + Status bar enriquecida | Fase 2 |
-| **4** | ManifestEngine + templates + multi-doc | Fase 3 |
-| **5** | .tex import + tests + SemanticLinter + deploy | Fase 4 |
+| **0** | Proyecto Vite+TS levanta, estructura de directorios | ✓ completo |
+| **1** | Editor funcional modo Código + .tex exportable | ✓ completo |
+| **2** | MathLive integrado + TheoremEnv + SnippetSidebar | ✓ completo |
+| **3** | CoachPanel + Status bar enriquecida | ✓ completo |
+| **4** | Metadata del documento + template selector | pendiente |
+| **5** | Snippets y macros de usuario | pendiente |
+| **6** | Multi-documento | pendiente |
+| **7** | .tex import + tests + SemanticLinter + deploy | pendiente |
 
 **MVP demos-able:** fin de Fase 2 (editor completo). ✓ alcanzado  
-**MVP con feedback contextual:** fin de Fase 3 (CoachPanel + status bar).  
-**Normalizer/AST:** postergado indefinidamente — ver nota en Fase 3.
+**MVP con feedback contextual:** fin de Fase 3 (CoachPanel + status bar). ✓ alcanzado  
+**Normalizer/AST:** postergado indefinidamente — ver nota en Fase 3.  
+**ManifestEngine completo / ExportOverride UI:** postergados — ver [`notes-man-ai/fase4-pendiente.md`](../../notes-man-ai/fase4-pendiente.md).

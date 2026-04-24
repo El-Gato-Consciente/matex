@@ -16,14 +16,14 @@
     Layout structure:
 
     ┌──────────────────────────────────────────────────────────────┐
-    │  #app-toolbar  (2 rows: format | structure+math)             │
-    ├──────────────────────────────────────────────────────────────┤
-    │  #formula-panel  (always visible; FormulaPanel component)    │
+    │  #app-toolbar                                                │
     ├──────────────┬───────────────────────────────┬───────────────┤
-    │  #snippet-   │  #editor-wrap                 │  #coach-      │
-    │  sidebar     │  (TipTap canvas)              │  panel        │
-    │  (collaps.)  │                               │               │
-    └──────────────┴───────────────────────────────┴───────────────┘
+    │  #doc-panel  │  #editor-wrap                 │  #snippet-   │
+    │  (doc info,  │  (TipTap canvas)              │  sidebar     │
+    │   stats…)    │                               │  (snippets)  │
+    ├──────────────┴───────────────────────────────┴───────────────┤
+    │  #status-bar                                                 │
+    └──────────────────────────────────────────────────────────────┘
   -->
 
   <div id="app">
@@ -43,9 +43,9 @@
     <!-- ── Main area ────────────────────────────────────────────── -->
     <main id="main-area">
 
-      <!-- Snippet sidebar (left) -->
-      <aside id="snippet-sidebar">
-        <!-- populated by SnippetSidebar component -->
+      <!-- Doc panel (left) -->
+      <aside id="doc-panel">
+        <!-- populated by DocPanel component -->
       </aside>
 
       <!-- Editor canvas (center) -->
@@ -53,9 +53,9 @@
         <div id="editor"></div>
       </div>
 
-      <!-- Coach panel (right) -->
-      <aside id="coach-panel">
-        <!-- populated by CoachPanel component -->
+      <!-- Snippet sidebar (right) -->
+      <aside id="snippet-sidebar">
+        <!-- populated by SnippetSidebar component -->
       </aside>
 
     </main>
