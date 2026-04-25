@@ -4,14 +4,20 @@ import { TheoremEnvView } from '../nodeviews/TheoremEnvView'
 import type { TheoremEnvType } from '@core/math/types'
 import { registerLatexSerializer } from '@core/serializer/LatexSerializerRegistry'
 
+import { theoremLabels } from '@core/editor/EditorStore'
+
 registerLatexSerializer('theoremEnv', (node, ctx) => {
   const envType = (node.attrs['envType'] as string) ?? 'theorem'
-  const label   = (node.attrs['label']   as string) ?? ''
+  const id      = (node.attrs['id']      as string) ?? ''
 
   // child(0) is always theoremEnvTitle; serialize its inline content as the title
   const titleText = ctx.serializeInline(node.child(0).content).trim()
   const titleOpt  = titleText ? `[${titleText}]` : ''
-  const labelLine = label     ? `  \\label{${label}}\n` : ''
+
+  // Auto-generate \label from the resolved number (e.g. \label{thm:2.3})
+  const entry     = id ? theoremLabels.value.get(id) : null
+  const shortType = envType.slice(0, 3)  // thm, def, lem, pro, cor, exa, exr, rem, not
+  const labelLine = entry ? `  \\label{${shortType}:${entry.num}}\n` : ''
 
   // body = all children after the title node
   const bodyParts: string[] = []
@@ -54,7 +60,7 @@ export const TheoremEnv = Node.create({
   addAttributes() {
     return {
       envType: { default: 'theorem' as TheoremEnvType },
-      label:   { default: '' },
+      id:      { default: '' },
     }
   },
 
@@ -62,8 +68,8 @@ export const TheoremEnv = Node.create({
     return [{
       tag: 'div[data-theorem-env]',
       getAttrs: (el) => ({
-        envType: (el as HTMLElement).dataset['env']   ?? 'theorem',
-        label:   (el as HTMLElement).dataset['label'] ?? '',
+        envType: (el as HTMLElement).dataset['env'] ?? 'theorem',
+        id:      (el as HTMLElement).dataset['id']  ?? '',
       }),
     }]
   },
@@ -72,7 +78,7 @@ export const TheoremEnv = Node.create({
     return ['div', mergeAttributes(HTMLAttributes, {
       'data-theorem-env': '',
       'data-env':         node.attrs['envType'],
-      'data-label':       node.attrs['label'],
+      'data-id':          node.attrs['id'],
       class: 'theorem-env',
     }), 0]  // 0 = contentDOM slot
   },

@@ -31,6 +31,8 @@ export const activeFormulaError = signal<string | null>(null)
 /** The raw text content of the currently active inline mathInput node. */
 export const activeMathInputText = signal<string | null>(null)
 export const activeMathInputRect = signal<DOMRect | null>(null)
+/** ProseMirror position of the active mathInput node (before() the node). Used to detect formula switches. */
+export const activeMathInputNodePos = signal<number | null>(null)
 
 /** How the floating editor was opened — drives mode and Esc behaviour. */
 export type TriggerSource = 'click' | 'keyboard' | 'toolbar'
@@ -45,6 +47,24 @@ export const docStats = signal({ words: 0, mathInline: 0, mathDisplay: 0, theore
 /** Flat list of headings for the document outline, updated on every transaction. */
 export interface OutlineItem { level: 1 | 2 | 3; text: string; pos: number; num: string }
 export const docOutline = signal<OutlineItem[]>([])
+
+/** Map from UUID → resolved theorem entry, updated on every transaction. */
+export interface TheoremLabelEntry { type: string; num: string; pos: number; title: string }
+export const theoremLabels = signal<Map<string, TheoremLabelEntry>>(new Map())
+
+/** Map from UUID → footnote entry, updated on every transaction. */
+export interface FootnoteEntry { num: number; pos: number; blockPos: number }
+export const footnoteMap = signal<Map<string, FootnoteEntry>>(new Map())
+
+
+/** Callbacks invoked synchronously every time theoremLabels is updated. */
+const _labelsSubscribers = new Set<() => void>()
+export function subscribeToLabels(cb: () => void): () => void {
+  _labelsSubscribers.add(cb)
+  // Fire immediately so the subscriber can render the current state
+  cb()
+  return () => _labelsSubscribers.delete(cb)
+}
 
 /** Document identity metadata. */
 export interface DocMeta {
@@ -88,6 +108,10 @@ export function setEditor(editor: Editor): void {
   editor.on('selectionUpdate', _syncFmtState)
   editor.on('update',          _syncFmtState)
   _syncFmtState()
+  // Populate signals immediately for the content already in the editor,
+  // then migrate any nodes that are missing UUIDs (old format) in one transaction.
+  _syncDocStats()
+  _migrateOrphanIds()
 }
 
 function _syncFmtState(): void {
@@ -111,6 +135,7 @@ function _syncFmtState(): void {
   const parentType = $from.parent.type.name
   if (parentType === 'mathInput' || parentType === 'mathDisplayInput') {
     activeMathInputText.value = $from.parent.textContent
+    activeMathInputNodePos.value = $from.before()
     activeFormulaType.value = (parentType === 'mathDisplayInput') ? 'display' : 'inline'
     const startPos = $from.before()
     let el = view.nodeDOM(startPos)
@@ -125,10 +150,28 @@ function _syncFmtState(): void {
   } else {
     activeMathInputText.value = null
     activeMathInputRect.value = null
+    activeMathInputNodePos.value = null
     // activeFormulaType.value is handled by deactivateNode or NodeViews
   }
 
   _syncDocStats()
+}
+
+const _UNNUMBERED_ENV = new Set(['proof'])
+
+// Assign UUIDs to all theoremEnv nodes that have an empty id, in one transaction.
+function _migrateOrphanIds(): void {
+  if (!_editor) return
+  const { state } = _editor
+  const { tr } = state
+  let changed = false
+  state.doc.descendants((node, pos) => {
+    if (node.type.name === 'theoremEnv' && !(node.attrs['id'] as string)?.trim()) {
+      tr.setNodeMarkup(pos, undefined, { ...node.attrs, id: crypto.randomUUID() })
+      changed = true
+    }
+  })
+  if (changed) _editor.view.dispatch(tr)
 }
 
 function _syncDocStats(): void {
@@ -136,27 +179,59 @@ function _syncDocStats(): void {
   const doc = _editor.state.doc
   let mathInline = 0, mathDisplay = 0, theoremEnv = 0
   const outline: OutlineItem[] = []
+  const labelMap = new Map<string, TheoremLabelEntry>()
+  const fnMap    = new Map<string, FootnoteEntry>()
+  let fnNum = 0
   let c1 = 0, c2 = 0, c3 = 0
+  let envInSection = 0   // shared counter across all env types, resets per H1
+
+  // First pass: collect block positions
+  const fnBlockPos = new Map<string, number>()
+  doc.descendants((node, pos) => {
+    if (node.type.name === 'footnoteBlock') {
+      fnBlockPos.set(node.attrs['id'] as string, pos)
+      return false
+    }
+  })
 
   doc.descendants((node, pos) => {
-    if      (node.type.name === 'mathInline')  mathInline++
-    else if (node.type.name === 'mathDisplay') mathDisplay++
-    else if (node.type.name === 'theoremEnv')  theoremEnv++
+    if      (node.type.name === 'mathInline')  { mathInline++; return false }
+    else if (node.type.name === 'mathDisplay') { mathDisplay++; return false }
+    else if (node.type.name === 'footnoteRef') {
+      const id = node.attrs['id'] as string
+      fnNum++
+      fnMap.set(id, { num: fnNum, pos, blockPos: fnBlockPos.get(id) ?? -1 })
+      return false
+    }
+    else if (node.type.name === 'theoremEnv') {
+      theoremEnv++
+      const envType = node.attrs['envType'] as string
+      const id      = (node.attrs['id'] as string ?? '').trim()
+      if (!_UNNUMBERED_ENV.has(envType)) {
+        envInSection++
+        const num = c1 > 0 ? `${c1}.${envInSection}` : `${envInSection}`
+        const title = node.childCount > 0 ? node.child(0).textContent.trim() : ''
+        if (id) labelMap.set(id, { type: envType, num, pos, title })
+      }
+    }
     else if (node.type.name === 'heading') {
       const level = node.attrs['level'] as 1 | 2 | 3
       const text  = node.textContent.trim()
       let num: string
-      if (level === 1)      { c1++; c2 = 0; c3 = 0; num = `${c1}` }
-      else if (level === 2) { c2++; c3 = 0;          num = `${c1}.${c2}` }
-      else                  { c3++;                   num = `${c1}.${c2}.${c3}` }
+      if (level === 1) { c1++; c2 = 0; c3 = 0; num = `${c1}`; envInSection = 0 }
+      else if (level === 2) { c2++; c3 = 0; num = `${c1}.${c2}` }
+      else                  { c3++;           num = `${c1}.${c2}.${c3}` }
       if (text) outline.push({ level, text, pos, num })
     }
   })
 
   const text  = doc.textContent.trim()
   const words = text ? text.split(/\s+/).length : 0
-  docStats.value   = { words, mathInline, mathDisplay, theoremEnv }
-  docOutline.value = outline
+  docStats.value      = { words, mathInline, mathDisplay, theoremEnv }
+  docOutline.value    = outline
+  theoremLabels.value = labelMap
+  footnoteMap.value   = fnMap
+  _labelsSubscribers.forEach(cb => cb())
 }
 
 
@@ -292,12 +367,122 @@ export function insertTheoremEnv(envType: string): void {
   if (!_editor) return
   _editor.chain().focus().insertContent({
     type: 'theoremEnv',
-    attrs: { envType, label: '' },
+    attrs: { envType, id: crypto.randomUUID() },
     content: [
       { type: 'theoremEnvTitle' },
       { type: 'paragraph' },
     ],
   }).run()
+}
+
+/**
+ * If the cursor is inside a mathInput or mathDisplayInput node, inserts
+ * `text` at the cursor and returns true. Returns false otherwise.
+ */
+export function insertIntoActiveMathInput(text: string): boolean {
+  if (!_editor) return false
+  const { state, view } = _editor
+  const { $from } = state.selection
+  const parentType = $from.parent.type.name
+  if (parentType !== 'mathInput' && parentType !== 'mathDisplayInput') return false
+  view.dispatch(state.tr.insertText(text))
+  view.focus()
+  return true
+}
+
+/** Insert a footnoteRef at cursor + footnoteBlock right after the containing paragraph. */
+export function insertFootnote(): void {
+  if (!_editor) return
+  const { state, view } = _editor
+  const { tr, schema } = state
+  const id = crypto.randomUUID()
+
+  const refNode   = schema.nodes['footnoteRef']!.create({ id })
+  const blockNode = schema.nodes['footnoteBlock']!.create(
+    { id },
+    schema.nodes['paragraph']!.create(),
+  )
+
+  // Position after the top-level block containing the cursor
+  const topLevelEnd = state.selection.$from.after(1)
+
+  // Insert ref at cursor, then block right after the containing paragraph.
+  // tr.mapping.map() adjusts for the ref insertion that precedes the block.
+  tr.replaceWith(state.selection.from, state.selection.to, refNode)
+  tr.insert(tr.mapping.map(topLevelEnd), blockNode)
+  view.dispatch(tr)
+}
+
+/** Delete both the footnoteRef and its footnoteBlock. */
+export function deleteFootnote(id: string): void {
+  if (!_editor) return
+  const { state, view } = _editor
+  const { tr } = state
+  const toDelete: Array<{ from: number; to: number }> = []
+
+  state.doc.descendants((node, pos) => {
+    if (
+      (node.type.name === 'footnoteRef' || node.type.name === 'footnoteBlock') &&
+      node.attrs['id'] === id
+    ) {
+      toDelete.push({ from: pos, to: pos + node.nodeSize })
+    }
+  })
+
+  // Delete in reverse order so earlier positions stay valid
+  toDelete.sort((a, b) => b.from - a.from)
+  for (const { from, to } of toDelete) tr.delete(from, to)
+  view.dispatch(tr)
+}
+
+/** Scroll the editor to the footnoteBlock for `id` and place cursor inside it. */
+export function scrollToFootnoteBlock(id: string): void {
+  if (!_editor) return
+  const entry = footnoteMap.value.get(id)
+  if (!entry || entry.blockPos < 0) return
+
+  const { view } = _editor
+  const dom = view.nodeDOM(entry.blockPos)
+  const el = dom instanceof Element ? dom : (dom as ChildNode | null)?.parentElement
+  el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+
+  // Place cursor inside the block's first paragraph
+  try {
+    const $pos = _editor.state.doc.resolve(entry.blockPos + 2)
+    view.dispatch(
+      _editor.state.tr.setSelection(TextSelection.near($pos))
+    )
+    view.focus()
+  } catch { /* position may be invalid if block is empty */ }
+}
+
+/** Scroll the editor to the footnoteRef for `id` and place cursor after it. */
+export function scrollToFootnoteRef(id: string): void {
+  if (!_editor) return
+  const entry = footnoteMap.value.get(id)
+  if (!entry) return
+
+  const { view } = _editor
+  const dom = view.nodeDOM(entry.pos)
+  const el = dom instanceof Element ? dom : (dom as ChildNode | null)?.parentElement
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+  try {
+    const $pos = _editor.state.doc.resolve(entry.pos + 1)
+    view.dispatch(_editor.state.tr.setSelection(TextSelection.near($pos)))
+    view.focus()
+  } catch { /* position may be invalid */ }
+}
+
+
+export function insertTheoremRef(id: string): void {
+  if (!_editor) return
+  const { state, view } = _editor
+  const { tr, schema } = state
+  const refNode = schema.nodes['theoremRef']?.create({ id })
+  if (!refNode) return
+  view.dispatch(tr.replaceSelectionWith(refNode))
+  _editor.view.focus()
 }
 
 // ── Formatting commands (called from Toolbar) ─────────────────────
@@ -327,7 +512,7 @@ export function clearDocument(): void {
 
 export function loadExample(): void {
   // Imported lazily to avoid circular deps at module init time
-  import('@features/documents/exampleDocument').then(({ EXAMPLE_DOCUMENT }) => {
+  import('@features/documents/ExampleDocument').then(({ EXAMPLE_DOCUMENT }) => {
     if (!_editor) return
     deactivateNode()
     docMeta.value = {
@@ -341,6 +526,7 @@ export function loadExample(): void {
       language:    'es',
     }
     _editor.commands.setContent(EXAMPLE_DOCUMENT as never, /* emitUpdate */ true)
+    _migrateOrphanIds()
     _editor.commands.focus('start')
   })
 }
@@ -382,6 +568,7 @@ export function setDocumentContent(content: import('@tiptap/core').JSONContent):
   if (!_editor) return
   deactivateNode()
   _editor.commands.setContent(content as never, /* emitUpdate */ true)
+  _migrateOrphanIds()
   _editor.commands.focus('start')
 }
 

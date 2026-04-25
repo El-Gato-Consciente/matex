@@ -11,8 +11,12 @@ import type { DocMeta } from '@core/editor/EditorStore'
 
 export class TexSerializer {
 
+  private _doc: Node | null = null
+
   serialize(doc: Node, meta?: Partial<DocMeta>): string {
+    this._doc = doc
     const body = this._serializeFragment(doc.content)
+    this._doc = null
     return this._wrapDocument(body, meta)
   }
 
@@ -102,6 +106,7 @@ export class TexSerializer {
 
   private _ctx(): LatexSerializerContext {
     return {
+      doc:               this._doc!,
       serializeFragment: (f) => this._serializeFragment(f),
       serializeInline:   (f) => this._serializeInlineContent(f),
       serializeNode:     (n) => this._serializeNode(n),

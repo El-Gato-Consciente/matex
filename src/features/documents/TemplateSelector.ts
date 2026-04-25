@@ -24,7 +24,7 @@ const it  = (text: string) => ({ type: 'text', marks: [{ type: 'italic' }], text
 
 const t   = (text: string) => ({ type: 'text', text })
 const thm = (envType: string, title: string, ...content: object[]) => ({
-  type: 'theoremEnv', attrs: { envType, label: '' },
+  type: 'theoremEnv', attrs: { envType, id: crypto.randomUUID() },
   content: [{ type: 'theoremEnvTitle', content: title ? [{ type: 'text', text: title }] : [] }, ...content],
 })
 const ol = (...items: object[][]) => ({
@@ -576,6 +576,7 @@ export const TEMPLATES: Template[] = [
       ]},
     },
   },
+
 ]
 
 // ── Component ─────────────────────────────────────────────────────

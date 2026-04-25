@@ -12,6 +12,7 @@ import type { Node, Fragment } from '@tiptap/pm/model'
    ───────────────────────────────────────────────────────────────── */
 
 export interface LatexSerializerContext {
+  doc: Node
   serializeFragment(fragment: Fragment): string
   serializeInline(fragment: Fragment): string
   serializeNode(node: Node): string

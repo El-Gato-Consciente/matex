@@ -2,6 +2,9 @@ import { Extension, InputRule } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import type { TheoremEnvType } from '@core/math/types'
 
+// Input rule for inline theorem references: /ref<space>  → inserts unresolved ref (picker opens on click)
+const REF_RULE = /\/ref\s$/
+
 /* ─────────────────────────────────────────────────────────────────
    SlashCommands — input rules that convert a trigger typed on a
    blank line into a TheoremEnv block.
@@ -35,25 +38,36 @@ export const SlashCommands = Extension.create({
   name: 'slashCommands',
 
   addInputRules() {
-    return COMMANDS.map(({ regex, envType }) =>
+    const envRules = COMMANDS.map(({ regex, envType }) =>
       new InputRule({
         find: regex,
         handler: ({ state, range }) => {
           const { tr, schema } = state
           const envNode = schema.nodes['theoremEnv']!.create(
-            { envType, label: '' },
+            { envType, id: crypto.randomUUID() },
             [
               schema.nodes['theoremEnvTitle']!.create(),
               schema.nodes['paragraph']!.create(),
             ],
           )
-          // Replace the whole paragraph (open token + content) with the env.
           tr.replaceWith(range.from - 1, range.to, envNode)
-          // Move cursor inside the inner paragraph.
           tr.setSelection(TextSelection.create(tr.doc, range.from + 1))
           tr.scrollIntoView()
         },
       }),
     )
+
+    const refRule = new InputRule({
+      find: REF_RULE,
+      handler: ({ state, range }) => {
+        const { tr, schema } = state
+        const refNode = schema.nodes['theoremRef']?.create({ id: '' })
+        if (!refNode) return
+        tr.replaceWith(range.from, range.to, [refNode, schema.text(' ')])
+        tr.setSelection(TextSelection.create(tr.doc, range.from + 2))
+      },
+    })
+
+    return [...envRules, refRule]
   },
 })

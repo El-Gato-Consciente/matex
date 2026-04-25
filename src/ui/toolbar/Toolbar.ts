@@ -6,8 +6,11 @@ import {
   toggleBold, toggleItalic, toggleCode,
   setHeading, toggleBulletList, toggleOrderedList,
   undo, redo,
-  insertTheoremEnv,
+  insertTheoremEnv, insertTheoremRef,
   loadExample, clearDocument,
+  theoremLabels,
+  insertNewFormulaAndActivate,
+  insertFootnote,
 } from '@core/editor/EditorStore'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
 
@@ -52,7 +55,11 @@ export class Toolbar extends LitElement {
       effect(() => {
         this._fmt = editorFmtState.value
         this.requestUpdate()
-      })
+      }),
+      effect(() => {
+        void theoremLabels.value  // subscribe so toolbar re-renders when refs change
+        this.requestUpdate()
+      }),
     )
     this._applyTheme(this._isDark)
     this._applyHighlight(this._highlight)
@@ -87,53 +94,53 @@ export class Toolbar extends LitElement {
 
   override render() {
     const f = this._fmt
-    const hActive = f.h1 || f.h2 || f.h3
-    const hLabel  = f.h1 ? 'H1' : f.h2 ? 'H2' : f.h3 ? 'H3' : 'H'
 
     return html`
       <div id="toolbar-row-1" class="toolbar-row">
 
         <!-- Text format -->
-        <button class="tbtn ${f.bold   ? 'active':''}" @click="${toggleBold}"   title="Bold (Ctrl+B)"><b>B</b></button>
-        <button class="tbtn ${f.italic ? 'active':''}" @click="${toggleItalic}" title="Italic (Ctrl+I)"><em>I</em></button>
-        <button class="tbtn ${f.code   ? 'active':''}" @click="${toggleCode}"   title="Inline code"><code style="font-size:11px">{}</code></button>
+        <button class="tbtn ${f.bold   ? 'active':''}" @click="${toggleBold}"   title="Negrita (Ctrl+B)"><b>B</b></button>
+        <button class="tbtn ${f.italic ? 'active':''}" @click="${toggleItalic}" title="Cursiva (Ctrl+I)"><em>I</em></button>
+        <button class="tbtn ${f.code   ? 'active':''}" @click="${toggleCode}"   title="Código inline"><code style="font-size:11px">{}</code></button>
+
+        <div class="sep"></div>
+
+        <!-- Fórmulas -->
+        <button class="tbtn tbtn--math" @click="${() => insertNewFormulaAndActivate('', false)}" title="Fórmula inline (Ctrl+M)"><em>$</em></button>
+        <button class="tbtn tbtn--math" @click="${() => insertNewFormulaAndActivate('', true)}"  title="Fórmula en bloque (Ctrl+Shift+M)"><em>$$</em></button>
+
+        <div class="sep"></div>
+
+        <!-- Nota al pie -->
+        <button class="tbtn" @click="${insertFootnote}" title="Nota al pie (Ctrl+Shift+F)"><sup style="font-size:9px;line-height:1">fn</sup></button>
+
+        <div class="sep"></div>
+
+        <!-- Lists (open) -->
+        <button class="tbtn ${f.bulletList  ? 'active':''}" @click="${toggleBulletList}"  title="Lista con viñetas">•≡</button>
+        <button class="tbtn ${f.orderedList ? 'active':''}" @click="${toggleOrderedList}" title="Lista numerada">1≡</button>
 
         <div class="sep"></div>
 
         <!-- Headings dropdown -->
         <div class="tbtn-drop">
-          <button class="tbtn ${hActive ? 'active':''}"
+          <button class="tbtn ${f.h1 || f.h2 || f.h3 ? 'active' : ''}"
             @click="${(e: Event) => this._toggleDropdown('heading', e)}"
-            title="Headings">${hLabel} ▾</button>
+            title="Secciones">${f.h1 ? '§' : f.h2 ? '§§' : f.h3 ? '§§§' : '§'} ▾</button>
           ${this._openDropdown === 'heading' ? html`
-            <div class="tbtn-menu">
-              <button class="tbtn ${f.h1 ? 'active':''}" @click="${() => { setHeading(1); this._openDropdown = null }}">H1</button>
-              <button class="tbtn ${f.h2 ? 'active':''}" @click="${() => { setHeading(2); this._openDropdown = null }}">H2</button>
-              <button class="tbtn ${f.h3 ? 'active':''}" @click="${() => { setHeading(3); this._openDropdown = null }}">H3</button>
+            <div class="tbtn-menu" style="min-width:160px">
+              <button class="tbtn ${f.h1 ? 'active':''}" @click="${() => { setHeading(1); this._openDropdown = null }}">
+                <span style="font-weight:600;min-width:36px">§</span> Sección
+              </button>
+              <button class="tbtn ${f.h2 ? 'active':''}" @click="${() => { setHeading(2); this._openDropdown = null }}">
+                <span style="min-width:36px">§§</span> Subsección
+              </button>
+              <button class="tbtn ${f.h3 ? 'active':''}" @click="${() => { setHeading(3); this._openDropdown = null }}">
+                <span style="font-size:11px;min-width:36px">§§§</span> Subsubsección
+              </button>
             </div>
           ` : ''}
         </div>
-
-        <div class="sep"></div>
-
-        <!-- Lists dropdown -->
-        <div class="tbtn-drop">
-          <button class="tbtn ${f.bulletList || f.orderedList ? 'active':''}"
-            @click="${(e: Event) => this._toggleDropdown('list', e)}"
-            title="Listas">≡ ▾</button>
-          ${this._openDropdown === 'list' ? html`
-            <div class="tbtn-menu">
-              <button class="tbtn ${f.bulletList  ? 'active':''}" @click="${() => { toggleBulletList();  this._openDropdown = null }}" title="Lista con viñetas">• Lista</button>
-              <button class="tbtn ${f.orderedList ? 'active':''}" @click="${() => { toggleOrderedList(); this._openDropdown = null }}" title="Lista numerada">1. Numerada</button>
-            </div>
-          ` : ''}
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- Undo / redo -->
-        <button class="tbtn" ?disabled="${!f.canUndo}" @click="${undo}" title="Undo (Ctrl+Z)">↩</button>
-        <button class="tbtn" ?disabled="${!f.canRedo}" @click="${redo}" title="Redo (Ctrl+Y)">↪</button>
 
         <div class="sep"></div>
 
@@ -165,8 +172,46 @@ export class Toolbar extends LitElement {
           ` : ''}
         </div>
 
+        <!-- Theorem references dropdown -->
+        ${(() => {
+          const refs = [...theoremLabels.value.entries()]
+          return html`
+          <div class="tbtn-drop">
+            <button class="tbtn"
+              @click="${(e: Event) => this._toggleDropdown('ref', e)}"
+              title="Insertar referencia"
+              ?disabled="${refs.length === 0}">↗ Ref ▾</button>
+            ${this._openDropdown === 'ref' ? html`
+              <div class="tbtn-menu" style="min-width:220px">
+                ${refs.map(([id, entry]) => {
+                  const TYPE_ES: Record<string,string> = {
+                    theorem:'Teorema', definition:'Definición', lemma:'Lema',
+                    proposition:'Proposición', corollary:'Corolario', example:'Ejemplo',
+                    exercise:'Ejercicio', remark:'Obs.', note:'Nota', proof:'Dem.',
+                  }
+                  const typeName = TYPE_ES[entry.type] ?? entry.type
+                  const label = entry.title
+                    ? `${typeName} ${entry.num} — ${entry.title}`
+                    : `${typeName} ${entry.num}`
+                  return html`
+                    <button class="tbtn" style="text-align:left;font-size:12px"
+                      @click="${() => { insertTheoremRef(id); this._openDropdown = null }}">
+                      ${label}
+                    </button>`
+                })}
+              </div>
+            ` : ''}
+          </div>`
+        })()}
+
         <!-- Push right -->
         <div class="sep push"></div>
+
+        <!-- Undo / redo -->
+        <button class="tbtn" ?disabled="${!f.canUndo}" @click="${undo}" title="Deshacer (Ctrl+Z)">↩</button>
+        <button class="tbtn" ?disabled="${!f.canRedo}" @click="${redo}" title="Rehacer (Ctrl+Y)">↪</button>
+
+        <div class="sep"></div>
 
         <!-- Zoom -->
         <button class="tbtn" ?disabled="${this._zoom <= ZOOM_MIN}" @click="${this._zoomOut}" title="Zoom out (Ctrl+−)">−</button>

@@ -15,6 +15,8 @@ import {
   getActiveFormulaDOM,
 } from '@core/editor/EditorStore'
 import { renderableLatex } from '@core/math/latexUtils'
+import { toMathLiveLatex, recordUsage } from '@features/formula-editor/SnippetStore'
+import { setBackslashState } from '@features/formula-editor/BackslashState'
 
 const MODE_KEY = 'formalia:formula-mode'
 
@@ -29,6 +31,7 @@ export class FloatingFormulaEditor extends LitElement {
   private _skipMfReload = false
   private _activeFormulaEl: Element | null = null
   private _disposes: (() => void)[] = []
+  private _mfBsQuery: string | null = null   // command being typed after \ in visual mode
 
   override createRenderRoot() { return this }
 
@@ -71,13 +74,14 @@ export class FloatingFormulaEditor extends LitElement {
       // Panel just closed — perform a full visual and selection cleanup
       document.body.classList.remove('has-formula-popover')
       document.querySelectorAll('.is-editing').forEach(el => el.classList.remove('is-editing'))
-      
+
       // Neutralize TipTap selection so nothing stays "lit" on the canvas
       // Passing the last known position ensures the cursor stays local.
       releaseFormulaSelection(this._lastActivePos)
 
       this._activeFormulaEl = null
       this._lastActivePos = null
+      this._clearBsState()
       return
     }
 
@@ -164,6 +168,7 @@ export class FloatingFormulaEditor extends LitElement {
   }
 
   private _setMode(mode: 'visual' | 'code') {
+    this._clearBsState()
     this._editMode = mode
     localStorage.setItem(MODE_KEY, mode)
 
@@ -296,6 +301,37 @@ export class FloatingFormulaEditor extends LitElement {
     `
   }
 
+  private _clearBsState() {
+    this._mfBsQuery = null
+    setBackslashState(null, null)
+  }
+
+  // Sync backslash state from textarea cursor position
+  private _syncTaBsState(ta: HTMLTextAreaElement) {
+    const pos  = ta.selectionStart
+    const text = ta.value.substring(0, pos)
+    const match = text.match(/\\([a-zA-Z]*)$/)
+    if (!match) { this._clearBsState(); return }
+
+    const query   = match[1]
+    const bsStart = pos - match[0].length
+
+    setBackslashState(query, (item) => {
+      recordUsage(item.id)
+      const insert = toMathLiveLatex(item.latex).replace(/#[@?]/g, '')
+      ta.value = ta.value.substring(0, bsStart) + insert + ta.value.substring(pos)
+      ta.selectionStart = ta.selectionEnd = bsStart + insert.length
+      this._autoResizeTextarea(ta)
+      const textW = this._measureTextWidth(ta.value)
+      ta.style.width = `${Math.ceil(textW) + 14}px`
+      const panel = this.querySelector<HTMLElement>('.ff-panel')
+      if (panel) this._positionPanel(panel)
+      updateActiveFormula(ta.value)
+      ta.focus()
+      setBackslashState(null, null)
+    })
+  }
+
   // ── Event handlers ───────────────────────────────────────────────
 
   private _onMfInput = (e: Event) => {
@@ -310,6 +346,7 @@ export class FloatingFormulaEditor extends LitElement {
 
   private _onMfKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+      this._clearBsState()
       e.preventDefault()
       deactivateNode()
       focusEditor()
@@ -318,6 +355,53 @@ export class FloatingFormulaEditor extends LitElement {
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault()
       ;(e.target as any).insert?.('\\\\')
+      return
+    }
+
+    // Backslash: start command tracking
+    if (e.key === '\\' && !e.ctrlKey) {
+      this._mfBsQuery = ''
+      const mf = e.target as any
+      setBackslashState('', (item) => {
+        recordUsage(item.id)
+        const n = 1 + (this._mfBsQuery?.length ?? 0)
+        for (let i = 0; i < n; i++) mf.executeCommand('deletePreviousChar')
+        mf.insert(toMathLiveLatex(item.latex))
+        mf.focus()
+        this._clearBsState()
+      })
+      return  // let MathLive handle the \ normally
+    }
+
+    // While tracking a command, extend or cancel
+    if (this._mfBsQuery !== null) {
+      if (/^[a-zA-Z]$/.test(e.key)) {
+        this._mfBsQuery += e.key
+        const mf = e.target as any
+        const query = this._mfBsQuery
+        setBackslashState(query, (item) => {
+          recordUsage(item.id)
+          const n = 1 + query.length
+          for (let i = 0; i < n; i++) mf.executeCommand('deletePreviousChar')
+          mf.insert(toMathLiveLatex(item.latex))
+          mf.focus()
+          this._clearBsState()
+        })
+      } else if (e.key === 'Backspace' && this._mfBsQuery.length > 0) {
+        this._mfBsQuery = this._mfBsQuery.slice(0, -1)
+        const mf = e.target as any
+        const query = this._mfBsQuery
+        setBackslashState(query, (item) => {
+          recordUsage(item.id)
+          const n = 1 + query.length
+          for (let i = 0; i < n; i++) mf.executeCommand('deletePreviousChar')
+          mf.insert(toMathLiveLatex(item.latex))
+          mf.focus()
+          this._clearBsState()
+        })
+      } else {
+        this._clearBsState()
+      }
     }
   }
 
@@ -332,6 +416,7 @@ export class FloatingFormulaEditor extends LitElement {
     if (panel) this._positionPanel(panel)
     updateActiveFormula(latex)
     this._validateLatex(latex)
+    this._syncTaBsState(ta)
   }
 
   /** Fit textarea height to its content so the popover auto-sizes */
@@ -355,12 +440,14 @@ export class FloatingFormulaEditor extends LitElement {
 
   private _onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
+      this._clearBsState()
       e.preventDefault()
       deactivateNode()
       focusEditor()
       return
     }
     if (e.key === 'Enter' && !e.shiftKey) {
+      this._clearBsState()
       e.preventDefault()
       deactivateNode()
       focusEditor()
@@ -374,6 +461,7 @@ export class FloatingFormulaEditor extends LitElement {
       ta.value  = ta.value.substring(0, s) + '  ' + ta.value.substring(end)
       ta.selectionStart = ta.selectionEnd = s + 2
       updateActiveFormula(ta.value)
+      return
     }
   }
 }

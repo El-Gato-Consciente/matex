@@ -79,6 +79,21 @@ export const MathInputNode = Node.create({
   addProseMirrorPlugins() {
     return [
       new Plugin({
+        key: new PluginKey('mathInputPaste'),
+        props: {
+          handlePaste(view, event) {
+            const { $from } = view.state.selection
+            const parentType = $from.parent.type.name
+            if (parentType !== 'mathInput' && parentType !== 'mathDisplayInput') return false
+            // Bypass ProseMirror's slice-fitting logic — paste as plain text directly
+            const text = event.clipboardData?.getData('text/plain') ?? ''
+            if (!text) return false
+            view.dispatch(view.state.tr.insertText(text))
+            return true
+          },
+        },
+      }),
+      new Plugin({
         key: new PluginKey('mathInputEmptyClass'),
         props: {
           decorations(state) {

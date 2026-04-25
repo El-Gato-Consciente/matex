@@ -1,16 +1,19 @@
 /* ─────────────────────────────────────────────────────────────────
    Formalia — Documento de ejemplo
-   Cubre todos los features disponibles en Fase 1:
-   headings, marks (bold/italic/code), bullet list, ordered list,
-   inline math, display math, y todos los entornos de teorema.
+   UUIDs se generan al cargar para que refs internas sean consistentes.
    ───────────────────────────────────────────────────────────────── */
 
-// TipTap JSON — se pasa directo a editor.commands.setContent()
+const ID_DEF_CONT   = crypto.randomUUID()
+const ID_THM_IVT    = crypto.randomUUID()
+const ID_DEF_DERIV  = crypto.randomUUID()
+const ID_LEM_DIFER  = crypto.randomUUID()
+const ID_EJ_PROD    = crypto.randomUUID()
+
 export const EXAMPLE_DOCUMENT = {
   type: 'doc',
   content: [
 
-    // ── Intro ─────────────────────────────────────────────────────
+    // ── Intro ──────────────────────────────────────────────────────
     {
       type: 'paragraph',
       content: [
@@ -26,16 +29,15 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // ── Sección 1 ─────────────────────────────────────────────────
+    // ── Sección 1 ──────────────────────────────────────────────────
     {
       type: 'heading', attrs: { level: 1 },
       content: [{ type: 'text', text: 'Continuidad' }]
     },
 
-    // Definición con inline math y display math
     {
       type: 'theoremEnv',
-      attrs: { envType: 'definition', label: '' },
+      attrs: { envType: 'definition', id: ID_DEF_CONT },
       content: [
         {
           type: 'theoremEnvTitle',
@@ -68,10 +70,9 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // Teorema del Valor Intermedio
     {
       type: 'theoremEnv',
-      attrs: { envType: 'theorem', label: '' },
+      attrs: { envType: 'theorem', id: ID_THM_IVT },
       content: [
         {
           type: 'theoremEnvTitle',
@@ -82,7 +83,9 @@ export const EXAMPLE_DOCUMENT = {
           content: [
             { type: 'text', text: 'Sea ' },
             { type: 'mathInline', attrs: { latex: 'f: [a, b] \\to \\mathbb{R}' } },
-            { type: 'text', text: ' continua. Si ' },
+            { type: 'text', text: ' continua (ver ' },
+            { type: 'theoremRef', attrs: { id: ID_DEF_CONT } },
+            { type: 'text', text: '). Si ' },
             { type: 'mathInline', attrs: { latex: 'f(a)' } },
             { type: 'text', text: ' y ' },
             { type: 'mathInline', attrs: { latex: 'f(b)' } },
@@ -96,10 +99,9 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // Demostración
     {
       type: 'theoremEnv',
-      attrs: { envType: 'proof', label: '' },
+      attrs: { envType: 'proof', id: crypto.randomUUID() },
       content: [
         { type: 'theoremEnvTitle' },
         {
@@ -123,16 +125,17 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // Observación
     {
       type: 'theoremEnv',
-      attrs: { envType: 'remark', label: '' },
+      attrs: { envType: 'remark', id: crypto.randomUUID() },
       content: [
         { type: 'theoremEnvTitle' },
         {
           type: 'paragraph',
           content: [
-            { type: 'text', text: 'El recíproco es falso: ' },
+            { type: 'text', text: 'El recíproco del ' },
+            { type: 'theoremRef', attrs: { id: ID_THM_IVT } },
+            { type: 'text', text: ' es falso: ' },
             { type: 'mathInline', attrs: { latex: 'f(x) = \\sin(1/x)' } },
             { type: 'text', text: ' cumple la propiedad del valor intermedio en ' },
             { type: 'mathInline', attrs: { latex: '(0, 1]' } },
@@ -144,16 +147,15 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // ── Sección 2 ─────────────────────────────────────────────────
+    // ── Sección 2 ──────────────────────────────────────────────────
     {
       type: 'heading', attrs: { level: 1 },
       content: [{ type: 'text', text: 'Diferenciabilidad' }]
     },
 
-    // Definición de derivada
     {
       type: 'theoremEnv',
-      attrs: { envType: 'definition', label: '' },
+      attrs: { envType: 'definition', id: ID_DEF_DERIV },
       content: [
         {
           type: 'theoremEnvTitle',
@@ -178,10 +180,9 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // Lema
     {
       type: 'theoremEnv',
-      attrs: { envType: 'lemma', label: '' },
+      attrs: { envType: 'lemma', id: ID_LEM_DIFER },
       content: [
         { type: 'theoremEnvTitle' },
         {
@@ -191,7 +192,9 @@ export const EXAMPLE_DOCUMENT = {
             { type: 'mathInline', attrs: { latex: 'f' } },
             { type: 'text', text: ' es diferenciable en ' },
             { type: 'mathInline', attrs: { latex: 'x_0' } },
-            { type: 'text', text: ', entonces es continua en ' },
+            { type: 'text', text: ' (ver ' },
+            { type: 'theoremRef', attrs: { id: ID_DEF_DERIV } },
+            { type: 'text', text: '), entonces es continua en ' },
             { type: 'mathInline', attrs: { latex: 'x_0' } },
             { type: 'text', text: '. El recíproco es falso: ' },
             { type: 'mathInline', attrs: { latex: 'f(x) = |x|' } },
@@ -203,13 +206,12 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // ── Sección 3 ─────────────────────────────────────────────────
+    // ── Sección 3 ──────────────────────────────────────────────────
     {
       type: 'heading', attrs: { level: 1 },
       content: [{ type: 'text', text: 'Reglas de derivación' }]
     },
 
-    // Display math con reglas
     {
       type: 'mathDisplay',
       attrs: {
@@ -218,7 +220,6 @@ export const EXAMPLE_DOCUMENT = {
       }
     },
 
-    // Lista ordenada
     {
       type: 'orderedList',
       content: [
@@ -255,10 +256,9 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // Ejemplo completo
     {
       type: 'theoremEnv',
-      attrs: { envType: 'example', label: '' },
+      attrs: { envType: 'example', id: ID_EJ_PROD },
       content: [
         { type: 'theoremEnvTitle' },
         {
@@ -276,7 +276,17 @@ export const EXAMPLE_DOCUMENT = {
       ]
     },
 
-    // Lista de conjuntos numéricos
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Esto es consecuencia directa del ' },
+        { type: 'theoremRef', attrs: { id: ID_LEM_DIFER } },
+        { type: 'text', text: ' aplicado a ' },
+        { type: 'mathInline', attrs: { latex: 'f(x) = x^3 \\sin(x)' } },
+        { type: 'text', text: '.' },
+      ]
+    },
+
     {
       type: 'heading', attrs: { level: 2 },
       content: [{ type: 'text', text: 'Conjuntos numéricos usados' }]
@@ -291,16 +301,6 @@ export const EXAMPLE_DOCUMENT = {
             content: [
               { type: 'mathInline', attrs: { latex: '\\mathbb{N} = \\{0, 1, 2, \\ldots\\}' } },
               { type: 'text', text: ' — naturales' },
-            ]
-          }]
-        },
-        {
-          type: 'listItem',
-          content: [{
-            type: 'paragraph',
-            content: [
-              { type: 'mathInline', attrs: { latex: '\\mathbb{Z}' } },
-              { type: 'text', text: ' — enteros' },
             ]
           }]
         },

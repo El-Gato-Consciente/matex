@@ -2,7 +2,7 @@ import { LitElement, html } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { effect } from '@preact/signals-core'
 import katex from 'katex'
-import { activeMathInputText, activeMathInputRect } from '@core/editor/EditorStore'
+import { activeMathInputText, activeMathInputRect, activeMathInputNodePos } from '@core/editor/EditorStore'
 
 @customElement('fp-math-preview-tooltip')
 export class MathPreviewTooltip extends LitElement {
@@ -13,6 +13,7 @@ export class MathPreviewTooltip extends LitElement {
   @state() private _rect: DOMRect | null = null
   @state() private _lastValidHtml: string | null = null
 
+  private _knownNodePos: number | null = null
   private _disposes: (() => void)[] = []
 
   override connectedCallback() {
@@ -21,16 +22,21 @@ export class MathPreviewTooltip extends LitElement {
       effect(() => {
         this._latex = activeMathInputText.value
         this._rect  = activeMathInputRect.value
+        const nodePos = activeMathInputNodePos.value
+
+        // Different formula node → reset memory so we don't show a stale render
+        if (nodePos !== this._knownNodePos) {
+          this._knownNodePos = nodePos
+          this._lastValidHtml = null
+        }
 
         const text = this._latex
         if (text && text.trim()) {
           try {
             this._lastValidHtml = katex.renderToString(text, { throwOnError: true, displayMode: true })
           } catch {
-            // keep previous valid HTML
+            // keep previous valid HTML for this formula
           }
-        } else if (!text) {
-          this._lastValidHtml = null
         }
       })
     )

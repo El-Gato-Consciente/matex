@@ -14,8 +14,12 @@ import { TheoremEnv }        from '@core/editor/extensions/TheoremEnv'
 import { TheoremEnvTitle }   from '@core/editor/extensions/TheoremEnvTitle'
 import { FormulaNavigation } from '@core/editor/extensions/FormulaNavigation'
 import { MathInputNode, MathDisplayInputNode, MathInputTrigger, MathInputAutoCommit } from '@core/editor/extensions/MathInput'
-import { SlashCommands }      from '@core/editor/extensions/SlashCommands'
+import { SlashMenu }          from '@core/editor/extensions/SlashMenu'
+import { SnippetPalette }     from '@core/editor/extensions/SnippetPalette'
 import { SectionNumbering }   from '@core/editor/extensions/SectionNumbering'
+import { TheoremRef }         from '@core/editor/extensions/TheoremRef'
+import { FootnoteRef }        from '@core/editor/extensions/FootnoteRef'
+import { FootnoteBlock }      from '@core/editor/extensions/FootnoteBlock'
 import { setEditor, initDocMeta, docMeta } from '@core/editor/EditorStore'
 import { effect } from '@preact/signals-core'
 import { LocalStorageAdapter } from '@features/documents/LocalStorageAdapter'
@@ -74,8 +78,12 @@ const editor: Editor = new Editor({
     MathDisplayInputNode,
     MathInputAutoCommit,
     MathInputTrigger,
-    SlashCommands,
+    SlashMenu,
+    SnippetPalette,
     SectionNumbering,
+    TheoremRef,
+    FootnoteRef,
+    FootnoteBlock,
   ],
   content: (currentDoc ? fromStorage(currentDoc) : { type: 'doc', content: [{ type: 'paragraph' }] }) as never,
   onUpdate({ editor: e }) {
@@ -142,5 +150,6 @@ docPanel.appendChild(document.createElement('fp-doc-panel'))
 const sidebar = document.getElementById('snippet-sidebar')!
 sidebar.innerHTML = ''
 sidebar.appendChild(document.createElement('fp-snippet-sidebar'))
+
 
 console.log('Formalia — Phase 1 loaded')

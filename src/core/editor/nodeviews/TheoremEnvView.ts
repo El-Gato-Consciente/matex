@@ -2,6 +2,7 @@ import type { Node as PmNode } from '@tiptap/pm/model'
 import type { ViewMutationRecord } from '@tiptap/pm/view'
 import type { Editor } from '@tiptap/core'
 import type { TheoremEnvType } from '@core/math/types'
+import { theoremLabels, subscribeToLabels } from '@core/editor/EditorStore'
 
 /* ─────────────────────────────────────────────────────────────────
    TheoremEnvView — ProseMirror NodeView for theoremEnv nodes.
@@ -26,8 +27,6 @@ const ENV_TYPES: { value: TheoremEnvType; label: string }[] = [
   { value: 'proof',       label: 'Proof'       },
 ]
 
-const UNNUMBERED = new Set(['proof'])
-
 export class TheoremEnvView {
   readonly dom:        HTMLElement
   readonly contentDOM: HTMLElement
@@ -39,17 +38,15 @@ export class TheoremEnvView {
   private _typeBtn:      HTMLButtonElement
   private _typeLabel:    HTMLSpanElement
   private _typeMenu:     HTMLElement
+  private _typeWrap:     HTMLElement
   private _numSpan:      HTMLElement
-  private _onDocUpdate:  () => void
+  private _unsubscribeLabels: () => void
   private _outsideClick: (e: Event) => void
 
   constructor(node: PmNode, getPos: () => number | undefined, editor: Editor) {
     this._node   = node
     this._getPos = getPos
     this._editor = editor
-
-    this._onDocUpdate = () => this._updateNumber()
-    this._editor.on('update', this._onDocUpdate)
 
     // ── Outer container ──────────────────────────────────────────
     this.dom = document.createElement('div')
@@ -62,7 +59,7 @@ export class TheoremEnvView {
     this._header.contentEditable = 'false'
 
     // ── Custom type dropdown ──────────────────────────────────────
-    const typeWrap = document.createElement('div')
+    const typeWrap = this._typeWrap = document.createElement('div')
     typeWrap.className = 'tenv-type-wrap'
     typeWrap.addEventListener('mousedown', e => e.stopPropagation())
 
@@ -113,6 +110,9 @@ export class TheoremEnvView {
     this.dom.appendChild(this.contentDOM)
 
     this._syncHeader()
+
+    // subscribeToLabels fires the callback immediately and on every _syncDocStats update
+    this._unsubscribeLabels = subscribeToLabels(() => this._updateNumber())
   }
 
   // ── NodeView interface ────────────────────────────────────────
@@ -139,7 +139,7 @@ export class TheoremEnvView {
 
   destroy(): void {
     this._closeMenu()
-    this._editor.off('update', this._onDocUpdate)
+    this._unsubscribeLabels()
   }
 
   // ── Dropdown ──────────────────────────────────────────────────
@@ -149,12 +149,37 @@ export class TheoremEnvView {
   }
 
   private _openMenu(): void {
+    const rect = this._typeBtn.getBoundingClientRect()
+
+    // Teleport to body so no ancestor overflow can clip the menu
+    document.body.appendChild(this._typeMenu)
+    Object.assign(this._typeMenu.style, {
+      position: 'fixed',
+      left:     `${rect.left}px`,
+      top:      `${rect.bottom + 5}px`,
+      zIndex:   '9999',
+    })
     this._typeMenu.hidden = false
     this._typeBtn.classList.add('open')
+
+    // Adjust if the menu overflows the viewport
+    requestAnimationFrame(() => {
+      const mb = this._typeMenu.getBoundingClientRect()
+      if (mb.bottom > window.innerHeight - 8)
+        this._typeMenu.style.top = `${rect.top - mb.height - 5}px`
+      if (mb.right > window.innerWidth - 8)
+        this._typeMenu.style.left = `${window.innerWidth - mb.width - 8}px`
+    })
+
     document.addEventListener('click', this._outsideClick)
   }
 
   private _closeMenu(): void {
+    // Return menu to its original parent before hiding
+    if (this._typeMenu.parentElement === document.body) {
+      this._typeWrap.appendChild(this._typeMenu)
+    }
+    Object.assign(this._typeMenu.style, { position: '', left: '', top: '', zIndex: '' })
     this._typeMenu.hidden = true
     this._typeBtn.classList.remove('open')
     document.removeEventListener('click', this._outsideClick)
@@ -183,27 +208,9 @@ export class TheoremEnvView {
   }
 
   private _updateNumber(): void {
-    const n = this._computeNumber()
-    this._numSpan.textContent = n !== null ? String(n) : ''
-  }
-
-  private _computeNumber(): number | null {
-    const envType = this._node.attrs['envType'] as string
-    if (UNNUMBERED.has(envType)) return null
-
-    const myPos = this._getPos()
-    if (myPos === undefined) return null
-
-    let preceding = 0
-    this._editor.state.doc.nodesBetween(0, myPos, (n) => {
-      if (n.type.name === 'theoremEnv') {
-        if (n.attrs['envType'] === envType) preceding++
-        return false
-      }
-      return true
-    })
-
-    return preceding + 1
+    const id    = this._node.attrs['id'] as string
+    const entry = id ? theoremLabels.value.get(id) : null
+    this._numSpan.textContent = entry ? entry.num : ''
   }
 
   // ── Dispatch ──────────────────────────────────────────────────
