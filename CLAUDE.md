@@ -47,6 +47,10 @@ npm run verify:content    # compila TODAS las lecciones/ejemplares/plantillas (a
 npm run verify:numbering  # QA-08: la numeración de la política vs. la que asigna TeX.
                           # Único script que pide `latexmk` en el PATH (necesita el .aux).
 
+npm run build:previews    # regenera las miniaturas de plantillas/ejemplares (DOC-09).
+                          # Necesita el compilador arriba. Corrida COMPLETA: reescribe
+                          # `public/previews/` y el manifiesto juntos. Se committea.
+
 cd ..
 docker compose up --build   # stack local completo: front en :8080, compilador en :8787
 ```
@@ -65,6 +69,21 @@ Para que `npm run dev` compile de verdad: `VITE_COMPILE_API_URL=http://localhost
 > puerto `LatexCompiler` **vía HTTP** — así corren contra la **imagen que va a producción**, y el
 > compilador queda libre para desplegarse solo. `verify:numbering` es la excepción: necesita el
 > `.aux`, que la API no expone, así que pide `latexmk` en el PATH.
+
+> **Las vistas previas de las plantillas son artefactos generados y committeados** (DOC-09). Las
+> imágenes viven en `plataforma/public/previews/` (assets estáticos, **fuera del bundle**) y la app
+> solo importa `src/features/previews/manifest.generated.ts`. El vínculo con la plantilla es el `id`
+> y lo resuelve `previewFor(kind, id)`: si no hay preview devuelve `undefined` y la tarjeta se dibuja
+> sin imagen — **una plantilla nueva sin regenerar no rompe nada**. El nombre de cada archivo lleva
+> hash de contenido: sin eso, el `Cache-Control: immutable` del deploy serviría la vieja por un año.
+
+> **Dónde está el usuario ES la URL, no un `useState`** (FIX-22). `features/navigation/location.ts`
+> es puro (unión discriminada `AppLocation` + `parseLocation`/`locationToPath`, testeable sin DOM) y
+> `useAppLocation` es el único módulo que toca `window.history`. `App` **deriva** su vista de ahí. Dos
+> consecuencias para cualquier vista nueva: **(1)** agregar una vista es agregar una variante y su
+> ruta —si la guardás en un `useState` local, el botón Atrás vuelve a romperse—; **(2)** el estado de
+> edición va en un componente montado con `key`, porque volver Atrás cambia la ubicación pero no
+> desmonta nada por sí solo (así se resolvió `CourseWorkspace`).
 
 > **`npm run build` es el typecheck autoritativo, no `tsc --noEmit`.** El caché
 > incremental de `tsc -b` puede ocultar errores de `exactOptionalPropertyTypes`; el build

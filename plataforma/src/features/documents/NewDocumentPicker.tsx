@@ -3,6 +3,10 @@ import { ChevronLeft, Plus } from '@/components/icons'
 import { templates } from '@/features/templates/data'
 import type { Template } from '@/features/templates/types'
 import type { Exemplar } from '@/features/showcase/types'
+import { previewFor } from '@/features/previews/previews'
+import { PreviewDialog } from '@/features/previews/PreviewDialog'
+import { PreviewThumb } from '@/features/previews/PreviewThumb'
+import type { Preview } from '@/features/previews/types'
 
 /** Cómo se va a editar el documento: en el editor visual o escribiendo LaTeX. */
 type EditMode = 'matex' | 'latex'
@@ -41,6 +45,9 @@ export function NewDocumentPicker({
 }: NewDocumentPickerProps) {
   const [mode, setMode] = useState<EditMode>('matex')
   const [intent, setIntent] = useState<Intent>('todo')
+  // Vista previa abierta en el visor. Se guarda el preview *y* el título: el visor no conoce
+  // plantillas ni ejemplares, solo páginas.
+  const [openPreview, setOpenPreview] = useState<{ title: string; preview: Preview } | null>(null)
   const wantsMatex = mode === 'matex'
   const showTemplates = intent === 'todo' || intent === 'plantillas'
   const showExemplars = intent === 'todo' || intent === 'ejemplos'
@@ -148,6 +155,8 @@ export function NewDocumentPicker({
                 title={template.title}
                 description={template.description}
                 available={!wantsMatex || !!template.matex}
+                preview={previewFor('template', template.id)}
+                onOpenPreview={setOpenPreview}
                 onPrimary={() => onTemplate(template, wantsMatex)}
               />
             ))}
@@ -161,12 +170,20 @@ export function NewDocumentPicker({
                 title={exemplar.title}
                 description={exemplar.description}
                 available={!wantsMatex || !!exemplar.matex}
+                preview={previewFor('exemplar', exemplar.id)}
+                onOpenPreview={setOpenPreview}
                 onPrimary={() => onUseExemplar(exemplar, wantsMatex)}
                 onStudy={() => onStudyExemplar(exemplar.id)}
               />
             ))}
         </div>
       </div>
+
+      <PreviewDialog
+        preview={openPreview?.preview ?? null}
+        title={openPreview?.title ?? ''}
+        onClose={() => setOpenPreview(null)}
+      />
     </div>
   )
 }
@@ -179,12 +196,26 @@ interface CardProps {
   description: string
   /** ¿Existe en el modo elegido? Si no, la tarjeta queda deshabilitada y lo explica. */
   available: boolean
+  /** Miniaturas del documento compilado, si están generadas (`npm run build:previews`). */
+  preview?: Preview | undefined
+  /** Pide abrir el visor de páginas. */
+  onOpenPreview: (open: { title: string; preview: Preview }) => void
   onPrimary: () => void
   /** Solo los ejemplares: abre el visor de estudio (fuente comentada + PDF). */
   onStudy?: () => void
 }
 
-function Card({ badge, kind, title, description, available, onPrimary, onStudy }: CardProps) {
+function Card({
+  badge,
+  kind,
+  title,
+  description,
+  available,
+  preview,
+  onOpenPreview,
+  onPrimary,
+  onStudy,
+}: CardProps) {
   return (
     <div
       className={[
@@ -192,20 +223,27 @@ function Card({ badge, kind, title, description, available, onPrimary, onStudy }
         available ? 'border-(--color-border) hover:border-(--color-primary)' : 'border-(--color-border) opacity-60',
       ].join(' ')}
     >
-      <button
-        type="button"
-        onClick={onPrimary}
-        disabled={!available}
-        className="flex flex-1 flex-col items-start p-4 text-left disabled:cursor-not-allowed"
-      >
-        <span className="mb-2 inline-flex items-center gap-1.5">
-          <span className="rounded-full bg-(--color-surface-muted) px-2 py-0.5 text-[11px] font-medium text-(--color-ink-muted)">{kind}</span>
-          <span className="rounded-full border border-(--color-border) px-2 py-0.5 text-[11px] text-(--color-ink-muted)">{badge}</span>
-        </span>
-        <span className="font-semibold text-(--color-ink)">{title}</span>
-        <span className="mt-1 text-sm text-(--color-ink-muted)">{description}</span>
-        {!available && <span className="mt-2 text-xs text-amber-600">Solo disponible en LaTeX.</span>}
-      </button>
+      {/* La miniatura es **hermana** del botón principal, no hija: un botón dentro de otro es
+          HTML inválido, y además abrir la vista previa no debe crear el documento. */}
+      <div className="flex flex-1 items-start gap-3 p-4">
+        <button
+          type="button"
+          onClick={onPrimary}
+          disabled={!available}
+          className="flex flex-1 flex-col items-start text-left disabled:cursor-not-allowed"
+        >
+          <span className="mb-2 inline-flex items-center gap-1.5">
+            <span className="rounded-full bg-(--color-surface-muted) px-2 py-0.5 text-[11px] font-medium text-(--color-ink-muted)">{kind}</span>
+            <span className="rounded-full border border-(--color-border) px-2 py-0.5 text-[11px] text-(--color-ink-muted)">{badge}</span>
+          </span>
+          <span className="font-semibold text-(--color-ink)">{title}</span>
+          <span className="mt-1 text-sm text-(--color-ink-muted)">{description}</span>
+          {!available && <span className="mt-2 text-xs text-amber-600">Solo disponible en LaTeX.</span>}
+        </button>
+        {preview && (
+          <PreviewThumb preview={preview} title={title} onOpen={() => onOpenPreview({ title, preview })} />
+        )}
+      </div>
       {onStudy && (
         <div className="border-t border-(--color-border) px-4 py-2">
           <button type="button" onClick={onStudy} className="rounded-md px-2 py-1 text-xs text-(--color-ink-muted) underline hover:text-(--color-ink)">

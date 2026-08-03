@@ -2,10 +2,13 @@ import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
- * Modal genérico: overlay centrado, cierra con **Escape** o click en el fondo. Se renderiza
- * en un portal al `body` (fuera del árbol del editor) para evitar problemas de stacking y de
- * foco con ProseMirror. Para editores **document-level** (bibliografía, portada) que no van en
- * el lienzo ni en la barra contextual.
+ * Modal genérico: overlay centrado, cierra con **Escape** o click en el fondo. Se renderiza en
+ * un portal al `body` (fuera del árbol de quien lo abre) para evitar problemas de stacking y de
+ * foco — en particular con ProseMirror, el editor visual.
+ *
+ * Vive en `components/` y no en `features/matex/editor/`, de donde salió: lo usan los editores
+ * **document-level** de Matex (bibliografía, portada) y el visor de vistas previas, que no
+ * tienen por qué depender del editor para pedir un overlay.
  */
 export function Modal({ open, onClose, title, children, width = 'max-w-2xl' }: {
   open: boolean

@@ -1,24 +1,25 @@
-import { useMemo, useRef, useState } from 'react'
-import { type ImperativePanelHandle } from 'react-resizable-panels'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDown, ChevronLeft, ChevronRight } from '@/components/icons'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { downloadBlob } from '@/lib/files'
 import { buildProjectZip, readProjectZip } from '@/lib/projectZip'
 import { createCompiler } from '@/features/compiler/createCompiler'
-import { safeCompile } from '@/features/compiler/safeCompile'
-import type { CompileResult } from '@/features/compiler/types'
-import { lessonCompileInput } from '@/features/lessons/compile'
 import { allLessons, findLesson, firstLesson, levels } from '@/features/lessons/content'
-import { ExamplePanel } from '@/features/lessons/ExamplePanel'
-import { LessonPanel } from '@/features/lessons/LessonPanel'
+import { CourseWorkspace } from '@/features/lessons/CourseWorkspace'
 import { LessonReader } from '@/features/lessons/LessonReader'
 import { LessonSwitcher } from '@/features/lessons/LessonSwitcher'
-import { Workspace } from '@/features/workspace/Workspace'
 import { HeaderSlotProvider, HeaderSlotTarget } from '@/features/workspace/HeaderSlot'
 import { MatexWorkspace } from '@/features/matex/editor/MatexWorkspace'
 import { compileToLatex, MATEX_AST_VERSION, parseMatexDoc, type MatexDoc } from '@/features/matex/core'
 import { readMatexBundle } from '@/features/matex/bundle'
+import {
+  HOME,
+  sectionOf,
+  type AppLocation,
+  type LessonView,
+  type Section,
+} from '@/features/navigation/location'
+import { useAppLocation } from '@/features/navigation/useAppLocation'
 import { LocalProgressStore } from '@/features/progress/LocalProgressStore'
 import { LocalReviewStore } from '@/features/srs/LocalReviewStore'
 import { allQuestions } from '@/features/quiz/pool'
@@ -32,9 +33,6 @@ import { mainContent } from '@/features/documents/types'
 import { exemplars, findExemplar } from '@/features/showcase/data'
 import type { Exemplar } from '@/features/showcase/types'
 import { ShowcaseViewer } from '@/features/showcase/ShowcaseViewer'
-
-/** Secciones de la app (nav principal). */
-type Section = 'curso' | 'proyectos'
 
 /** Documento de ejemplo para probar el editor visual Matex (beta). */
 const MATEX_SAMPLE: MatexDoc = {
@@ -69,11 +67,17 @@ const MATEX_SAMPLE: MatexDoc = {
     },
   ],
 }
-/** Sub-vistas dentro de una lección del Curso (incluye Repasar). */
-type LessonView = 'learn' | 'example' | 'practice' | 'repaso'
 
 const BLANK_TEX = ['\\documentclass{article}', '', '\\begin{document}', '', '\\end{document}', ''].join('\n')
 
+/**
+ * Shell de la app: el header y **el ruteo**.
+ *
+ * Dónde está el usuario no es estado local sino la **URL** (`useAppLocation`): así el botón Atrás
+ * del navegador funciona, y cada vista tiene un link que se puede compartir o recargar. Lo que sí
+ * es estado de acá son los datos que el header muestra (progreso, repasos pendientes) y la lista
+ * de proyectos, que varias vistas comparten.
+ */
 export default function App() {
   // El compilador entra como PUERTO; el factory elige Mock o Remote (Docker/WASM).
   const compiler = useMemo(() => createCompiler(), [])
@@ -81,41 +85,37 @@ export default function App() {
   const reviewStore = useMemo(() => new LocalReviewStore(), [])
   const projectStore = useMemo(() => new LocalProjectStore(), [])
 
-  const lessonPanelRef = useRef<ImperativePanelHandle>(null)
-  const isNarrow = useMediaQuery('(max-width: 860px)')
-  const direction = isNarrow ? 'vertical' : 'horizontal'
+  const [location, navigate] = useAppLocation()
 
-  const [section, setSection] = useState<Section>('curso')
-  const [lessonView, setLessonView] = useState<LessonView>('learn')
-  const [selectedLessonId, setSelectedLessonId] = useState(firstLesson.id)
-  const [source, setSource] = useState(firstLesson.challenge?.starter ?? firstLesson.example)
-  // Archivo activo en el editor del Curso (multi-archivo): el principal o un acompañante.
-  const [lessonActivePath, setLessonActivePath] = useState(firstLesson.mainFile)
-  const [compiling, setCompiling] = useState(false)
-  const [result, setResult] = useState<CompileResult | null>(null)
-  const [lessonCollapsed, setLessonCollapsed] = useState(false)
   const [completedIds, setCompletedIds] = useState<ReadonlySet<string>>(
     () => new Set(progress.all().map((entry) => entry.lessonId)),
   )
   const [projects, setProjects] = useState(() => projectStore.list())
   const [folders, setFolders] = useState(() => projectStore.listFolders())
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
-  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
-  const [documentsView, setDocumentsView] = useState<'list' | 'new'>('list')
-  const [activeExemplarId, setActiveExemplarId] = useState<string | null>(null)
 
-  const lesson = findLesson(selectedLessonId) ?? firstLesson
-  const currentIndex = allLessons.findIndex((entry) => entry.id === selectedLessonId)
+  const section = sectionOf(location)
+  const lessonView: LessonView = location.kind === 'lesson' ? location.view : 'learn'
+  // Un id que ya no existe (link viejo) cae en la primera lección en vez de dar pantalla blanca.
+  const lesson =
+    (location.kind === 'lesson' && location.lessonId ? findLesson(location.lessonId) : undefined) ??
+    firstLesson
+
+  // Volver al Curso desde Mis Proyectos retoma la última lección visitada. No va en la URL: es
+  // memoria de la sesión, como la posición del scroll, no un lugar al que se pueda linkear.
+  const lastLesson = useRef<AppLocation>(HOME)
+  useEffect(() => {
+    if (location.kind === 'lesson') lastLesson.current = location
+  }, [location])
+
+  const currentIndex = allLessons.findIndex((entry) => entry.id === lesson.id)
   const prev = currentIndex > 0 ? allLessons[currentIndex - 1] : undefined
   const next = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : undefined
-  const activeProject = activeDocumentId ? projectStore.get(activeDocumentId) : undefined
-  const activeExemplar = activeExemplarId ? findExemplar(activeExemplarId) : undefined
 
-  // Editor del Curso: el principal (editable = `source`) o un acompañante (solo lectura).
-  const lessonIsMainActive = lessonActivePath === lesson.mainFile
-  const lessonActiveContent = lessonIsMainActive
-    ? source
-    : (lesson.files.find((file) => file.path === lessonActivePath)?.content ?? source)
+  // Un id que no resuelve (proyecto borrado, ejemplar renombrado) simplemente no abre nada: la
+  // cadena de abajo cae en la galería.
+  const activeProject = location.kind === 'project' ? projectStore.get(location.projectId) : undefined
+  const activeExemplar = location.kind === 'exemplar' ? findExemplar(location.exemplarId) : undefined
 
   const completedCount = useMemo(
     () => allLessons.filter((entry) => completedIds.has(entry.id)).length,
@@ -127,53 +127,19 @@ export default function App() {
   const refreshDueCount = () =>
     setDueCount(allQuestions.filter((question) => reviewStore.isDue(question.id)).length)
 
-  async function handleCompile() {
-    setCompiling(true)
-    try {
-      setResult(await safeCompile(compiler, lessonCompileInput(lesson, source)))
-    } finally {
-      setCompiling(false)
-    }
-  }
-
+  // ── Curso ─────────────────────────────────────────────────────────────────
   function selectLesson(lessonId: string) {
-    setSelectedLessonId(lessonId)
-    const target = findLesson(lessonId)
-    if (target) {
-      setSource(target.challenge?.starter ?? target.example)
-      setLessonActivePath(target.mainFile)
-    }
-    setResult(null)
-    setSection('curso')
     // Al cambiar de lección se empieza leyendo, salvo que estés repasando.
-    setLessonView((current) => (current === 'repaso' ? 'repaso' : 'learn'))
+    navigate({ kind: 'lesson', lessonId, view: lessonView === 'repaso' ? 'repaso' : 'learn' })
   }
 
-  /** Cambia la sub-vista de la lección cargando en el editor la fuente correcta. */
   function changeLessonView(nextView: LessonView) {
-    if (nextView === lessonView && section === 'curso') return
-    if (nextView === 'example') {
-      setSource(lesson.example)
-      setResult(null)
-    } else if (nextView === 'practice') {
-      setSource(lesson.challenge?.starter ?? lesson.example)
-      setResult(null)
-    }
-    setLessonActivePath(lesson.mainFile)
-    setLessonView(nextView)
-    setSection('curso')
+    navigate({ kind: 'lesson', lessonId: lesson.id, view: nextView })
   }
 
   function handleChallengePassed(lessonId: string) {
     progress.markCompleted(lessonId)
     setCompletedIds((previous) => new Set(previous).add(lessonId))
-  }
-
-  function toggleLesson() {
-    const panel = lessonPanelRef.current
-    if (!panel) return
-    if (panel.isCollapsed()) panel.expand()
-    else panel.collapse()
   }
 
   // ── Galería ───────────────────────────────────────────────────────────────
@@ -184,9 +150,7 @@ export default function App() {
       mainFile: exemplar.mainFile,
       folderId: selectedFolderId,
     })
-    setActiveExemplarId(null)
     openProject(project.id)
-    setSection('proyectos')
   }
 
   /** Usa el ejemplar como punto de partida en el modo elegido (visual o LaTeX). */
@@ -205,16 +169,13 @@ export default function App() {
       mainContent: compileToLatex(exemplar.matex),
       folderId: selectedFolderId,
     })
-    setActiveExemplarId(null)
     openProject(project.id)
-    setSection('proyectos')
   }
 
   // ── Mis Proyectos ───────────────────────────────────────────────────────
   function openProject(id: string) {
     setProjects(projectStore.list())
-    setActiveDocumentId(id)
-    setDocumentsView('list')
+    navigate({ kind: 'project', projectId: id })
   }
 
   /** Crea un documento **Matex** (visual) y lo abre. */
@@ -313,11 +274,6 @@ export default function App() {
     )
   }
 
-  function openDocument(id: string) {
-    setActiveDocumentId(id)
-    setSection('proyectos')
-  }
-
   function renameDocument(id: string) {
     const current = projectStore.get(id)
     const name = window.prompt('Nuevo nombre del proyecto:', current?.name ?? '')
@@ -357,9 +313,8 @@ export default function App() {
   }
 
   function closeDocument() {
-    setActiveDocumentId(null)
-    setDocumentsView('list')
     setProjects(projectStore.list())
+    navigate({ kind: 'projects' })
   }
 
   // ── Carpetas ──────────────────────────────────────────────────────────────
@@ -389,14 +344,9 @@ export default function App() {
     if (selectedFolderId === id) setSelectedFolderId(parentId)
   }
 
-  /** Cambia de sección y vuelve a la grilla/lista (deselecciona el ítem abierto). */
+  /** Cambia de sección: al Curso se vuelve donde estabas; a Proyectos, a la lista. */
   function goSection(next: Section) {
-    setActiveExemplarId(null)
-    if (next === 'proyectos') {
-      setActiveDocumentId(null)
-      setDocumentsView('list')
-    }
-    setSection(next)
+    navigate(next === 'curso' ? lastLesson.current : { kind: 'projects' })
   }
 
   return (
@@ -420,7 +370,7 @@ export default function App() {
             </NavButton>
             <LessonSwitcher
               levels={levels}
-              currentLessonId={selectedLessonId}
+              currentLessonId={lesson.id}
               isCompleted={(lessonId) => completedIds.has(lessonId)}
               onSelect={selectLesson}
             />
@@ -445,8 +395,8 @@ export default function App() {
         <HeaderSlotTarget className="flex min-w-0 flex-1 items-center justify-end gap-2" />
       </header>
 
-      {section === 'curso' ? (
-        lessonView === 'learn' ? (
+      {location.kind === 'lesson' ? (
+        location.view === 'learn' ? (
           <main className="min-h-0 flex-1 bg-(--color-surface)">
             <LessonReader
               lesson={lesson}
@@ -454,64 +404,30 @@ export default function App() {
               onPractice={() => changeLessonView('practice')}
             />
           </main>
-        ) : lessonView === 'repaso' ? (
+        ) : location.view === 'repaso' ? (
           <main className="min-h-0 flex-1">
             <QuizSession
-              key={selectedLessonId}
+              key={lesson.id}
               store={reviewStore}
-              lessonId={selectedLessonId}
+              lessonId={lesson.id}
               level={lesson.level}
               onAnswered={refreshDueCount}
             />
           </main>
         ) : (
           <main className="min-h-0 flex-1">
-          <Workspace
-            direction={direction}
-            autoSaveId={`matex-lesson-${direction}`}
-            leftPanel={
-              lessonView === 'example' ? (
-                <ExamplePanel
-                  key={lesson.id}
-                  lesson={lesson}
-                  activePath={lessonActivePath}
-                  onSelectFile={setLessonActivePath}
-                  onReset={() => setSource(lesson.example)}
-                  onCollapse={toggleLesson}
-                  onGoLearn={() => changeLessonView('learn')}
-                  onGoPractice={lesson.challenge ? () => changeLessonView('practice') : undefined}
-                />
-              ) : (
-                <LessonPanel
-                  key={lesson.id}
-                  lesson={lesson}
-                  activePath={lessonActivePath}
-                  onSelectFile={setLessonActivePath}
-                  currentSource={source}
-                  onLoadIntoEditor={setSource}
-                  onChallengePassed={handleChallengePassed}
-                  onCollapse={toggleLesson}
-                  onGoLearn={() => changeLessonView('learn')}
-                  onGoExample={() => changeLessonView('example')}
-                />
-              )
-            }
-            leftPanelRef={lessonPanelRef}
-            expandKey={`${selectedLessonId}-${lessonView}`}
-            leftCollapsed={lessonCollapsed}
-            onToggleLeft={toggleLesson}
-            onLeftCollapse={() => setLessonCollapsed(true)}
-            onLeftExpand={() => setLessonCollapsed(false)}
-            source={lessonActiveContent}
-            onSourceChange={lessonIsMainActive ? setSource : () => {}}
-            readOnly={!lessonIsMainActive}
-            filePaths={[lesson.mainFile, ...lesson.files.map((file) => file.path)]}
-            onOpenPath={setLessonActivePath}
-            result={result}
-            compiling={compiling}
-            onCompile={handleCompile}
-            downloadName={lesson.id}
-          />
+            {/* La `key` reinicia la sesión de edición al cambiar de lección o de vista —
+                incluso yendo Atrás con el navegador. */}
+            <CourseWorkspace
+              key={`${lesson.id}:${location.view}`}
+              lesson={lesson}
+              view={location.view}
+              compiler={compiler}
+              onChallengePassed={handleChallengePassed}
+              onGoLearn={() => changeLessonView('learn')}
+              onGoExample={() => changeLessonView('example')}
+              onGoPractice={() => changeLessonView('practice')}
+            />
           </main>
         )
       ) : (
@@ -523,7 +439,7 @@ export default function App() {
               key={activeExemplar.id}
               exemplar={activeExemplar}
               compiler={compiler}
-              onBack={() => setActiveExemplarId(null)}
+              onBack={() => navigate({ kind: 'newDocument' })}
               onUseAsBase={openExemplarAsLatex}
               onOpenMatex={openExemplarAsMatex}
             />
@@ -545,15 +461,15 @@ export default function App() {
                 onClose={closeDocument}
               />
             )
-          ) : documentsView === 'new' ? (
+          ) : location.kind === 'newDocument' ? (
             <NewDocumentPicker
               onBlank={createBlank}
               onMatex={createMatex}
               onTemplate={createFromTemplate}
               exemplars={exemplars}
               onUseExemplar={startFromExemplar}
-              onStudyExemplar={setActiveExemplarId}
-              onCancel={() => setDocumentsView('list')}
+              onStudyExemplar={(id) => navigate({ kind: 'exemplar', exemplarId: id })}
+              onCancel={() => navigate({ kind: 'projects' })}
             />
           ) : (
             <DocumentsGallery
@@ -564,10 +480,10 @@ export default function App() {
               onCreateFolder={createFolder}
               onRenameFolder={renameFolder}
               onDeleteFolder={deleteFolder}
-              onNew={() => setDocumentsView('new')}
+              onNew={() => navigate({ kind: 'newDocument' })}
               onImportZip={importZip}
               onImportMatex={importMatex}
-              onOpen={openDocument}
+              onOpen={(id) => navigate({ kind: 'project', projectId: id })}
               onRename={renameDocument}
               onDuplicate={duplicateDocument}
               onDelete={deleteDocument}

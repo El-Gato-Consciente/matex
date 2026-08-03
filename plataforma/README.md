@@ -18,6 +18,10 @@ npm test         # vitest
 npm run lint     # oxlint
 ```
 
+Dos scripts más piden el compilador arriba: `npm run verify:content` (compila **todo** el
+contenido, anti-bitrot) y `npm run build:previews` (regenera las miniaturas de plantillas y
+ejemplares en `public/previews/` + su manifiesto; son artefactos **committeados**).
+
 Sin configuración la app usa el `MockCompiler` (offline, PDF de marcador). Para compilar
 de verdad, levantá el compilador (`docker compose up compiler` desde la raíz — su código vive
 en el repo `lambdas`, en `lambdas/matex/compiler/`) y poné en `.env.local`:
@@ -51,6 +55,9 @@ src/
 │   ├── documents/      # PUERTO ProjectStore: proyectos multi-archivo, carpetas, zip
 │   ├── templates/      # plantillas (punto de partida) — 12, con versión Matex
 │   ├── showcase/       # ejemplares de estudio — 11, con versión Matex
+│   ├── previews/       # miniaturas del PDF de plantillas/ejemplares: manifiesto
+│   │                   # generado + UI. Las imágenes son estáticas (public/previews/)
+│   ├── navigation/     # la URL como ubicación: location.ts (puro) + useAppLocation
 │   ├── latex/          # utilidades del lenguaje (parseLog, etc.)
 │   └── matex/
 │       ├── core/       # matex-core: PURO, sin DOM ni frameworks

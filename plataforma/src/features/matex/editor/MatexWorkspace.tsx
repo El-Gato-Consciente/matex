@@ -74,7 +74,7 @@ import { ChartEditor } from './ChartEditor'
 import { DistEditor } from './DistEditor'
 import { DiagramEditor } from './DiagramEditor'
 import { TreeEditor } from './TreeEditor'
-import { Modal } from './Modal'
+import { Modal } from '@/components/Modal'
 import { autoKey, emitBibtex } from '../core'
 import type { Author, BibEntry, CalloutVariant, ChartForm, ChartSpec, DiagramSpec, DistForm, DistSpec, DocKind, DocMeta, FigureItem, PlotSpec, TableAlign, TheoremVariant, TreeSpec } from '../core'
 
