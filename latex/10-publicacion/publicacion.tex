@@ -1,0 +1,211 @@
+% =====================================================================
+%  Publicación e interoperabilidad — suite de documentos LaTeX
+%  Nivel 4 (Avanzado) · clase article.
+%  Compilar: latexmk -pdf publicacion.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Publicación e interoperabilidad en LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  language=bash, xleftmargin=8pt, framesep=4pt, extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1,
+}
+\lstdefinestyle{tex}{language=[LaTeX]TeX, keywordstyle=\color{codekw}\bfseries}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+
+\title{\textbf{Publicación e interoperabilidad}\\[2pt]
+       \large Llevar \LaTeX{} al resto del mundo}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent El documento \LaTeX{} no vive aislado: hay que \textbf{convertirlo} a
+otros formatos (un docente pide Word, una web pide HTML), \textbf{prepararlo}
+para enviarlo a una revista o repositorio, cuidar la \textbf{calidad y
+accesibilidad} del PDF, y a veces \textbf{generar muchos documentos} a partir de
+datos. Esta es la capa de \enquote{salida} y puentes hacia afuera.
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Conversión de formatos: \texttt{pandoc}}
+% =====================================================================
+La herramienta central de interoperabilidad es \textbf{\texttt{pandoc}}: convierte
+entre decenas de formatos (es externo a \LaTeX, se corre en la terminal). Casos
+típicos:
+\begin{lstlisting}
+# LaTeX  ->  Word (.docx)   (lo que mas piden los docentes)
+pandoc informe.tex -o informe.docx
+
+# LaTeX  ->  Markdown / HTML
+pandoc informe.tex -o informe.md
+pandoc informe.tex -o informe.html --mathjax
+
+# Word  ->  LaTeX   (punto de partida desde un .docx ajeno)
+pandoc origen.docx -o origen.tex
+
+# usar una bibliografia .bib en la conversion
+pandoc informe.tex --citeproc --bibliography=refs.bib -o informe.docx
+\end{lstlisting}
+\begin{quote}\small
+\textbf{Realismo:} pandoc traduce muy bien estructura, listas, tablas y
+matemática básica; lo \textbf{muy específico} de \LaTeX{} (TikZ, macros raras,
+ciertos paquetes) no siempre sobrevive. Para Word suele requerir un repaso
+manual; aun así, ahorra horas.
+\end{quote}
+
+% =====================================================================
+\section{LaTeX a HTML (matemática en la web)}
+% =====================================================================
+Para publicar en la web conservando la matemática hay tres caminos:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Herramienta} & \textbf{Notas} \\
+\midrule
+\texttt{pandoc -{}-mathjax} & Rápido; la matemática la renderiza \textbf{MathJax} en el navegador. \\
+\texttt{make4ht} / \texttt{tex4ht} & Más fiel a \LaTeX; genera HTML+CSS (y ODT, ePub). \\
+\textbf{LaTeXML} & Conversión de \textbf{alta calidad} a HTML/XML (la usa arXiv para su HTML). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Si solo querés la matemática \emph{en} una web propia, \textbf{MathJax} o
+\textbf{KaTeX} renderizan \LaTeX{} directamente en el navegador (pegás
+\verb|$...$| en el HTML).
+
+% =====================================================================
+\section{Calidad del PDF: metadatos, PDF/A y accesibilidad}
+% =====================================================================
+El PDF también se \enquote{publica}, y conviene que sea prolijo y duradero.
+
+\paragraph{Metadatos.} Con \pkg{hyperref} (título, autor; aparecen en
+\emph{Propiedades} del PDF y ayudan a buscadores/bibliotecas):
+\begin{lstlisting}[style=tex]
+\hypersetup{unicode, pdftitle={Mi tesina}, pdfauthor={Mi Nombre},
+            pdfsubject={...}, pdfkeywords={latex, matematica}}
+\end{lstlisting}
+
+\paragraph{PDF/A (archivado).} Muchos repositorios de tesis exigen \textbf{PDF/A}
+(formato auto-contenido, con fuentes incrustadas, pensado para preservación a
+largo plazo). El paquete \pkg{pdfx} lo activa:
+\begin{lstlisting}[style=tex]
+\usepackage[a-2b]{pdfx}   % declara conformidad PDF/A-2b
+\end{lstlisting}
+
+\paragraph{Accesibilidad (PDF \enquote{etiquetado}).} Un PDF \emph{tagged} permite
+que un lector de pantalla lo lea en orden y describa figuras. Es un área en
+desarrollo en \LaTeX: el proyecto \enquote{\LaTeX{} Tagged PDF} y el paquete
+\pkg{tagpdf} avanzan hacia PDF accesibles; conviene además poner texto
+alternativo en las imágenes importantes. Para entregas formales, verificá si te
+exigen accesibilidad.
+
+% =====================================================================
+\section{Preparar un envío (revista / repositorio / arXiv)}
+% =====================================================================
+Al enviar a una revista o a \textbf{arXiv} casi siempre piden el \textbf{fuente},
+no solo el PDF. Dos cuidados:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Aplanar} el proyecto: si usás \C{include}/\C{input}, conviene
+        unificar en un solo \texttt{.tex} con \texttt{latexpand}:
+\begin{lstlisting}
+latexpand tesina.tex > enviar.tex
+\end{lstlisting}
+  \item \textbf{Bibliografía:} incluí el \texttt{.bbl} generado (arXiv no corre
+        biber/bibtex). Y revisá que compile \enquote{en limpio} desde cero.
+\end{itemize}
+Herramientas como \texttt{arxiv-collector} juntan el \texttt{.tex}, el
+\texttt{.bbl} y las figuras en un \texttt{.zip} listo para subir. Cada
+revista trae su \textbf{plantilla} (clase + \texttt{.bst}); respetala y leé sus
+\emph{author guidelines}.
+
+% =====================================================================
+\section{Mail merge: generar muchos documentos desde datos}
+% =====================================================================
+\LaTeX{} sirve para \textbf{producción en masa}: certificados, exámenes
+personalizados, cartas\dots a partir de una tabla de datos. El paquete
+\pkg{csvsimple} recorre un CSV y arma un documento por fila:
+\begin{lstlisting}[style=tex]
+\usepackage{csvsimple}
+...
+\csvreader[head to column names]{alumnos.csv}{}{%
+  \newpage
+  Certificamos que \nombre\ \apellido\ aprobo con \nota.%
+}
+\end{lstlisting}
+Con un CSV de 100 filas, una sola compilación genera las 100 páginas. La
+alternativa más potente es \pkg{datatool} (ordenar, filtrar, hacer cuentas sobre
+los datos). Combinado con \pkg{pgfplots}, también graficás esos datos.
+
+% =====================================================================
+\section{Compartir y colaborar}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \textbf{Overleaf:} edición en la nube, sin instalar, con historial y
+        comentarios; ideal para co-autoría y para enviar a quien no tiene \LaTeX.
+  \item \textbf{git:} el fuente es texto, versionalo (ver \emph{Flujo}); para que
+        un docente vea cambios, \texttt{latexdiff} marca lo agregado/borrado.
+  \item \textbf{El PDF} es el entregable universal: se ve igual en todos lados.
+        Cuando piden \enquote{editable}, ahí entra pandoc $\to$ Word.
+\end{itemize}
+
+% =====================================================================
+\section{Buenas prácticas}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item Si te piden Word/HTML, \texttt{pandoc} primero y \textbf{repasá} el
+        resultado; no esperes una conversión perfecta de lo muy específico.
+  \item Para tesis/repositorios, averiguá si exigen \textbf{PDF/A} (y usá
+        \pkg{pdfx}) y/o accesibilidad.
+  \item Antes de enviar: \textbf{aplaná} (\texttt{latexpand}), incluí el
+        \texttt{.bbl}, y verificá una compilación limpia desde cero.
+  \item Metadatos del PDF siempre (\pkg{hyperref}); \texttt{unicode} activado.
+  \item Producción en masa $\to$ \pkg{csvsimple}/\pkg{datatool} desde un CSV.
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Flujo e instalación} — git, \texttt{latexdiff}, Overleaf, CI.
+  \item \emph{Referencias y bibliografía} — el \texttt{.bbl} y los estilos.
+  \item \emph{Programación} — generar \texttt{.tex} desde datos/otros lenguajes.
+  \item Externo: \texttt{pandoc.org}; \texttt{texdoc pdfx}, \texttt{texdoc csvsimple}.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,319 @@
+% =====================================================================
+%  Tablas, listas y cajas — suite de documentos LaTeX
+%  Nivel 2 (Capacidades) · clase article.
+%  Compilar: latexmk -pdf tablas-listas-cajas.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+% --- Tablas ---
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{longtable}
+% --- Listas y cajas ---
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+% --- Enlaces ---
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Tablas, listas y cajas en LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  language=[LaTeX]TeX, xleftmargin=8pt, framesep=4pt, extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\produce}{\par\smallskip\noindent\textit{produce:}\par\smallskip}
+
+\title{\textbf{Tablas, listas y cajas en \LaTeX}\\[2pt]
+       \large Elementos de contenido}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent Los tres elementos que estructuran el contenido \emph{dentro} del
+texto: \textbf{tablas} (datos en filas y columnas), \textbf{listas} (ítems
+ordenados o no) y \textbf{cajas} (encuadrar y resaltar). Formato código →
+resultado. \emph{(El canon tipográfico está en \emph{Estándares}; este documento
+lo aplica y amplía.)}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Tablas: lo básico}
+% =====================================================================
+Una tabla se arma con el entorno \texttt{tabular} y un \textbf{preámbulo de
+columnas} que dice cuántas hay y cómo se alinean:
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \texttt{l} \texttt{c} \texttt{r}: columna alineada a izquierda, centro o
+        derecha (ancho automático).
+  \item \texttt{p\{3cm\}}: columna de ancho fijo con texto que \textbf{ajusta}
+        (varias líneas).
+  \item \texttt{\&} separa celdas; \texttt{\textbackslash\textbackslash} termina
+        la fila.
+\end{itemize}
+\begin{lstlisting}
+\begin{tabular}{lcr}
+  Nombre & Edad & Nota \\
+  Ana    & 21   & 9.5  \\
+  Beto   & 23   & 8.0  \\
+\end{tabular}
+\end{lstlisting}
+
+% =====================================================================
+\section{El canon: \texttt{booktabs}}
+% =====================================================================
+Las tablas profesionales usan \pkg{booktabs}: solo reglas \textbf{horizontales}
+(\C{toprule}, \C{midrule}, \C{bottomrule}), \textbf{nunca verticales}. El aire y
+las líneas finas se leen mucho mejor que una grilla cerrada.
+\begin{lstlisting}
+\begin{tabular}{@{}lcr@{}}
+  \toprule
+  Nombre & Edad & Nota \\
+  \midrule
+  Ana  & 21 & 9.5 \\
+  Beto & 23 & 8.0 \\
+  \bottomrule
+\end{tabular}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tabular}{@{}lcr@{}}
+  \toprule
+  Nombre & Edad & Nota \\
+  \midrule
+  Ana  & 21 & 9.5 \\
+  Beto & 23 & 8.0 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+\noindent El \texttt{@\{\}} al principio y final quita el relleno lateral
+sobrante. Para una regla \textbf{parcial} (bajo algunas columnas) se usa
+\C{cmidrule\{2-3\}}.
+
+% =====================================================================
+\section{Combinar celdas: \texttt{multicolumn} y \texttt{multirow}}
+% =====================================================================
+\begin{lstlisting}
+\begin{tabular}{@{}lcc@{}}
+  \toprule
+  & \multicolumn{2}{c}{Parciales} \\   % una celda que ocupa 2 columnas
+  \cmidrule(lr){2-3}
+  Alumno & 1.\textordmasculine{} & 2.\textordmasculine{} \\
+  \midrule
+  \multirow{2}{*}{Grupo A} & 7 & 8 \\  % una celda que ocupa 2 filas
+                           & 9 & 6 \\
+  \bottomrule
+\end{tabular}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+  \toprule
+  & \multicolumn{2}{c}{Parciales} \\
+  \cmidrule(lr){2-3}
+  Alumno & 1.\textordmasculine{} & 2.\textordmasculine{} \\
+  \midrule
+  \multirow{2}{*}{Grupo A} & 7 & 8 \\
+                           & 9 & 6 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+% =====================================================================
+\section{Anchos y alineación de números}
+% =====================================================================
+\paragraph{\texttt{tabularx}: ancho total fijo.} La columna \texttt{X} se
+\textbf{estira} para que la tabla ocupe el ancho pedido (ideal para texto largo):
+\begin{lstlisting}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+  \toprule
+  Campo & Descripcion \\
+  \midrule
+  Titulo & Un texto que puede ser largo y se acomoda solo en varias lineas. \\
+  \bottomrule
+\end{tabularx}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+  \toprule
+  Campo & Descripción \\
+  \midrule
+  Título & Un texto que puede ser largo y se acomoda solo en varias líneas sin
+           que tengas que cortarlo a mano. \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Columna \texttt{S} de \texttt{siunitx}: alinear por el decimal.}
+\begin{lstlisting}
+\begin{tabular}{@{}lS@{}}
+  \toprule Magnitud & {Valor} \\ \midrule
+  Ancho  & 12.5  \\
+  Alto   &  3.25 \\
+  Largo  & 120.0 \\
+  \bottomrule
+\end{tabular}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tabular}{@{}lS@{}}
+  \toprule Magnitud & {Valor} \\ \midrule
+  Ancho  & 12.5  \\
+  Alto   &  3.25 \\
+  Largo  & 120.0 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+Los números quedan alineados \textbf{por la coma decimal} (el encabezado va entre
+\texttt{\{\}} para que no lo interprete como número).
+
+% =====================================================================
+\section{Tablas flotantes y muy largas}
+% =====================================================================
+Para que una tabla tenga \textbf{número y epígrafe} y se referencie, va en un
+entorno \texttt{table} (flotante, como las figuras):
+\begin{lstlisting}
+\begin{table}[htbp]\centering
+  \begin{tabular}{...} ... \end{tabular}
+  \caption{Resultados.}\label{tab:res}   % caption ANTES del label
+\end{table}
+... y se cita con \cref{tab:res}.
+\end{lstlisting}
+Si la tabla \textbf{no entra en una página}, \texttt{table} no sirve (no se
+parte): usá \pkg{longtable}, que se corta entre páginas repitiendo el encabezado.
+
+% =====================================================================
+\section{Listas}
+% =====================================================================
+Tres entornos básicos:
+\begin{lstlisting}
+\begin{itemize} \item ... \end{itemize}      % vinetas
+\begin{enumerate} \item ... \end{enumerate}  % numeradas
+\begin{description} \item[Termino] ... \end{description}  % con etiqueta
+\end{lstlisting}
+\produce
+\begin{center}\begin{minipage}{0.85\linewidth}
+\begin{description}[leftmargin=2.2cm,style=nextline,font=\bfseries]
+  \item[itemize] lista con viñetas, para ítems sin orden.
+  \item[enumerate] numerada, cuando el orden importa.
+  \item[description] cada ítem tiene una \textbf{etiqueta} en negrita.
+\end{description}
+\end{minipage}\end{center}
+
+\paragraph{Personalizar con \texttt{enumitem}.} Permite ajustar espaciado,
+etiquetas y reanudar la numeración, sin \enquote{hacks}:
+\begin{lstlisting}
+\begin{enumerate}[label=(\alph*), noitemsep]  % (a) (b) (c), compacta
+\begin{itemize}[label=$\Rightarrow$, leftmargin=*]
+\begin{enumerate}[resume]   % CONTINUA la numeracion de una lista anterior
+\end{lstlisting}
+\produce
+\begin{center}\begin{minipage}{0.7\linewidth}
+\begin{enumerate}[label=(\alph*), noitemsep]
+  \item primer ítem, etiqueta \texttt{(a)};
+  \item segundo, sin espacio extra entre ítems;
+  \item tercero.
+\end{enumerate}
+\end{minipage}\end{center}
+Las listas \textbf{se anidan} hasta cuatro niveles (cambia la viñeta sola). Para
+una lista \textbf{en línea} (dentro de un párrafo) está el entorno \texttt{enumerate*}
+(de \texttt{enumitem} con la opción \texttt{inline}).
+
+% =====================================================================
+\section{Cajas}
+% =====================================================================
+\paragraph{Cajas simples (núcleo de \LaTeX).}
+\begin{lstlisting}
+\fbox{texto}                 % recuadro ajustado
+\framebox[5cm][c]{centrado}  % recuadro de ancho fijo
+\colorbox{yellow}{resaltado} % fondo de color
+\parbox{4cm}{varias lineas}  % caja de ancho fijo con parrafo
+\end{lstlisting}
+\produce
+\begin{center}
+\fbox{texto} \quad \colorbox{yellow}{resaltado} \quad
+\framebox[3cm][c]{ancho fijo}
+\end{center}
+
+\paragraph{\texttt{minipage}: una \enquote{mini página}.} Encierra contenido en un
+ancho dado; es la base para poner cosas \textbf{lado a lado}:
+\begin{lstlisting}
+\begin{minipage}{0.48\textwidth} ... izquierda ... \end{minipage}\hfill
+\begin{minipage}{0.48\textwidth} ... derecha ...   \end{minipage}
+\end{lstlisting}
+
+\paragraph{Cajas vistosas con \texttt{tcolorbox}.} Para destacados, definiciones o
+notas con color, título y bordes redondeados:
+\begin{lstlisting}
+\begin{tcolorbox}[colback=blue!5, colframe=blue!60!black, title=Definicion]
+  Una funcion es par si f(-x)=f(x).
+\end{tcolorbox}
+\end{lstlisting}
+\produce
+\begin{tcolorbox}[colback=blue!5,colframe=blue!60!black,title=Definición,
+                  fonttitle=\bfseries]
+  Una función es \textbf{par} si $f(-x)=f(x)$ para todo $x$ del dominio.
+\end{tcolorbox}
+\noindent \pkg{tcolorbox} es muy potente: cajas que se parten entre páginas,
+\enquote{teoremas} con estilo, cajas con dos columnas, etc. La alternativa más
+liviana es \pkg{mdframed}.
+
+% =====================================================================
+\section{Buenas prácticas}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item Tablas con \pkg{booktabs}; \textbf{sin} líneas verticales ni
+        \C{hline}\C{hline}.
+  \item \pkg{tabularx} para ancho total fijo; columna \texttt{S} para alinear
+        decimales.
+  \item Tabla con epígrafe $\to$ entorno \texttt{table} + \C{caption} + \C{label};
+        citá con \C{cref}.
+  \item Listas: ajustá con \pkg{enumitem}, no con \C{vspace} a mano.
+  \item Cajas de color para \emph{resaltar con sentido}, sin abusar; \pkg{tcolorbox}
+        para las elaboradas.
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Estándares} — el canon de tablas (booktabs) y anti-patrones.
+  \item \emph{Matemática} — entornos de teorema (otra forma de \enquote{caja}).
+  \item Manuales: \texttt{texdoc booktabs}, \texttt{texdoc enumitem},
+        \texttt{texdoc tcolorbox}.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,284 @@
+% =====================================================================
+%  Programación y automatización en LaTeX — suite de documentos LaTeX
+%  Nivel 4 (Avanzado) · clase article.
+%  Compilar: latexmk -pdf programacion.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+% --- Programación ---
+\usepackage{ifthen}     % \ifthenelse
+\usepackage{etoolbox}   % toggles, \ifdef...
+\usepackage{tikz}       % trae \foreach (pgffor)
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Programación y automatización en LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  language=[LaTeX]TeX, xleftmargin=8pt, framesep=4pt, extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\produce}{\par\smallskip\noindent\textit{produce:}\quad}
+
+% --- Macros de demostración (se usan en el cuerpo) ---
+\newcommand{\saludo}{¡Hola desde una macro!}
+\newcommand{\cuadrado}[1]{#1^{2}}
+\newcommand{\vect}[1][v]{\mathbf{#1}}      % argumento OPCIONAL (default: v)
+\newcounter{ejemplo}                        % contador propio
+
+\title{\textbf{Programación y automatización en \LaTeX}\\[2pt]
+       \large Macros, lógica, bucles y generación de contenido}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent \LaTeX{} no es solo un procesador de texto: es un \textbf{lenguaje de
+programación} (de hecho, Turing-completo). Eso permite definir tus propios
+comandos, automatizar lo repetitivo, tomar decisiones lógicas, repetir con
+bucles e incluso \textbf{inyectar} resultados de otros lenguajes. Acá va lo
+esencial, de lo cotidiano (macros) a lo avanzado (\pkg{expl3}, Lua, generación).
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Macros: tus propios comandos}
+% =====================================================================
+La herramienta más usada. \C{newcommand} define un comando nuevo; si ya existe,
+\LaTeX{} avisa (a diferencia de \C{def}, que pisa en silencio):
+\begin{lstlisting}
+\newcommand{\saludo}{Hola desde una macro!}     % sin argumentos
+\newcommand{\cuadrado}[1]{#1^{2}}               % 1 argumento: #1
+\newcommand{\vect}[1][v]{\mathbf{#1}}           % argumento OPCIONAL (default v)
+\end{lstlisting}
+\produce \saludo{} \quad $\cuadrado{x}$, \quad $\cuadrado{(a+b)}$, \quad
+$\vect$ y $\vect[w]$.
+\medskip
+
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \texttt{[n]} declara \textbf{n} argumentos, accesibles como
+        \texttt{\#1\dots\#9}.
+  \item \texttt{[n][def]} hace que el \textbf{primer} argumento sea opcional, con
+        valor por defecto \texttt{def}.
+  \item \C{renewcommand} \textbf{redefine} uno existente; \C{providecommand} lo
+        define solo si no existe.
+\end{itemize}
+\textbf{Por qué importa:} una macro centraliza una notación. Si definís
+\C{newcommand\{\textbackslash R\}\{\textbackslash mathbb\{R\}\}}, escribís
+\C{R} en todos lados y, si algún día querés otro estilo, lo cambiás \emph{en un
+solo lugar} (principio DRY).
+
+\paragraph{Entornos propios.} \C{newenvironment} hace lo mismo para pares
+\texttt{begin/end}:
+\begin{lstlisting}
+\newenvironment{remarca}{\par\noindent\textbf{Nota:~}\itshape}{\par}
+\end{lstlisting}
+
+% =====================================================================
+\section{Contadores y longitudes}
+% =====================================================================
+\LaTeX{} cuenta con \textbf{contadores} (enteros) y mide con \textbf{longitudes}.
+Podés crear y manipular los tuyos:
+\begin{lstlisting}
+\newcounter{ejemplo}
+\stepcounter{ejemplo}            % +1
+\setcounter{ejemplo}{5}          % asignar
+\arabic{ejemplo} / \roman{...}   % mostrarlo (1.. / i..)
+\the\value{ejemplo}              % su valor
+
+\newlength{\misangria}\setlength{\misangria}{1.5em}
+\addtolength{\misangria}{2pt}
+\end{lstlisting}
+\stepcounter{ejemplo}\stepcounter{ejemplo}\stepcounter{ejemplo}%
+\produce el contador vale \arabic{ejemplo} (en romano: \roman{ejemplo}).
+\medskip
+
+Los contadores son la base de la numeración automática (secciones, ecuaciones,
+teoremas): todos son contadores que \LaTeX{} incrementa solo.
+
+% =====================================================================
+\section{Lógica: condicionales}
+% =====================================================================
+Para que el documento \textbf{decida}, hay varias vías. La más legible es
+\C{ifthenelse} (paquete \pkg{ifthen}):
+\begin{lstlisting}
+\ifthenelse{\value{ejemplo} > 3}{es grande}{es chico}
+\ifthenelse{\equal{\modo}{borrador}}{...}{...}
+\end{lstlisting}
+\produce el contador \arabic{ejemplo}
+\ifthenelse{\value{ejemplo} > 3}{ \textbf{es grande}}{ es chico}.
+\medskip
+
+Con \pkg{etoolbox} se trabaja con \textbf{interruptores} (\emph{toggles}), muy
+cómodos para activar/desactivar partes:
+\begin{lstlisting}
+\newtoggle{soluciones}
+\toggletrue{soluciones}     % o \togglefalse
+\iftoggle{soluciones}{\textbf{Solucion:} ...}{}
+\end{lstlisting}
+También existen los condicionales primitivos \C{ifnum}, \C{ifdim}, y
+\C{ifdefined} para comprobar si un comando existe.
+
+% =====================================================================
+\section{Bucles}
+% =====================================================================
+Para repetir, lo más práctico es \C{foreach} (de \pkg{pgffor}, que trae
+\pkg{tikz}): itera sobre una lista o un rango:
+\begin{lstlisting}
+\foreach \n in {1,2,3,4,5}{\n\ }          % lista explicita
+\foreach \n in {1,...,10}{$\cuadrado{\n}=\the\numexpr\n*\n\ $ }  % rango
+\end{lstlisting}
+\produce \foreach \n in {1,...,6}{$\n^2=\the\numexpr\n*\n\relax$\quad}
+\medskip
+
+\C{foreach} es ideal para generar tablas, grillas o figuras repetitivas sin
+copiar y pegar. También existen \C{loop\dots\C{repeat}} (TeX) y los bucles de
+\pkg{expl3}.
+
+\paragraph{Ejemplo: una fila de puntos con \texttt{\textbackslash foreach}.}
+\begin{center}
+\begin{tikzpicture}
+  \foreach \x in {0,1,...,8}{ \fill[blue!60] (\x*0.6,0) circle (2.5pt); }
+\end{tikzpicture}
+\end{center}
+
+% =====================================================================
+\section{\texttt{expl3}: la capa de programación moderna (LaTeX3)}
+% =====================================================================
+La programación \enquote{clásica} de TeX es poderosa pero críptica. \pkg{expl3}
+(ya parte del \LaTeX{} actual) ofrece una sintaxis \textbf{ordenada}, con
+funciones y tipos de datos (listas, secuencias, \emph{property lists}), pensada
+para escribir paquetes:
+\begin{lstlisting}
+\ExplSyntaxOn
+\cs_new:Npn \mi_doble:n #1 { \int_eval:n { 2 * #1 } }
+\ExplSyntaxOff
+\end{lstlisting}
+Convenciones: los nombres llevan \texttt{\_} y un sufijo de tipo (\texttt{:n},
+\texttt{:N}\dots), y dentro de \texttt{\textbackslash ExplSyntaxOn} el espacio
+\textbf{no cuenta} (se usa \texttt{\textasciitilde} para espacio explícito), lo
+que hace el código legible. Es el estándar para desarrollo serio de paquetes; para
+el día a día alcanza con \C{newcommand}.
+
+% =====================================================================
+\section{Inyectar otros lenguajes}
+% =====================================================================
+\paragraph{Lua (con LuaLaTeX).} El motor \texttt{lualatex} incluye el lenguaje
+\textbf{Lua}; podés ejecutar código durante la compilación:
+\begin{lstlisting}
+\directlua{ tex.print(2^10) }        % imprime 1024
+% o el entorno del paquete luacode para bloques mas largos
+\end{lstlisting}
+
+\paragraph{Python (con \pkg{pythontex}).} Permite \textbf{correr Python} y volcar
+el resultado en el PDF (requiere \texttt{-shell-escape} y un paso extra
+\texttt{pythontex}):
+\begin{lstlisting}
+\begin{pycode}
+import numpy as np
+x = np.linspace(0, 1, 5)
+print(x.mean())
+\end{pycode}
+\py{2 + 2}        % inserta 4 en el texto
+\end{lstlisting}
+Es ideal para que cálculos, tablas o gráficos provengan de datos reales sin
+copiar números a mano (\enquote{documento reproducible}).
+
+\paragraph{Generar y \texttt{\textbackslash input}.} Un patrón general: un script
+externo (Python, etc.) genera un \texttt{.tex} (una tabla, por ejemplo) y el
+documento lo incorpora con \C{input\{tabla\_generada.tex\}}. Así separás el
+cálculo de la presentación.
+
+% =====================================================================
+\section{Compilación condicional}
+% =====================================================================
+Producir \textbf{varias versiones} del mismo fuente (con/sin soluciones, borrador
+vs.\ final) sin duplicar el archivo:
+\begin{lstlisting}
+% con un toggle de etoolbox (ver seccion de logica)
+\newtoggle{soluciones}\toggletrue{soluciones}
+... \iftoggle{soluciones}{\textbf{Sol:} 42}{} ...
+
+% o con el paquete comment para excluir bloques enteros:
+\usepackage{comment}
+\excludecomment{soluciones}   % todo lo de ese entorno se omite
+\begin{soluciones} ... \end{soluciones}
+\end{lstlisting}
+Para borrador vs.\ final también sirven la opción \texttt{draft} de la clase y
+\C{includeonly} (ver \emph{Documentos largos}).
+
+% =====================================================================
+\section{Algoritmos y pseudocódigo}
+% =====================================================================
+Para escribir \textbf{pseudocódigo} con formato (palabras clave, indentación,
+numeración de líneas) hay paquetes dedicados —\pkg{algorithm2e} o
+\pkg{algpseudocodex}—, en vez de simular a mano:
+\begin{lstlisting}
+\begin{algorithm}
+\caption{Euclides: mcd(a,b)}
+\While{$b \neq 0$}{
+  $t \gets b$\;
+  $b \gets a \bmod b$\;
+  $a \gets t$\;
+}
+\Return $a$\;
+\end{algorithm}
+\end{lstlisting}
+(Para \textbf{mostrar} código fuente con resaltado —no pseudocódigo— se usan
+\pkg{listings} o \pkg{minted}; ver \emph{Estándares}.)
+
+% =====================================================================
+\section{Buenas prácticas}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \C{newcommand} (no \C{def}) para tus macros: avisa si pisás algo.
+  \item Macros \textbf{semánticas} y centralizadas (DRY); preámbulo reutilizable.
+  \item Lógica legible con \pkg{ifthen}/\pkg{etoolbox}; \C{foreach} para repetir.
+  \item \pkg{expl3} solo si desarrollás paquetes; para escribir, alcanza lo básico.
+  \item Datos reales $\to$ \pkg{pythontex}/Lua o generá \texttt{.tex} y
+        \C{input} (reproducibilidad).
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Estándares} — \C{newcommand} vs.\ \C{def}, mostrar código.
+  \item \emph{Documentos largos} — \C{includeonly}, opción \texttt{draft}.
+  \item \emph{Flujo e instalación} — \texttt{-shell-escape} para pythontex/minted.
+  \item Manuales: \texttt{texdoc usrguide} (LaTeX), \texttt{texdoc expl3},
+        \texttt{texdoc pythontex}, \texttt{texdoc etoolbox}.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,1121 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+
+% ====================== Tema y apariencia ======================
+\usetheme{Madrid}
+\usecolortheme{whale}
+\useinnertheme{rounded}
+\useoutertheme{infolines}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+
+% Pie de página mínimo: solo el número de diapositiva
+\setbeamertemplate{footline}{%
+  \hfill
+  \usebeamercolor[fg]{page number in head/foot}%
+  \usebeamerfont{page number in head/foot}%
+  \footnotesize\insertframenumber\,/\,\inserttotalframenumber\kern1em\vskip3pt%
+}
+
+% ====================== Paquetes ======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}     % fuentes vectoriales (evita bitmaps; habilita microtype)
+\usepackage{microtype}  % pulido tipográfico
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\hypersetup{unicode,  % marcadores del PDF (índice) con acentos y ¿ ¡ correctos
+  pdftitle={Cómo crear documentos y presentaciones con LaTeX},
+  pdfauthor={Rodrigo Martín Vidal Galán}}
+
+% Colores propios
+\definecolor{azulPrincipal}{RGB}{20,60,120}
+\definecolor{verdeAgua}{RGB}{0,140,150}
+\definecolor{naranja}{RGB}{210,110,30}
+\definecolor{vino}{RGB}{170,30,70}
+
+\setbeamercolor{structure}{fg=azulPrincipal}
+\setbeamercolor{frametitle}{bg=azulPrincipal,fg=white}
+
+% Comando propio de ejemplo (se muestra en el nivel avanzado)
+\newcommand{\Rdemo}{\mathbb{R}}
+
+% Estilo para mostrar código LaTeX
+\lstset{
+  language=[LaTeX]TeX,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{azulPrincipal}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{naranja},
+  backgroundcolor=\color{azulPrincipal!6},
+  frame=single,
+  rulecolor=\color{azulPrincipal!30},
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  texcsstyle=*\color{azulPrincipal}\bfseries,
+  extendedchars=true,
+  literate=
+    {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+    {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+    {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {¿}{{?`}}1 {¡}{{!`}}1 {°}{{\textdegree}}1,
+}
+
+% Divisoria de nivel
+\newcommand{\nivel}[3]{%
+  \begin{frame}[plain]
+    \centering\vfill
+    {\small\structure{#1}}\\[8pt]
+    {\Large\textbf{#2}}\\[12pt]
+    {\normalsize #3}
+    \vfill
+  \end{frame}}
+
+% ====================== Datos del título ======================
+\title[LaTeX y Beamer]{Cómo crear documentos y presentaciones con LaTeX}
+\subtitle{Una introducción práctica desde cero (¡hecha en LaTeX!)}
+\author{Rodrigo Martín Vidal Galán}
+\institute{}
+\date{}
+
+\begin{document}
+
+% ====================== Portada ======================
+{
+\setbeamertemplate{footline}{}
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+}
+
+% ====================== Agenda ======================
+\begin{frame}{Recorrido por niveles}
+  \tableofcontents
+  \vfill
+  \begin{center}\small De lo \textbf{básico} a lo \textbf{avanzado}, y cerramos con \textbf{ejemplos integrados}.\end{center}
+\end{frame}
+
+% ####################################################################
+\section{Nivel 1 -- Lo básico}
+% ####################################################################
+\nivel{NIVEL 1}{Lo básico}{Tu primer documento: qué es LaTeX, cómo se compila, estructura, texto, listas y matemática elemental.}
+
+\begin{frame}{¿Qué es LaTeX?}
+  \begin{block}{Idea central}
+    LaTeX es un \textbf{sistema de composición de documentos}: vos escribís
+    texto plano con \emph{instrucciones}, y LaTeX se encarga de la
+    \textbf{apariencia} (tipografía, espaciado, fórmulas, figuras).
+  \end{block}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Procesador tradicional (Word)}
+      \begin{itemize}
+        \item Ves el resultado mientras escribís (WYSIWYG).
+        \item Vos ajustás el formato a mano.
+      \end{itemize}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.48\textwidth}
+      \textbf{LaTeX}
+      \begin{itemize}
+        \item Escribís el \emph{contenido}; el formato es automático.
+        \item Ideal para \textbf{matemática}, tesis, libros y presentaciones.
+        \item Resultados consistentes y profesionales.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Herramientas y flujo de trabajo}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{¿Qué necesito?}
+        \begin{itemize}
+          \item Una \textbf{distribución} LaTeX: \texttt{MiKTeX} (Windows) o
+            \texttt{TeX~Live}.
+          \item Un \textbf{editor}: TeXstudio, VS Code, o \texttt{Overleaf}
+            (online, sin instalar nada).
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{El ciclo de trabajo}
+        \[ \texttt{archivo.tex} \;\xrightarrow{\text{compilar}}\; \texttt{archivo.pdf} \]
+        \begin{enumerate}
+          \item Escribís el \texttt{.tex}.
+          \item \textbf{Compilás} (con \texttt{pdflatex} o \texttt{latexmk}).
+          \item Mirás el \texttt{.pdf} y repetís.
+        \end{enumerate}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Instalación paso a paso (Windows)}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{enumerate}
+        \item Descargá e instalá \textbf{MiKTeX} desde \texttt{miktex.org}.
+        \item Instalá un editor: \textbf{TeXstudio} o \textbf{VS~Code} con la
+          extensión \emph{LaTeX Workshop}.
+        \item Creá un archivo \texttt{.tex} y escribí tu documento.
+        \item Apretá \textbf{Compilar} (o usá la consola).
+      \end{enumerate}
+    \end{column}
+    \hspace{0.03\textwidth}
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Compilar desde la consola}
+\begin{lstlisting}
+pdflatex documento.tex
+% o, recomendado (resuelve
+% referencias en varias pasadas):
+latexmk -pdf documento.tex
+\end{lstlisting}
+      \end{block}
+      \begin{exampleblock}{Tip}
+        MiKTeX instala los paquetes que falten \textbf{automáticamente} la
+        primera vez que los usás.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{La estructura mínima de un .tex}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{lstlisting}
+\documentclass{article}
+
+% --- Preámbulo ---
+\usepackage[utf8]{inputenc}
+\title{Mi documento}
+\author{Yo}
+
+% --- Cuerpo ---
+\begin{document}
+\maketitle
+Hola, mundo.
+\end{document}
+\end{lstlisting}
+    \end{column}
+    \hspace{0.03\textwidth}
+    \begin{column}{0.41\textwidth}
+      \begin{itemize}
+        \item \texttt{\textbackslash documentclass}: el tipo de documento.
+        \item \textbf{Preámbulo}: todo lo que va \emph{antes} de
+          \texttt{\textbackslash begin\{document\}} (paquetes, ajustes).
+        \item \textbf{Cuerpo}: entre \texttt{\textbackslash begin\{document\}}
+          y \texttt{\textbackslash end\{document\}}.
+        \item Las líneas con \texttt{\%} son \textbf{comentarios}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos, entornos y paquetes}
+  \begin{columns}[c]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Dos ladrillos fundamentales}
+        \textbf{Comando:} empieza con \texttt{\textbackslash} y puede llevar
+        argumentos entre llaves.
+\begin{lstlisting}
+\textbf{texto en negrita}
+\end{lstlisting}
+        \textbf{Entorno:} bloque con apertura y cierre.
+\begin{lstlisting}
+\begin{center}
+  texto centrado
+\end{center}
+\end{lstlisting}
+      \end{block}
+    \end{column}
+    \hspace{0.03\textwidth}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Paquetes}
+        Se cargan en el preámbulo y agregan funciones:
+\begin{lstlisting}
+\usepackage{amsmath} % matematica
+\usepackage{graphicx}% imagenes
+\usepackage{tikz}    % graficos
+\end{lstlisting}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Formato de texto}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+Texto normal,
+\textbf{negrita},
+\emph{énfasis (itálica)} y
+\texttt{monoespaciado}.
+\end{lstlisting}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        Texto normal, \textbf{negrita}, \emph{énfasis (itálica)} y
+        \texttt{monoespaciado}.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Listas}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\begin{itemize}
+  \item Primer punto
+  \item Segundo punto
+\end{itemize}
+
+\begin{enumerate}
+  \item Paso uno
+  \item Paso dos
+\end{enumerate}
+\end{lstlisting}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \begin{itemize}
+          \item Primer punto
+          \item Segundo punto
+        \end{itemize}
+        \begin{enumerate}
+          \item Paso uno
+          \item Paso dos
+        \end{enumerate}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Matemática: en línea y centrada}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+En línea: $a^2 + b^2 = c^2$.
+
+Centrada (display):
+\[ x = \frac{-b \pm \sqrt{b^2-4ac}}{2a} \]
+\end{lstlisting}
+      \scriptsize El modo matemático va entre \texttt{\$...\$} (en línea)
+      o \texttt{\textbackslash[...\textbackslash]} (centrado).
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        En línea: $a^2+b^2=c^2$.
+        \medskip
+
+        Centrada (display):
+        \[ x=\frac{-b\pm\sqrt{b^2-4ac}}{2a} \]
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Matemática: símbolos más usados}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+$x_1$, $x^2$        % sub/super
+$\frac{1}{2}$       % fracción
+$\sqrt{x}$          % raíz
+$\sum_{i=1}^{n} i$  % sumatoria
+$\alpha,\ \pi,\ \infty$
+$\leq,\ \geq,\ \neq$
+\end{lstlisting}
+      \scriptsize Muchos símbolos vienen del paquete \texttt{amsmath}.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        $x_1$,\quad $x^2$ \\[3pt]
+        $\dfrac{1}{2}$,\quad $\sqrt{x}$,\quad
+        $\displaystyle\sum_{i=1}^{n} i$ \\[6pt]
+        $\alpha,\ \pi,\ \infty$ \\[3pt]
+        $\leq,\ \geq,\ \neq$
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ####################################################################
+\section{Nivel 2 -- Intermedio}
+% ####################################################################
+\nivel{NIVEL 2}{Intermedio}{Documentos más ricos y tu primera presentación: tablas, imágenes, referencias, más matemática, Beamer y un primer gráfico.}
+
+\begin{frame}[fragile]{Tablas}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\begin{tabular}{l c}
+  \toprule
+  Forma & Vértice \\
+  \midrule
+  Canónica & (h, k) \\
+  Polinómica & (0, c) \\
+  \bottomrule
+\end{tabular}
+\end{lstlisting}
+      \scriptsize (\texttt{\textbackslash toprule}, etc. son del paquete
+      \texttt{booktabs}.)
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \centering
+        \begin{tabular}{l c}
+          \toprule
+          Forma & Vértice \\
+          \midrule
+          Canónica & $(h,k)$ \\
+          Polinómica & $(0,c)$ \\
+          \bottomrule
+        \end{tabular}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Imágenes y figuras}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\usepackage{graphicx} % preámbulo
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.6\linewidth]
+                  {foto.png}
+  \caption{Una parábola.}
+\end{figure}
+\end{lstlisting}
+      \scriptsize \texttt{figure} la posiciona y le agrega numeración con
+      \texttt{\textbackslash caption}.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \centering
+        \begin{tikzpicture}
+          \draw[gray!60] (0,0) rectangle (3.4,2.0);
+          \begin{scope}[shift={(1.7,0.3)}]
+            \draw[azulPrincipal,thick,smooth,domain=-1.15:1.15,samples=40]
+              plot ({\x},{0.95*\x*\x});
+          \end{scope}
+        \end{tikzpicture}\\[2pt]
+        {\footnotesize Figura 1: Una parábola.}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Referencias cruzadas y notas al pie}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+La ecuación \eqref{eq:res} da las raíces.
+
+\begin{equation}\label{eq:res}
+  x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
+\end{equation}
+
+Una aclaración.\footnote{Texto al pie.}
+\end{lstlisting}
+      \scriptsize \texttt{\textbackslash label} marca y
+      \texttt{\textbackslash ref}/\texttt{\textbackslash eqref} recuperan el
+      número: si reordenás, se actualiza solo.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        La ecuación~(1) da las raíces.
+        \[ x=\frac{-b\pm\sqrt{b^2-4ac}}{2a} \tag{1} \]
+        Una aclaración.$^{1}$
+        \vspace{4pt}\hrule\vspace{2pt}
+        {\scriptsize $^{1}$ Texto al pie.}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Matemática: matrices y sistemas}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+A = \begin{pmatrix}
+  1 & 2 \\
+  3 & 4
+\end{pmatrix}
+
+f(x)=\begin{cases}
+  x^2 & \text{si } x\ge 0\\
+  -x  & \text{si } x<0
+\end{cases}
+\end{lstlisting}
+      \scriptsize \texttt{pmatrix} y \texttt{cases} vienen de \texttt{amsmath}.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \[ A=\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix} \]
+        \[ f(x)=\begin{cases} x^2 & \text{si } x\ge 0\\ -x & \text{si } x<0 \end{cases} \]
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Matemática: alinear ecuaciones, integrales y límites}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\begin{align*}
+  (x+1)^2 &= x^2 + 2x + 1 \\
+          &= x^2 + 2x + 1
+\end{align*}
+
+$\int_0^1 x^2\,dx = \tfrac{1}{3}$
+
+$\lim_{x\to 0}\frac{\sin x}{x}=1$
+\end{lstlisting}
+      \scriptsize En \texttt{align} el \texttt{\&} marca por dónde se alinean
+      las ecuaciones (acá, el \texttt{=}).
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \begin{align*}
+          (x+1)^2 &= x^2 + 2x + 1 \\
+                  &= x^2 + 2x + 1
+        \end{align*}
+        \[ \int_0^1 x^2\,dx=\tfrac{1}{3} \]
+        \[ \lim_{x\to 0}\frac{\sin x}{x}=1 \]
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\texttt{article} vs Beamer: ¿cuál elijo?}
+  Las dos son \textbf{clases de documento}: cambia el
+  \texttt{\textbackslash documentclass}.
+  \medskip
+  \renewcommand{\arraystretch}{1.3}
+  \begin{center}
+  \footnotesize
+  \begin{tabular}{@{}p{0.18\textwidth} p{0.35\textwidth} p{0.35\textwidth}@{}}
+    \toprule
+    \textbf{Aspecto} & \texttt{\textbf{article}} & \texttt{\textbf{beamer}} \\
+    \midrule
+    ¿Para qué? & Documentos para leer o imprimir: apuntes, informes, TPs, tesis. & Presentaciones para proyectar: diapositivas. \\
+    Unidad básica & La \textbf{página} (el texto fluye). & La \textbf{diapositiva} (\texttt{frame}). \\
+    Se arma con & \texttt{\textbackslash section}, párrafos, figuras. & \texttt{frame}, bloques, columnas. \\
+    Portada & \texttt{\textbackslash maketitle}. & \texttt{\textbackslash titlepage}. \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vfill
+  \begin{exampleblock}{Lo que comparten}
+    El \textbf{mismo lenguaje}: preámbulo, paquetes, matemática, tablas,
+    imágenes y gráficos funcionan igual en ambas. ¡Lo que aprendés sirve para
+    las dos!
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Beamer: cada \texttt{frame} es una diapositiva}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+      Se usa \texttt{\textbackslash documentclass\{beamer\}}. Cada diapositiva
+      es un entorno \texttt{frame}:
+      \lstinputlisting{ejemplo_frame_beamer.tex}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado (una diapositiva)}
+        \centering
+        \fbox{\begin{minipage}{0.9\linewidth}
+          \color{azulPrincipal}\rule{\linewidth}{6pt}\\[2pt]
+          \footnotesize\textbf{Mi primera diapositiva}\\[4pt]
+          \color{black}\footnotesize Hola, soy el contenido de la diapositiva.
+          \vspace{4pt}
+        \end{minipage}}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Beamer: bloques de color}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+\begin{lstlisting}
+\begin{block}{Definición}
+  Contenido del bloque.
+\end{block}
+
+\begin{alertblock}{¡Atención!}
+  Algo importante.
+\end{alertblock}
+
+\begin{exampleblock}{Ejemplo}
+  Un tercer color.
+\end{exampleblock}
+\end{lstlisting}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Definición}
+        Contenido del bloque.
+      \end{block}
+      \begin{alertblock}{¡Atención!}
+        Algo importante.
+      \end{alertblock}
+      \begin{exampleblock}{Ejemplo}
+        Un tercer color.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Beamer: dos columnas}
+  Sirven para poner contenido \textbf{lado a lado} (texto y gráfico, o
+  código y resultado, como en toda esta presentación):
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+    Izquierda
+  \end{column}
+  \begin{column}{0.5\textwidth}
+    Derecha
+  \end{column}
+\end{columns}
+\end{lstlisting}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \fbox{\begin{minipage}[t]{0.43\linewidth}\centering\strut Izquierda\end{minipage}}%
+        \hfill
+        \fbox{\begin{minipage}[t]{0.43\linewidth}\centering\strut Derecha\end{minipage}}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Beamer: temas y colores}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      Una o dos líneas en el \textbf{preámbulo} cambian todo el diseño
+      (disposición y colores):
+\begin{lstlisting}
+\usetheme{Madrid}
+\usecolortheme{whale}
+\end{lstlisting}
+      Hay muchos temas: \texttt{Berlin}, \texttt{Singapore},
+      \texttt{Copenhagen}, \texttt{metropolis}\dots
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.46\textwidth}
+      \begin{exampleblock}{El mismo título, distintos colores}
+        \footnotesize
+        \colorbox{azulPrincipal}{\makebox[0.9\linewidth][l]{\color{white}\strut\ Mi diapositiva}}\\[4pt]
+        \colorbox{vino}{\makebox[0.9\linewidth][l]{\color{white}\strut\ Mi diapositiva}}\\[4pt]
+        \colorbox{verdeAgua}{\makebox[0.9\linewidth][l]{\color{white}\strut\ Mi diapositiva}}
+        \\[4pt]
+        \scriptsize Cambia la barra de título, las fuentes y los colores.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Gráficos: una parábola con \texttt{pgfplots}}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\begin{tikzpicture}
+\begin{axis}[width=\linewidth, height=4.5cm,
+    axis lines=middle, xlabel=$x$, ylabel=$y$,
+    xmin=-3.2, xmax=3.2, ymin=-0.7, ymax=9.5,
+    xtick={-2,2}, ytick={4,8}]
+  \addplot[blue,very thick,
+           domain=-3:3,samples=80]{x^2};
+\end{axis}
+\end{tikzpicture}
+\end{lstlisting}
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \begin{tikzpicture}
+        \begin{axis}[width=\linewidth, height=4.5cm,
+            axis lines=middle, xlabel=$x$, ylabel=$y$,
+            xmin=-3.2, xmax=3.2, ymin=-0.7, ymax=9.5,
+            xtick={-2,2}, ytick={4,8}]
+          \addplot[blue,very thick,
+                   domain=-3:3,samples=80]{x^2};
+        \end{axis}
+        \end{tikzpicture}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ####################################################################
+\section{Nivel 3 -- Avanzado}
+% ####################################################################
+\nivel{NIVEL 3}{Avanzado}{Personalización y herramientas potentes: comandos propios, overlays, gráficos avanzados, diagramas, bibliografía y errores comunes.}
+
+\begin{frame}[fragile]{Comandos propios y colores}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+% definir un atajo:
+\newcommand{\R}{\mathbb{R}}
+$f : \R \to \R$
+
+% definir y usar un color:
+\definecolor{miazul}{RGB}{20,60,120}
+\textcolor{miazul}{texto en mi azul}
+\end{lstlisting}
+      \scriptsize \texttt{\textbackslash newcommand} crea atajos para lo que
+      repetís mucho; mantiene el documento prolijo y consistente.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        $f : \Rdemo \to \Rdemo$
+        \medskip
+
+        \textcolor{azulPrincipal}{texto en mi azul}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Beamer avanzado: aparición por pasos}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\begin{itemize}
+  \item<1-> Aparece primero
+  \item<2-> Aparece al segundo clic
+\end{itemize}
+
+Texto \pause y más texto después.
+\end{lstlisting}
+      \scriptsize Los \emph{overlays} (\texttt{<1->}, \texttt{\textbackslash pause})
+      revelan el contenido de a poco. En \textbf{estas} presentaciones los
+      evitamos para que sean lineales.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado (por clics)}
+        \footnotesize
+        \textbf{Clic 1:}
+        \begin{itemize}
+          \item Aparece primero
+        \end{itemize}
+        \textbf{Clic 2:}
+        \begin{itemize}
+          \item Aparece primero
+          \item Aparece al segundo clic
+        \end{itemize}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{pgfplots avanzado: leyenda, varias curvas y puntos}
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}
+\begin{lstlisting}
+\begin{tikzpicture}
+\begin{axis}[width=\linewidth, height=4.5cm,
+    axis lines=middle, xlabel=$x$,
+    legend pos=north west]
+  \addplot[blue,very thick,domain=-2:2]{x^2};
+  \addlegendentry{$x^2$}
+  \addplot[orange,very thick,domain=-2:2]{2*x+1};
+  \addlegendentry{$2x+1$}
+  \addplot[red,only marks,mark=*]
+    coordinates {(1,1)};
+\end{axis}
+\end{tikzpicture}
+\end{lstlisting}
+    \end{column}
+    \hspace{0.03\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \begin{tikzpicture}
+        \begin{axis}[width=\linewidth, height=4.5cm,
+            axis lines=middle, xlabel=$x$,
+            legend pos=north west]
+          \addplot[blue,very thick,domain=-2:2]{x^2};
+          \addlegendentry{$x^2$}
+          \addplot[orange,very thick,domain=-2:2]{2*x+1};
+          \addlegendentry{$2x+1$}
+          \addplot[red,only marks,mark=*]
+            coordinates {(1,1)};
+        \end{axis}
+        \end{tikzpicture}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{TikZ: diagramas con nodos y flechas}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+\usetikzlibrary{arrows.meta,
+                positioning}
+\begin{tikzpicture}
+  \node (a) {.tex};
+  \node[right=of a] (b) {compilar};
+  \node[right=of b] (c) {.pdf};
+  \draw[-{Stealth}] (a) -- (b);
+  \draw[-{Stealth}] (b) -- (c);
+\end{tikzpicture}
+\end{lstlisting}
+      \scriptsize TikZ sirve para dibujar: nodos, flechas, diagramas de flujo,
+      esquemas\dots
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \centering
+        \begin{tikzpicture}[
+            node distance=0.5cm and 0.7cm,
+            every node/.style={font=\scriptsize},
+            caja/.style={draw,rounded corners,fill=azulPrincipal!10,inner sep=4pt},
+          ]
+          \node[caja] (a) {.tex};
+          \node[caja,right=of a] (b) {compilar};
+          \node[caja,right=of b] (c) {.pdf};
+          \draw[-{Stealth},azulPrincipal,thick] (a) -- (b);
+          \draw[-{Stealth},azulPrincipal,thick] (b) -- (c);
+        \end{tikzpicture}
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Bibliografía y citas}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}
+% archivo "refs.bib":
+@book{carena2019,
+  author = {Carena, Marilina},
+  title  = {Manual de matemática
+            preuniversitaria},
+  year   = {2019}
+}
+% en el documento:
+Según \cite{carena2019} ...
+\printbibliography
+\end{lstlisting}
+      \scriptsize Con \texttt{biblatex} la cita y la lista de referencias se
+      arman y numeran \textbf{solas}.
+    \end{column}
+    \hspace{0.04\textwidth}
+    \begin{column}{0.42\textwidth}
+      \begin{exampleblock}{Resultado}
+        \footnotesize
+        Según [1] $\dots$
+        \vspace{6pt}\hrule\vspace{4pt}
+        \textbf{Referencias}\\[2pt]
+        [1] Carena, M. (2019). \emph{Manual de matemática preuniversitaria}.
+        Ediciones UNL.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Errores comunes y cómo resolverlos}
+  \small
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{@{}p{0.34\textwidth} p{0.6\textwidth}@{}}
+    \toprule
+    \textbf{Mensaje / síntoma} & \textbf{Causa y solución} \\
+    \midrule
+    \texttt{Undefined control sequence} &
+      Comando mal escrito o falta un \texttt{\textbackslash usepackage}.
+      Revisá la ortografía y cargá el paquete. \\
+    \texttt{Missing \$ inserted} &
+      Un símbolo matemático fuera de modo math. Encerralo en \texttt{\$...\$}. \\
+    \texttt{Runaway argument} / falta \texttt{\}} &
+      Una llave o un entorno sin cerrar. Revisá \texttt{\textbackslash begin}/\texttt{\textbackslash end} y las llaves. \\
+    Error con \texttt{verbatim}/código &
+      Un \texttt{frame} con código sin la opción \texttt{[fragile]}. Agregala. \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{exampleblock}{Tip de oro}
+    Leé \textbf{la primera} línea de error y el \textbf{número de línea}: casi
+    siempre el problema está ahí (o una línea antes).
+  \end{exampleblock}
+\end{frame}
+
+% ####################################################################
+\section{Nivel 4 -- Ejemplos integrados}
+% ####################################################################
+\nivel{NIVEL 4}{Ejemplos integrados}{Casos reales que combinan varias herramientas a la vez: desde la carátula hasta un problema resuelto de punta a punta.}
+
+\begin{frame}[fragile]{La carátula: el código}
+  En el \textbf{preámbulo} declarás los datos y en el \textbf{cuerpo} los
+  mostrás (\texttt{\textbackslash maketitle} en \texttt{article},
+  \texttt{\textbackslash titlepage} en Beamer):
+  \lstinputlisting{ejemplo_caratula.tex}
+\end{frame}
+
+\begin{frame}{La carátula: el resultado}
+  \centering
+  {\footnotesize\itshape (representación: la portada ocupa una página completa)}
+  \vspace{10pt}
+
+  \fbox{\begin{minipage}[t]{0.7\linewidth}
+    \vspace{18pt}\centering
+    \colorbox{azulPrincipal}{\makebox[0.9\linewidth][c]{\color{white}\large\strut Función cuadrática}}\\[18pt]
+    {\normalsize Grupo 5}\\[4pt]
+    {\normalsize Junio de 2026}
+    \vspace{20pt}
+  \end{minipage}}
+\end{frame}
+
+\begin{frame}[fragile]{Anatomía de una diapositiva: el código}
+  Así se arma la diapositiva del ``máximo beneficio'' (Actividad~6): un
+  \texttt{frame} con dos columnas, una fórmula, un \texttt{alertblock} y un
+  gráfico. En la \textbf{siguiente} diapositiva, este mismo código renderizado
+  de verdad:
+  \lstinputlisting{ejemplo_anatomia.tex}
+\end{frame}
+
+\begin{frame}{Máximo beneficio}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      $P(x)=5000+1000x-5x^2$, con $a<0$.
+      \[ x=-\frac{b}{2a}=100 \]
+      \begin{alertblock}{Conclusión}
+        Máximo $55000$ en $x=100$.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{tikzpicture}
+      \begin{axis}[width=\linewidth,height=4cm,
+                   axis lines=middle,xlabel=$x$]
+        \addplot[blue,very thick,domain=0:200,
+                 samples=40]{5000+1000*x-5*x^2};
+        \addplot[red,only marks,mark=*]
+          coordinates {(100,55000)};
+      \end{axis}
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Un documento \texttt{article}: el código}
+\begin{lstlisting}
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\title{Informe de laboratorio}
+\author{Grupo 5}
+\date{\today}
+
+\begin{document}
+\maketitle
+\section{Introducción}
+Estudiamos la función cuadrática.
+\section{Resultados}
+La raíz se obtiene con
+\begin{equation}
+  x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
+\end{equation}
+\end{document}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Un documento \texttt{article}: el resultado}
+  \centering
+  {\footnotesize\itshape (representación de la página generada)}
+  \vspace{8pt}
+
+  \fbox{\begin{minipage}[t]{0.78\linewidth}
+    \centering
+    {\large\textbf{Informe de laboratorio}}\\[2pt]
+    {\small Grupo 5 \quad\today}\\[12pt]
+    \raggedright\small
+    \textbf{1\quad Introducción}\\[2pt]
+    Estudiamos la función cuadrática.\\[10pt]
+    \textbf{2\quad Resultados}\\[2pt]
+    La raíz se obtiene con
+    \[ x=\frac{-b\pm\sqrt{b^2-4ac}}{2a} \tag{1} \]
+    \vspace{4pt}
+  \end{minipage}}
+\end{frame}
+
+\begin{frame}[fragile]{Un problema resuelto: el código}
+  \footnotesize Dentro de un \texttt{frame} combinamos texto, \texttt{align},
+  un \texttt{block} y un gráfico, en dos columnas:
+\begin{lstlisting}
+\textbf{Problema.} Hallar el vértice de $f(x)=x^2-4x+1$.
+\begin{columns}
+  \begin{column}{0.55\textwidth}
+    \begin{align*}
+      f(x) &= x^2-4x+1 \\
+           &= (x-2)^2 - 4 + 1 \\
+           &= (x-2)^2 - 3.
+    \end{align*}
+    \begin{block}{Conclusión}
+      Vértice $(2,-3)$; como $a>0$, mínimo $-3$ en $x=2$.
+    \end{block}
+  \end{column}
+  \begin{column}{0.42\textwidth}
+    \begin{tikzpicture}
+    \begin{axis}[axis lines=middle, xlabel=$x$,
+                 width=\linewidth, height=4cm,
+                 xtick={2}, ytick={-3}]
+      \addplot[blue,very thick,domain=-0.5:4.5]{x^2-4*x+1};
+      \addplot[red,only marks,mark=*]
+        coordinates {(2,-3)};
+    \end{axis}
+    \end{tikzpicture}
+  \end{column}
+\end{columns}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Un problema resuelto: el resultado}
+  \footnotesize
+  \textbf{Problema.} Hallar el vértice de $f(x)=x^2-4x+1$.
+  \begin{columns}
+    \begin{column}{0.55\textwidth}
+      \begin{align*}
+        f(x) &= x^2-4x+1 \\
+             &= (x-2)^2 - 4 + 1 \\
+             &= (x-2)^2 - 3.
+      \end{align*}
+      \begin{block}{Conclusión}
+        Vértice $(2,-3)$; como $a>0$, mínimo $-3$ en $x=2$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{tikzpicture}
+      \begin{axis}[axis lines=middle, xlabel=$x$,
+                   width=\linewidth, height=4cm,
+                   xtick={2}, ytick={-3}]
+        \addplot[blue,very thick,domain=-0.5:4.5]{x^2-4*x+1};
+        \addplot[red,only marks,mark=*]
+          coordinates {(2,-3)};
+      \end{axis}
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Una lámina-resumen: el código}
+  \footnotesize Tres bloques de distinto color y un gráfico, en dos columnas:
+\begin{lstlisting}
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+    \begin{block}{Definición}
+      $f(x)=ax^2+bx+c$, con $a\neq0$.
+    \end{block}
+    \begin{alertblock}{Vértice y extremo}
+      $x=-\frac{b}{2a}$; máx si $a<0$, mín si $a>0$.
+    \end{alertblock}
+    \begin{exampleblock}{Raíces}
+      $x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$
+    \end{exampleblock}
+  \end{column}
+  \begin{column}{0.46\textwidth}
+    \begin{tikzpicture}
+    \begin{axis}[axis lines=middle, width=\linewidth, height=4cm]
+      \addplot[blue,very thick,domain=-1.2:3.2]{x^2-2*x-3};
+      \addplot[red,only marks,mark=*]
+        coordinates {(1,-4)};
+      \addplot[orange,only marks,mark=*]
+        coordinates {(-1,0) (3,0)};
+    \end{axis}
+    \end{tikzpicture}
+  \end{column}
+\end{columns}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Una lámina-resumen: el resultado}
+  \footnotesize
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{block}{Definición}
+        $f(x)=ax^2+bx+c$, con $a\neq0$.
+      \end{block}
+      \begin{alertblock}{Vértice y extremo}
+        $x=-\frac{b}{2a}$; máx si $a<0$, mín si $a>0$.
+      \end{alertblock}
+      \begin{exampleblock}{Raíces}
+        $x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$
+      \end{exampleblock}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{tikzpicture}
+      \begin{axis}[axis lines=middle, width=\linewidth, height=4cm]
+        \addplot[blue,very thick,domain=-1.2:3.2]{x^2-2*x-3};
+        \addplot[red,only marks,mark=*]
+          coordinates {(1,-4)};
+        \addplot[orange,only marks,mark=*]
+          coordinates {(-1,0) (3,0)};
+      \end{axis}
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ####################################################################
+\section{Cierre}
+% ####################################################################
+\begin{frame}{Síntesis: la receta completa}
+  \begin{enumerate}
+    \item Elegí la \textbf{clase}: \texttt{article} para documentos,
+      \texttt{beamer} para presentaciones.
+    \item Armá el \textbf{preámbulo} con los \texttt{\textbackslash usepackage}
+      que necesites (\texttt{babel}, \texttt{amsmath}, \texttt{graphicx},
+      \texttt{pgfplots}\dots).
+    \item Escribí el \textbf{cuerpo}: texto, \texttt{frame}s, bloques,
+      columnas, fórmulas, tablas, imágenes y gráficos.
+    \item \textbf{Compilá} con \texttt{latexmk -pdf} y revisá el PDF.
+  \end{enumerate}
+  \vfill
+  \begin{block}{Para seguir aprendiendo}
+    \begin{itemize}
+      \item \texttt{Overleaf} (editor online con plantillas y tutoriales).
+      \item La guía ``\emph{The Not So Short Introduction to \LaTeX}''.
+      \item \texttt{es.wikibooks.org/wiki/Manual\_de\_LaTeX}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[plain]
+  \centering
+  \vfill
+  {\Huge \structure{¡Gracias!}}\\[1em]
+  {\large Cómo crear documentos y presentaciones con LaTeX}\\[0.5em]
+  Rodrigo Martín Vidal Galán
+  \vfill
+\end{frame}
+
+\end{document}

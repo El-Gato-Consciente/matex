@@ -1,0 +1,51 @@
+# ===== Node / build =====
+# El repo llegó a tener 3872 archivos de node_modules commiteados por no tener esta sección.
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Entorno local (nunca commitear)
+.env
+.env.*
+!.env.example
+
+# ===== Archivos intermedios de LaTeX =====
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.out
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.lof
+*.lot
+
+# Bibliografía / índices
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.idx
+*.ind
+*.ilg
+*.glo
+*.gls
+*.glg
+*.acn
+*.acr
+*.alg
+*.xdy
+
+# Carpeta de salida de editores (VS Code LaTeX Workshop, etc.)
+out/
+
+# ===== Sistema operativo / editores =====
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,163 @@
+% =====================================================================
+%  Hoja de referencia de LaTeX (cheat sheet) — suite de documentos LaTeX
+%  Nivel 1 (Empezar) · article apaisado a 3 columnas · consulta rápida.
+%  Compilar: latexmk -pdf cheatsheet.tex
+% =====================================================================
+\documentclass[9pt,a4paper,landscape]{extarticle}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage[landscape,margin=1cm]{geometry}
+\usepackage{multicol}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Hoja de referencia de LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán}, hidelinks}
+
+\setlength{\parindent}{0pt}
+\setlength{\columnsep}{1.2em}
+\definecolor{tit}{RGB}{20,60,120}
+
+% Encabezado de bloque temático
+\newtcolorbox{blk}[1]{colback=tit!4, colframe=tit!70, fonttitle=\bfseries\small,
+  title=#1, boxsep=2pt, left=3pt, right=3pt, top=2pt, bottom=2pt,
+  before skip=4pt, after skip=4pt}
+% comando \cmd = nombre de comando en mono
+\newcommand{\K}[1]{\texttt{\textbackslash #1}}
+% fila código -> efecto en dos "columnas" via \hfill
+\newcommand{\R}[2]{\texttt{#1}\dotfill{\footnotesize #2}\\}
+
+\begin{document}
+\begin{center}
+  {\Large\bfseries Hoja de referencia de \LaTeX}\quad
+  {\footnotesize · suite de documentos · consulta rápida}
+\end{center}
+\vspace{-2pt}
+
+\begin{multicols}{3}
+
+\begin{blk}{Esqueleto mínimo}
+\texttt{\textbackslash documentclass\{article\}}\\
+\texttt{\textbackslash usepackage[utf8]\{inputenc\}}\\
+\texttt{\textbackslash begin\{document\}}\\
+\hspace*{1em}\dots texto \dots\\
+\texttt{\textbackslash end\{document\}}\\[2pt]
+Compilar: \texttt{latexmk -pdf a.tex}
+\end{blk}
+
+\begin{blk}{Estructura}
+\K{section\{\}} · \K{subsection\{\}}\\
+\K{subsubsection\{\}} · \K{paragraph\{\}}\\
+\K{chapter\{\}} (report/book)\\
+\K{tableofcontents}\\
+\K{label\{k\}} \dots{} \K{cref\{k\}}\\
+\K{footnote\{\dots\}}
+\end{blk}
+
+\begin{blk}{Formato de texto}
+\K{textbf\{negrita\}} · \K{textit\{cursiva\}}\\
+\K{texttt\{monoespaciada\}}\\
+\K{emph\{énfasis\}} · \K{underline\{\}}\\
+\K{textsc\{Versalitas\}}\\
+\K{large} \K{small} \K{footnotesize}\\
+\K{enquote\{comillas\}} (csquotes)
+\end{blk}
+
+\begin{blk}{Matemática: modos}
+En línea: \texttt{\$ f(x)=x\^{}2 \$}\\
+Bloque: \texttt{\textbackslash[ \dots{} \textbackslash]}\\
+Numerada: \texttt{equation}\\
+Varias: \texttt{align} (con \texttt{\&} y \texttt{\textbackslash\textbackslash})\\
+Cita ec.: \K{eqref\{k\}}
+\end{blk}
+
+\begin{blk}{Matemática: construcciones}
+\K{frac\{a\}\{b\}} · \K{sqrt[n]\{x\}}\\
+\texttt{x\^{}\{2\}} · \texttt{x\_\{i\}} (sup/sub)\\
+\K{sum\_\{i=1\}\^{}\{n\}} · \K{prod} · \K{int}\\
+\K{lim\_\{x\textbackslash to0\}} · \K{frac\{d\}\{dx\}}\\
+\K{binom\{n\}\{k\}} · \K{cdot} · \K{times}\\
+\K{left(} \dots \K{right)} {\footnotesize(auto-tamaño)}
+\end{blk}
+
+\begin{blk}{Símbolos frecuentes}
+\K{alpha}\,$\alpha$ \K{beta}\,$\beta$ \K{pi}\,$\pi$ \K{theta}\,$\theta$\\
+\K{infty}\,$\infty$ \K{partial}\,$\partial$ \K{nabla}\,$\nabla$\\
+\K{leq}\,$\leq$ \K{geq}\,$\geq$ \K{neq}\,$\neq$ \K{approx}\,$\approx$\\
+\K{to}\,$\to$ \K{Rightarrow}\,$\Rightarrow$ \K{iff}\,$\iff$\\
+\K{in}\,$\in$ \K{subset}\,$\subset$ \K{cup}\,$\cup$ \K{cap}\,$\cap$\\
+\K{mathbb\{R\}}\,$\mathbb{R}$ \K{forall}\,$\forall$ \K{exists}\,$\exists$
+\end{blk}
+
+\begin{blk}{Listas}
+\texttt{\textbackslash begin\{itemize\}}\\
+\hspace*{1em}\K{item} \dots\\
+\texttt{\textbackslash end\{itemize\}}\\[2pt]
+\texttt{enumerate} (numerada)\\
+\texttt{description} con \K{item[etiq.]}\\
+Opciones: \texttt{[noitemsep]}, \texttt{[label=(\textbackslash alph*)]} (enumitem)
+\end{blk}
+
+\begin{blk}{Tablas (booktabs)}
+\texttt{\textbackslash begin\{tabular\}\{@\{\}lcr@\{\}\}}\\
+\hspace*{0.5em}\K{toprule}\\
+\hspace*{0.5em}A \& B \& C \texttt{\textbackslash\textbackslash}\\
+\hspace*{0.5em}\K{midrule}\\
+\hspace*{0.5em}1 \& 2 \& 3 \texttt{\textbackslash\textbackslash}\\
+\hspace*{0.5em}\K{bottomrule}\\
+\texttt{\textbackslash end\{tabular\}}\\[2pt]
+{\footnotesize Sin líneas verticales. \texttt{tabularx} = ancho fijo.}
+\end{blk}
+
+\begin{blk}{Figuras}
+\texttt{\textbackslash begin\{figure\}[htbp]}\\
+\hspace*{0.5em}\K{centering}\\
+\hspace*{0.5em}\K{includegraphics[width=.6\textbackslash textwidth]\{f\}}\\
+\hspace*{0.5em}\K{caption\{\dots\}} \K{label\{fig:k\}}\\
+\texttt{\textbackslash end\{figure\}}\\[2pt]
+{\footnotesize Graficar funciones: \texttt{pgfplots} (\K{addplot}).}
+\end{blk}
+
+\begin{blk}{Espaciado y saltos}
+\K{quad} \K{qquad} (espacio math)\\
+\K{,} \K{;} \K{!} (finos en math)\\
+\K{newpage} · \K{clearpage}\\
+\K{vspace\{1cm\}} · \K{hspace\{\}}\\
+\K{noindent} · \K{centering}\\
+{\footnotesize Línea en blanco = párrafo nuevo}
+\end{blk}
+
+\begin{blk}{Preámbulo base (matemática)}
+\K{usepackage[T1]\{fontenc\}}\\
+\K{usepackage\{lmodern\}}\\
+\K{usepackage[spanish,es-noshorthands]\{babel\}}\\
+\K{usepackage\{mathtools,amssymb\}}\\
+\K{usepackage\{microtype\}}\\
+\K{usepackage\{hyperref\}}\\
+{\footnotesize (ver doc \emph{Estándares} / \emph{Plantillas})}
+\end{blk}
+
+\begin{blk}{Errores típicos}
+{\footnotesize
+\texttt{??} en el PDF $\to$ compilá 2 veces / \texttt{latexmk}.\\[2pt]
+\texttt{Missing \$} $\to$ símbolo math fuera de \texttt{\$\dots\$}.\\[2pt]
+\texttt{Undefined control sequence} $\to$ comando mal escrito o falta \K{usepackage}.\\[2pt]
+\texttt{File X.sty not found} $\to$ instalá el paquete.}
+\end{blk}
+
+\end{multicols}
+
+\vfill
+\begin{center}\footnotesize
+Suite de documentos \LaTeX{} · Rodrigo Martín Vidal Galán ·
+\texttt{texdoc <paquete>} abre el manual de cualquier paquete.
+\end{center}
+
+\end{document}

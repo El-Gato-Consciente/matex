@@ -1,8 +1,9 @@
-name: Deploy Matex to S3 + CloudFront
+name: Deploy Matex (S3 + CloudFront)
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -11,8 +12,10 @@ permissions:
 env:
   AWS_REGION: us-east-1
   S3_BUCKET: matex-static-egc-prod
-  DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_MATEX }}
-  DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+  # URL pública del compilador. Se hornea EN BUILD (`import.meta.env`), así que un cambio acá
+  # exige rebuild — no alcanza con invalidar CloudFront.
+  # `RemoteCompiler` le concatena `/compile` → POST https://el-gato-consciente.com/api/compile
+  VITE_COMPILE_API_URL: https://el-gato-consciente.com/api
 
 jobs:
   deploy:
@@ -20,24 +23,68 @@ jobs:
     environment: Prod
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: plataforma/package-lock.json
 
-      - run: npm ci
-      - run: npm run build
+      - name: Deps
+        working-directory: plataforma
+        run: npm ci
+
+      # `npm run build` = tsc -b + vite build. Es el typecheck autoritativo, así que un error
+      # de tipos corta el deploy acá.
+      - name: Build
+        working-directory: plataforma
+        run: npm run build
 
       - uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
 
+      # ── Subida en tres pasos, y el orden importa ──────────────────────────────────────
+      #
+      # 1. Todo lo demás con cache larga: los assets llevan hash en el nombre, así que son
+      #    inmutables. `--delete` limpia los de builds anteriores.
+      #    `index.html` se excluye porque necesita lo contrario (paso 3).
+      - name: Sync de assets (inmutables)
+        run: |
+          aws s3 sync plataforma/dist/ "s3://${S3_BUCKET}/" --delete \
+            --exclude "index.html" \
+            --cache-control "public, max-age=31536000, immutable"
 
-      - name: Sync to S3
-        run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ --delete
+      # 2. Los `.mjs` se re-suben con el content-type correcto.
+      #
+      #    ⚠️ Esto NO es cosmético: el worker de PDF.js es un `.mjs`, y `aws s3 sync` adivina
+      #    su content-type mal. Si S3 lo sirve como `binary/octet-stream`, el navegador se
+      #    niega a ejecutarlo como módulo y **el visor de PDF se rompe** con "Failed to fetch
+      #    dynamically imported module" — aunque la descarga del archivo funcione perfecto.
+      #    El síntoma no menciona MIME types en ningún momento.
+      #
+      #    Van después del sync (no en lugar de) para que `--delete` siga limpiando los viejos.
+      - name: Corregir el content-type de los .mjs (worker de PDF.js)
+        run: |
+          find plataforma/dist -name '*.mjs' -printf '%P\n' | while read -r f; do
+            echo "  → $f"
+            aws s3 cp "plataforma/dist/${f}" "s3://${S3_BUCKET}/${f}" \
+              --content-type "application/javascript" \
+              --cache-control "public, max-age=31536000, immutable"
+          done
 
-      - name: Invalidate CloudFront
-        run: aws cloudfront create-invalidation --distribution-id ${{ env.DISTRIBUTION_ID }} --paths "/*"
+      # 3. `index.html` sin cache: es el único archivo sin hash en el nombre, así que es lo que
+      #    le dice al navegador qué assets pedir. Si se cachea, un deploy nuevo sigue sirviendo
+      #    referencias a assets que ya no existen.
+      - name: Subir index.html sin cache
+        run: |
+          aws s3 cp plataforma/dist/index.html "s3://${S3_BUCKET}/index.html" \
+            --content-type "text/html; charset=utf-8" \
+            --cache-control "no-cache, must-revalidate"
+
+      - name: Invalidar CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CF_DISTRIBUTION_MATEX }}" \
+            --paths "/*"

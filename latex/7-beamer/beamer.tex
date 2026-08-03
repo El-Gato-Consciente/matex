@@ -1,0 +1,330 @@
+% =====================================================================
+%  Presentaciones con Beamer (a fondo) — suite de documentos LaTeX
+%  Nivel 3 (Tipos de documento) · clase article (guía SOBRE la clase beamer).
+%  Compilar: latexmk -pdf beamer.tex
+%  (No es la Masterclass: este doc trabaja la clase beamer en profundidad.)
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Presentaciones con Beamer (a fondo)},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  language=[LaTeX]TeX, xleftmargin=8pt, framesep=4pt, extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+
+\title{\textbf{Presentaciones con Beamer (a fondo)}\\[2pt]
+       \large La clase \texttt{beamer} en profundidad}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent Guía de referencia de la clase \pkg{beamer}, la forma estándar de hacer
+\textbf{presentaciones} con \LaTeX. Acá se explica \emph{cómo funciona} cada
+pieza —frames, overlays, bloques, temas— para que puedas armar y personalizar tus
+diapositivas. \emph{(Es distinto de la \emph{Masterclass}, que es una charla
+\textbf{sobre LaTeX en general}; este documento entra a fondo en la clase
+\texttt{beamer}.)}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Anatomía de una presentación}
+% =====================================================================
+Una presentación es una serie de \textbf{frames} (diapositivas). El esqueleto
+mínimo:
+\begin{lstlisting}
+\documentclass[10pt,aspectratio=169]{beamer}
+\usetheme{Madrid}
+\begin{document}
+  \begin{frame}{Titulo del frame}
+    Contenido...
+  \end{frame}
+\end{document}
+\end{lstlisting}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \texttt{aspectratio=169} da pantalla ancha 16:9 (también \texttt{43},
+        \texttt{1610}).
+  \item Todo lo \textbf{visible} vive dentro de un \texttt{frame}.
+  \item \pkg{beamer} ya carga \pkg{hyperref}, \pkg{xcolor}, \pkg{amsmath} y
+        \pkg{tikz}: \textbf{no} los recargues.
+\end{itemize}
+
+\paragraph{El frame y sus opciones.} El entorno \texttt{frame} acepta un título
+(y subtítulo) y opciones entre corchetes:
+\begin{lstlisting}
+\begin{frame}[fragile]{Titulo}{Subtitulo opcional}
+  ...
+\end{frame}
+\end{lstlisting}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Opción} & \textbf{Para qué} \\
+\midrule
+\texttt{fragile} & \textbf{Obligatoria} si el frame contiene \texttt{verbatim}/
+                   \pkg{listings} (código). \\
+\texttt{plain}   & Sin encabezado ni pie (portada, o una imagen a sangre). \\
+\texttt{allowframebreaks} & Si el contenido no entra, lo parte en varias diapositivas. \\
+\texttt{t} / \texttt{c} / \texttt{b} & Alinea el contenido arriba / centro / abajo. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\section{Estructura y navegación}
+% =====================================================================
+\C{section} y \C{subsection}, puestos \textbf{fuera} de los frames, organizan la
+charla y alimentan el índice:
+\begin{lstlisting}
+\section{Introduccion}
+\begin{frame}{...} ... \end{frame}
+
+% un indice que se actualiza solo:
+\begin{frame}{Contenido}\tableofcontents\end{frame}
+\end{lstlisting}
+Para mostrar un \textbf{mini-índice} al empezar cada sección, resaltando la
+actual, se automatiza con \C{AtBeginSection}:
+\begin{lstlisting}
+\AtBeginSection[]{
+  \begin{frame}{Contenido}
+    \tableofcontents[currentsection]
+  \end{frame}}
+\end{lstlisting}
+Así el público siempre sabe \enquote{dónde está} en la presentación.
+
+% =====================================================================
+\section{Bloques}
+% =====================================================================
+Los \textbf{bloques} encuadran contenido con un título y un color, según su
+\emph{significado}. Hay tres:
+\begin{lstlisting}
+\begin{block}{Definicion}        Texto neutro.        \end{block}
+\begin{alertblock}{Cuidado}      Algo importante.     \end{alertblock}
+\begin{exampleblock}{Ejemplo}    Un caso concreto.    \end{exampleblock}
+\end{lstlisting}
+El \texttt{block} usa el color de estructura del tema (azul, en Madrid);
+\texttt{alertblock} sale en rojo (para advertencias) y \texttt{exampleblock} en
+verde (para ejemplos). La idea es elegirlos por lo que \textbf{significan}, no por
+el color que producen.
+
+% =====================================================================
+\section{Columnas}
+% =====================================================================
+Para poner cosas lado a lado (típico: texto a un lado, gráfico al otro) está el
+entorno \texttt{columns}:
+\begin{lstlisting}
+\begin{columns}[T]   % [T]=alinear arriba; [c]=centrar verticalmente
+  \begin{column}{0.48\textwidth}
+    Texto, items o ecuaciones...
+  \end{column}
+  \begin{column}{0.48\textwidth}
+    \includegraphics[width=\textwidth]{figura}  % o un tikzpicture
+  \end{column}
+\end{columns}
+\end{lstlisting}
+\begin{quote}\small
+\textbf{Regla práctica:} la suma de los anchos \emph{más} la separación debe ser
+$\le \texttt{\textbackslash textwidth}$. Si te pasás (p.\,ej.\ dos columnas de
+\texttt{0.5} con separación), las columnas se van al margen.
+\end{quote}
+
+% =====================================================================
+\section{Overlays: revelado por pasos}
+% =====================================================================
+Lo que distingue a \pkg{beamer}: un mismo frame puede mostrarse en \textbf{varios
+pasos} (cada paso es una \enquote{diapositiva} del PDF). La forma más simple es
+\C{pause}:
+\begin{lstlisting}
+Primero esto. \pause Despues esto.
+\end{lstlisting}
+Para más control se usan \textbf{especificaciones de overlay} \texttt{<...>}, que
+indican en qué pasos aparece cada cosa:
+\begin{lstlisting}
+\begin{itemize}
+  \item<1-> Visible desde el paso 1.
+  \item<2-> Aparece en el paso 2.
+  \item<3-> Y este en el 3.
+\end{itemize}
+\end{lstlisting}
+
+\paragraph{La familia de comandos de overlay.}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Comando} & \textbf{Efecto} \\
+\midrule
+\C{only<n>\{\dots\}}   & Muestra el material \textbf{solo} en el paso $n$; \emph{no} reserva espacio. \\
+\C{uncover<n->\{\dots\}} & Lo revela en $n$, pero \textbf{reserva el lugar} desde el inicio. \\
+\C{onslide<n->\{\dots\}} & Como \texttt{uncover}, versión flexible. \\
+\C{alt<n>\{A\}\{B\}}   & Muestra \texttt{A} en el paso $n$ y \texttt{B} en el resto. \\
+\C{temporal<n>\{antes\}\{durante\}\{después\}} & Tres estados según el paso. \\
+\C{alert<n>\{texto\}}  & \textbf{Resalta} el texto solo en el paso $n$. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Sutileza clave:} \C{only} \emph{no} reserva espacio (lo de abajo se mueve
+al aparecer/desaparecer); \C{uncover} sí. Para que el contenido no \enquote{salte}
+entre pasos, preferí \C{uncover}.
+
+Los overlays también funcionan \textbf{dentro} de ecuaciones y de gráficos
+\pkg{pgfplots} (p.\,ej.\ \C{onslide<2->\{\C{addplot}\dots\}} dibuja una curva
+recién en el segundo paso), lo que permite \enquote{construir} una figura por
+etapas.
+
+% =====================================================================
+\section{Temas y personalización}
+% =====================================================================
+El aspecto se arma combinando \textbf{cuatro temas}:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Tema} & \textbf{Controla} \\
+\midrule
+\texttt{theme}      & El \enquote{maestro} (\texttt{Madrid}, \texttt{Berlin}, \texttt{metropolis}\dots). \\
+\texttt{colortheme} & La paleta (\texttt{whale}, \texttt{beaver}, \texttt{seagull}\dots). \\
+\texttt{innertheme} & Viñetas, bloques (\texttt{circles}, \texttt{rectangles}). \\
+\texttt{outertheme} & Cabecera, pie, barra lateral. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{lstlisting}
+\usetheme{Madrid}\usecolortheme{whale}
+\useinnertheme{circles}
+\end{lstlisting}
+\begin{quote}\small
+\textbf{Nota (2026):} \texttt{metropolis} (tema moderno y minimalista) está
+\textbf{sin mantenimiento}; su fork \texttt{moloch} lo continúa.
+\end{quote}
+
+\paragraph{Retocar piezas sueltas.} Sin cambiar de tema, podés ajustar colores,
+fuentes y plantillas concretas:
+\begin{lstlisting}
+\setbeamercolor{frametitle}{bg=blue!70!black, fg=white}
+\setbeamerfont{frametitle}{series=\bfseries}
+\setbeamertemplate{navigation symbols}{}   % oculta la botonera de navegacion
+\setbeamertemplate{caption}[numbered]       % numera las figuras
+\setbeamertemplate{itemize item}[triangle]
+\end{lstlisting}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \C{setbeamercolor} $\to$ colores de un elemento (\texttt{fg}/\texttt{bg}).
+  \item \C{setbeamerfont} $\to$ tamaño / serie / forma.
+  \item \C{setbeamertemplate} $\to$ \textbf{reemplaza} una plantilla entera.
+\end{itemize}
+
+% =====================================================================
+\section{Matemática y gráficos en las diapositivas}
+% =====================================================================
+Toda la matemática de \pkg{amsmath} funciona igual que en un \texttt{article}.
+Lo propio de \pkg{beamer} es combinarla con overlays para \textbf{construir} una
+idea por pasos:
+\begin{lstlisting}
+\begin{frame}{Tangente}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item<1-> La parabola $y=x^2$...
+        \item<2-> ...y su recta tangente en $x=1$.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{tikzpicture}
+        \begin{axis}[axis lines=middle, domain=-0.5:2, samples=60]
+          \addplot[blue,thick]{x^2};
+          \onslide<2->{\addplot[red,thick,domain=0:2]{2*x-1};}
+        \end{axis}
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+\end{lstlisting}
+En el primer paso se ve la parábola; en el segundo aparece la tangente (porque su
+\C{addplot} está envuelto en \C{onslide<2->}).
+
+% =====================================================================
+\section{Notas del orador y modo entrega}
+% =====================================================================
+\paragraph{Notas.} \C{note\{\dots\}} agrega notas que solo ve quien presenta (en
+el monitor de presentador):
+\begin{lstlisting}
+\note{Recordar: mencionar el contraejemplo.}
+\setbeameroption{show notes on second screen=right}
+\end{lstlisting}
+
+\paragraph{Imprimir / repartir.} Para una versión sin animaciones (cada frame
+colapsado a una sola diapositiva) y con varias por hoja:
+\begin{lstlisting}
+\documentclass[handout]{beamer}   % colapsa todos los overlays
+% varias diapositivas por hoja (con pgfpages):
+\usepackage{pgfpages}
+\pgfpagesuselayout{4 on 1}[a4paper,landscape,border shrink=5mm]
+\end{lstlisting}
+La opción \texttt{handout} es clave: convierte una presentación llena de
+\C{pause} en un PDF limpio para entregar.
+
+% =====================================================================
+\section{Buenas prácticas}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \textbf{Una idea por diapositiva}; poco texto, frases cortas.
+  \item Overlays \textbf{con moderación}: revelar para guiar la atención, no por
+        efecto.
+  \item Preferí \C{uncover} a \C{only} para que el contenido no \enquote{salte}.
+  \item \texttt{[fragile]} en \textbf{todo} frame con código.
+  \item Bloques por su \emph{significado} (\texttt{block}/\texttt{alertblock}/
+        \texttt{exampleblock}), no por su color.
+  \item Generá un \texttt{handout} para imprimir o repartir.
+  \item Anchos de columna $+$ separación $\le \texttt{\textbackslash textwidth}$.
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Masterclass de LaTeX} — panorama general (esta es la versión
+        \emph{a fondo} de la clase \texttt{beamer}).
+  \item \emph{Plantillas} — \texttt{beamer.tex} para arrancar una presentación.
+  \item \emph{Gráficos} — \pkg{pgfplots} dentro de los frames.
+  \item Manual: \texttt{texdoc beamer} (la guía oficial, exhaustiva).
+\end{itemize}
+
+\end{document}

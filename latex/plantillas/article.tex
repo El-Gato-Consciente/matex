@@ -1,0 +1,108 @@
+% =====================================================================
+%  PLANTILLA · documento article (matemática) — suite LaTeX
+%  Copiá este archivo y empezá a escribir donde dice "CONTENIDO".
+%  Compilar:  latexmk -pdf article.tex
+%  Base estándar comentada (ver doc "Estándares y buenas prácticas").
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Codificación y fuentes (motor pdfLaTeX) ------------------------
+\usepackage[utf8]{inputenc}   % entrada UTF-8 (acentos en el .tex)
+\usepackage[T1]{fontenc}      % salida T1: guionado y copy-paste correctos
+\usepackage{lmodern}          % fuentes vectoriales (no bitmaps)
+\usepackage{microtype}        % pulido tipográfico (protrusion + expansion)
+
+% --- Idioma ---------------------------------------------------------
+\usepackage[spanish,es-noshorthands]{babel} % es-noshorthands: no rompe tikz/urls
+\usepackage{csquotes}                        % \enquote{...}: comillas correctas
+
+% --- Matemática -----------------------------------------------------
+\usepackage{mathtools}  % superconjunto de amsmath (+ \coloneqq, delimitadores)
+\usepackage{amssymb}    % \mathbb, \mathcal, relaciones, flechas
+\usepackage{amsthm}     % entornos de teorema/definición/demostración
+\usepackage{bm}         % negrita matemática correcta: \bm{x}
+\usepackage{siunitx}    % números y unidades: \num, \qty
+
+% --- Tablas, gráficos, layout ---------------------------------------
+\usepackage{booktabs}\usepackage{tabularx}   % tablas limpias
+\usepackage{graphicx}                         % \includegraphics
+\usepackage{pgfplots}\pgfplotsset{compat=1.18}% gráficos de funciones/datos
+\usepackage{caption}\usepackage{subcaption}\usepackage{float}
+\usepackage[margin=2.5cm]{geometry}           % márgenes
+\usepackage{enumitem}                         % listas personalizables
+
+% --- Bibliografía (descomentar si se usa) ---------------------------
+% \usepackage[backend=biber,style=numeric]{biblatex}
+% \addbibresource{refs.bib}
+
+% --- Enlaces y referencias (casi al final) --------------------------
+\usepackage{hyperref}
+\hypersetup{unicode, hidelinks,
+            pdftitle={Título del documento}, pdfauthor={Tu Nombre}}
+\usepackage[spanish,capitalise,nameinlink]{cleveref} % DESPUÉS de hyperref
+
+% --- Macros propias (DRY + semántica) -------------------------------
+\newcommand{\R}{\mathbb{R}}  \newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}  \newcommand{\Q}{\mathbb{Q}}
+\DeclareMathOperator{\sen}{sen}                 % seno (español, redonda)
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}   % \abs{x}, \abs*{\frac..}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\theoremstyle{plain}      \newtheorem{teo}{Teorema}[section]
+\theoremstyle{definition} \newtheorem{defi}[teo]{Definición}
+
+\title{Título del documento}
+\author{Tu Nombre}
+\date{\today}
+
+\begin{document}
+\maketitle
+% \tableofcontents \newpage    % índice en hoja aparte, si lo necesitás
+
+% =====================================================================
+% CONTENIDO  — borrá los ejemplos y escribí lo tuyo
+% =====================================================================
+\section{Introducción}
+Texto con una cita \enquote{entre comillas} y una referencia a
+\cref{sec:resultados}.
+
+\section{Resultados}\label{sec:resultados}
+Matemática en línea $f(x)=x^2$ y en bloque:
+\begin{equation}\label{eq:cuad}
+  f(x) = ax^2 + bx + c, \qquad a \neq 0 .
+\end{equation}
+Por \cref{eq:cuad}, el discriminante es $\Delta = b^2 - 4ac$.
+
+\begin{teo}\label{teo:ej}
+  Para todo $x \in \R$ se cumple $\abs{x} \ge 0$.
+\end{teo}
+\begin{proof}
+  Inmediato por la definición de valor absoluto.
+\end{proof}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[width=8cm, height=5cm, axis lines=middle,
+                 xlabel=$x$, ylabel=$y$, samples=80]
+      \addplot[blue, thick, domain=-2:2] {x^2};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{La parábola $y=x^2$.}\label{fig:par}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{@{}lS@{}}
+    \toprule
+    Magnitud & {Valor} \\
+    \midrule
+    Ancho  & 12.5 \\
+    Alto   &  3.2 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Una tabla con \texttt{booktabs}.}\label{tab:ej}
+\end{table}
+
+% \printbibliography   % si usás biblatex
+
+\end{document}

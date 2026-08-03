@@ -1,0 +1,671 @@
+% =====================================================================
+%  Matemática en LaTeX — Guía práctica desde cero
+%  Parte de la suite de documentos LaTeX. Clase: article.
+%  Compilar con pdfLaTeX (latexmk -pdf matematica.tex).
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Codificación y fuentes (base estándar) ---
+\usepackage[utf8]{inputenc}   % redundante desde 2018, explícito
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Idioma ---
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+
+% --- Matemática ---
+\usepackage{mathtools}   % incluye amsmath + correcciones
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{bm}
+\usepackage{siunitx}
+
+% --- Tablas, diseño, código ---
+\usepackage{booktabs}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{cancel}     % tachados para derivaciones
+\usepackage{listings}
+
+% --- Enlaces y referencias (casi al final) ---
+\usepackage{hyperref}
+\usepackage[capitalise,nameinlink]{cleveref}
+\hypersetup{unicode, pdftitle={Matemática en LaTeX}, pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+
+% --- Colores y estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{120,120,120}
+\lstset{
+  language=[LaTeX]TeX,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  xleftmargin=10pt, xrightmargin=4pt, framesep=4pt,
+  extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {°}{{\textdegree}}1,
+}
+
+% --- Macros de la guía ---
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}   % imprime el nombre de un comando: \C{alpha} -> \alpha
+
+% --- Macros semánticas (buena práctica) ---
+\newcommand{\R}{\mathbb{R}}  \newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}  \newcommand{\Q}{\mathbb{Q}}  \newcommand{\Cc}{\mathbb{C}}
+\DeclareMathOperator{\sen}{sen}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+% --- Teoremas (ecosistema típico de textos de matemática) ---
+\theoremstyle{plain}      % enunciado en itálica
+\newtheorem{teorema}{Teorema}[section]
+\newtheorem{lema}[teorema]{Lema}              % comparten contador con teorema
+\newtheorem{corolario}[teorema]{Corolario}
+\newtheorem{proposicion}[teorema]{Proposición}
+\theoremstyle{definition} % enunciado en redonda
+\newtheorem{definicion}{Definición}[section]
+\newtheorem{ejemplo}{Ejemplo}[section]
+\theoremstyle{remark}
+\newtheorem*{obs}{Observación}
+
+\title{\textbf{Matemática en \LaTeX}\\[2pt]\large Guía práctica desde cero}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Cómo escribir matemática en \LaTeX, desde los modos matemáticos hasta
+teoremas y unidades. Cada tema muestra el \emph{código} y su \emph{resultado}.
+Asume que ya sabés compilar un documento; si no, ver el documento
+\emph{Quickstart} de la suite. El preámbulo de esta guía es, en sí mismo, un
+ejemplo de la base estándar recomendada para matemática.
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Introducción: esta guía y la suite}
+% =====================================================================
+Esta guía es parte de una \textbf{suite de documentos cortos y complementarios}
+sobre \LaTeX, organizada por niveles. Cada pieza apunta a un \emph{lector} y un
+\emph{objetivo} distintos, y es \emph{completa dentro de su tema} sin solaparse
+con las demás. Este es el documento de \textbf{Matemática} (Nivel~2,
+\enquote{Capacidades}); el \textbf{mapa completo y actualizado} de la suite está
+en el \texttt{README} del proyecto.
+
+\paragraph{Documentos relacionados.} Si nunca usaste \LaTeX, empezá por el
+\emph{Quickstart} (o mirá la \emph{Masterclass de \LaTeX}). Para \textbf{graficar
+funciones} y figuras está \emph{Gráficos y figuras}; para \textbf{referencias
+cruzadas y bibliografía}, \emph{Referencias, índices y bibliografía}; para el
+\textbf{preámbulo recomendado} y los anti-patrones, \emph{Estándares y buenas
+prácticas}.
+
+\paragraph{Cómo leer esta guía.} Cada tema muestra el \textbf{código} en una caja
+y, debajo, su \textbf{resultado} renderizado (precedido por \enquote{produce:}).
+Los nombres de comando aparecen así: \C{frac}. El preámbulo de este mismo archivo
+es un ejemplo de la \emph{base estándar} recomendada para matemática (detallada
+en \emph{Estándares}).
+
+% =====================================================================
+\section{Los modos matemáticos}
+% =====================================================================
+\LaTeX{} distingue el \textbf{modo texto} del \textbf{modo matemático}. Toda
+fórmula —hasta una sola letra como variable— va en modo matemático, donde las
+letras se ponen en itálica y el espaciado lo decide \LaTeX.
+
+\paragraph{En línea (inline).} Dentro de un párrafo, entre \texttt{\$\dots\$}
+(o \texttt{\textbackslash(\dots\textbackslash)}):
+\begin{lstlisting}
+La identidad $a^2+b^2=c^2$ vale en un triángulo rectángulo.
+\end{lstlisting}
+produce: La identidad $a^2+b^2=c^2$ vale en un triángulo rectángulo.
+
+\paragraph{En bloque (display).} Centrada y en su propio renglón, con
+\texttt{\textbackslash[\dots\textbackslash]} (sin número) o el entorno
+\texttt{equation} (numerada):
+\begin{lstlisting}
+\[ x = \frac{-b \pm \sqrt{b^2-4ac}}{2a} \]
+\begin{equation} e^{i\pi}+1=0 \end{equation}
+\end{lstlisting}
+produce:
+\[ x = \frac{-b \pm \sqrt{b^2-4ac}}{2a} \]
+\begin{equation}\label{eq:euler} e^{i\pi}+1=0 \end{equation}
+
+\begin{obs}
+Nunca uses \texttt{\$\$\dots\$\$} (es \TeX{} plano: rompe el espaciado). Usá
+\texttt{\textbackslash[\dots\textbackslash]} o \texttt{equation}.
+\end{obs}
+
+% =====================================================================
+\section{Construcciones básicas}
+% =====================================================================
+\begin{itemize}[noitemsep]
+  \item \textbf{Superíndice} \verb|^| y \textbf{subíndice} \verb|_|. Si hay más
+        de un carácter, agrupá con llaves \verb|{}|.
+  \item \textbf{Fracción}: \C{frac} (con dos argumentos).
+  \item \textbf{Raíz}: \C{sqrt}; raíz $n$-ésima con argumento opcional.
+\end{itemize}
+\begin{lstlisting}
+$x^2$,  $x^{2n}$,  $a_i$,  $a_{i+1}$,  $x_1^2$
+$\frac{a+b}{c}$,  $\tfrac{1}{2}$ (chica),  $\dfrac{1}{2}$ (grande)
+$\sqrt{2}$,  $\sqrt[3]{x}$,  $\sqrt{\frac{a}{b}}$
+\end{lstlisting}
+produce:
+$x^2$,\quad $x^{2n}$,\quad $a_i$,\quad $a_{i+1}$,\quad $x_1^2$;\qquad
+$\frac{a+b}{c}$,\quad $\tfrac{1}{2}$,\quad $\dfrac{1}{2}$;\qquad
+$\sqrt{2}$,\quad $\sqrt[3]{x}$,\quad $\sqrt{\frac{a}{b}}$.
+
+\begin{obs}
+$\tfrac{1}{2}$ (\emph{textstyle}) da fracción chica y $\dfrac{1}{2}$
+(\emph{displaystyle}) la da grande; útiles para controlar el tamaño en línea.
+\end{obs}
+
+\paragraph{Coeficiente binomial y fracción continua.} Con \C{binom} y \C{cfrac}:
+\begin{lstlisting}
+$\binom{n}{k}$,  $\cfrac{1}{1+\cfrac{1}{2+\cfrac{1}{3}}}$
+\end{lstlisting}
+produce: $\dbinom{n}{k}$,\qquad
+$\cfrac{1}{1+\cfrac{1}{2+\cfrac{1}{3}}}$.
+
+% =====================================================================
+\section{Símbolos}
+% =====================================================================
+
+\subsection{Letras griegas}
+\begin{center}
+\begin{tabular}{llllll}
+\toprule
+\C{alpha} & $\alpha$ & \C{beta} & $\beta$ & \C{gamma} & $\gamma$ \\
+\C{delta} & $\delta$ & \C{epsilon} & $\epsilon$ & \C{varepsilon} & $\varepsilon$ \\
+\C{theta} & $\theta$ & \C{lambda} & $\lambda$ & \C{mu} & $\mu$ \\
+\C{pi} & $\pi$ & \C{rho} & $\rho$ & \C{sigma} & $\sigma$ \\
+\C{phi} & $\phi$ & \C{varphi} & $\varphi$ & \C{omega} & $\omega$ \\
+\midrule
+\C{Gamma} & $\Gamma$ & \C{Delta} & $\Delta$ & \C{Theta} & $\Theta$ \\
+\C{Lambda} & $\Lambda$ & \C{Sigma} & $\Sigma$ & \C{Omega} & $\Omega$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Relaciones y pertenencia}
+\begin{center}
+\begin{tabular}{llllll}
+\toprule
+\C{leq} & $\leq$ & \C{geq} & $\geq$ & \C{neq} & $\neq$ \\
+\C{approx} & $\approx$ & \C{equiv} & $\equiv$ & \C{sim} & $\sim$ \\
+\C{in} & $\in$ & \C{notin} & $\notin$ & \C{subset} & $\subset$ \\
+\C{subseteq} & $\subseteq$ & \C{cup} & $\cup$ & \C{cap} & $\cap$ \\
+\C{forall} & $\forall$ & \C{exists} & $\exists$ & \C{infty} & $\infty$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Flechas y puntos suspensivos}
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\C{to} & $\to$ & \C{implies} (o \C{Rightarrow}) & $\Rightarrow$ \\
+\C{iff} (o \C{Leftrightarrow}) & $\Leftrightarrow$ & \C{mapsto} & $\mapsto$ \\
+\C{dots} & $\dots$ & \C{cdots} / \C{vdots} / \C{ddots} & $\cdots\ \vdots\ \ddots$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{obs}
+Usá \C{dots}: \texttt{amsmath} elige automáticamente puntos a la línea base
+($\ldots$) o centrados ($\cdots$) según el contexto.
+\end{obs}
+
+\subsection{Conjuntos numéricos}
+Con \C{mathbb} (de \texttt{amssymb}): $\N,\ \Z,\ \Q,\ \R,\ \mathbb{C}$. Conviene
+definir macros (ver \cref{sec:bp}): \verb|\newcommand{\R}{\mathbb{R}}|.
+
+\subsection{Alfabetos matemáticos}
+Distintos \enquote{estilos} de letras, cada uno con su significado convencional
+(vectores, matrices, conjuntos, álgebras\dots):
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\C{mathbf\{v\}} & $\mathbf{v}$ & \C{bm\{v\}} & $\bm{v}$ \\
+\C{mathit\{x\}} & $\mathit{x}$ & \C{mathrm\{d\}} & $\mathrm{d}$ \\
+\C{mathcal\{F\}} & $\mathcal{F}$ & \C{mathbb\{R\}} & $\mathbb{R}$ \\
+\C{mathfrak\{g\}} & $\mathfrak{g}$ & \C{mathsf\{M\}} & $\mathsf{M}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{obs}
+Para \textbf{vectores en negrita} usá \C{bm} (de \texttt{bm}), que respeta la
+itálica matemática, en vez de \C{mathbf} (que pone redonda).
+\end{obs}
+
+\subsection{Lógica y probabilidad}
+Conectivos y cuantificadores:
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\C{land} & $\land$ & \C{lor} & $\lor$ \\
+\C{neg} & $\neg$ & \C{implies} & $\implies$ \\
+\C{forall} & $\forall$ & \C{exists} & $\exists$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Probabilidad: esperanza $\mathbb{E}[X]$ (\C{mathbb\{E\}}), probabilidad
+$\Pr(A)$ (\C{Pr}), varianza $\operatorname{Var}(X)$
+(\C{operatorname\{Var\}}) y condicional $P(A\mid B)$ (la barra es \C{mid}).
+
+% =====================================================================
+\section{Operadores y funciones}
+% =====================================================================
+Las funciones estándar tienen su comando (se ven en redonda y con el espaciado
+correcto): \C{sin}, \C{cos}, \C{tan}, \C{log}, \C{ln}, \C{exp}, \C{lim}, etc.
+Los \emph{operadores grandes} (\C{sum}, \C{int}, \C{prod}) llevan límites con
+\verb|_| y \verb|^|.
+\begin{lstlisting}
+\[ \lim_{x\to 0}\frac{\sen x}{x}=1 \qquad
+   \sum_{i=1}^{n} i = \frac{n(n+1)}{2} \qquad
+   \int_0^1 x^2\,dx = \tfrac{1}{3} \]
+\end{lstlisting}
+produce:
+\[ \lim_{x\to 0}\frac{\sen x}{x}=1 \qquad
+   \sum_{i=1}^{n} i = \frac{n(n+1)}{2} \qquad
+   \int_0^1 x^2\,dx = \tfrac{1}{3} \]
+
+\paragraph{Operadores propios.} Para uno que no existe (p.\,ej.\ seno en
+español), se declara en el preámbulo con \C{DeclareMathOperator}:
+\begin{lstlisting}
+\DeclareMathOperator{\sen}{sen}   % en el preámbulo
+... $\sen(2\pi)=0$ ...
+\end{lstlisting}
+Así $\sen$ sale en redonda y con buen espaciado, a diferencia de escribir
+$sen$ (que se interpreta como $s\cdot e\cdot n$).
+
+\paragraph{Más operadores grandes y subíndices múltiples.} Uniones e
+intersecciones grandes, coproductos y subíndices apilados:
+\begin{lstlisting}
+\[ \bigcup_{i=1}^{n} A_i \quad \bigcap_{i} A_i \quad \coprod_j X_j \quad
+   \sum_{\substack{1\le i\le n \\ i\ne j}} a_i \]
+\end{lstlisting}
+produce:
+\[ \bigcup_{i=1}^{n} A_i \quad \bigcap_{i} A_i \quad \coprod_j X_j \quad
+   \sum_{\substack{1\le i\le n \\ i\ne j}} a_i \]
+(\C{substack} apila varias condiciones en un subíndice.)
+
+\paragraph{Aritmética modular y flechas con etiqueta.} Congruencias y flechas
+extensibles con etiqueta:
+\begin{lstlisting}
+$17 \equiv 2 \pmod 5$,  $a \bmod n$
+\[ x \xrightarrow{\,f\,} y \xleftarrow{\,g\,} z \]
+\end{lstlisting}
+produce: $17 \equiv 2 \pmod 5$,\; $a \bmod n$;\quad y
+\[ x \xrightarrow{\,f\,} y \xleftarrow{\,g\,} z. \]
+
+% =====================================================================
+\section{Cálculo: derivadas, integrales y límites}
+% =====================================================================
+\paragraph{Derivadas.} Notación de Lagrange, de Leibniz y parciales:
+\begin{lstlisting}
+\[ f'(x),\quad \frac{\mathrm{d}y}{\mathrm{d}x},\quad
+   \frac{\partial f}{\partial x},\quad \nabla f,\quad \ddot{x} \]
+\end{lstlisting}
+produce:
+\[ f'(x),\quad \frac{\mathrm{d}y}{\mathrm{d}x},\quad
+   \frac{\partial f}{\partial x},\quad \nabla f,\quad \ddot{x} \]
+\begin{obs}
+Convención frecuente: la \enquote{d} del diferencial en \textbf{redonda}
+(\C{mathrm\{d\}}) para distinguirla de una variable: $\mathrm{d}x$ en vez de
+$dx$. Mantené una sola convención en todo el documento.
+\end{obs}
+
+\paragraph{Integrales.} Simple, múltiples y de contorno, con sus límites:
+\begin{lstlisting}
+\[ \int_a^b f\,\mathrm{d}x,\quad \iint_D f\,\mathrm{d}A,\quad
+   \iiint_V f\,\mathrm{d}V,\quad \oint_C \mathbf{F}\cdot\mathrm{d}\mathbf{r} \]
+\end{lstlisting}
+produce:
+\[ \int_a^b f\,\mathrm{d}x,\quad \iint_D f\,\mathrm{d}A,\quad
+   \iiint_V f\,\mathrm{d}V,\quad \oint_C \mathbf{F}\cdot\mathrm{d}\mathbf{r} \]
+
+\paragraph{Límites y series.} Con \C{limsup}/\C{liminf} y series infinitas:
+\begin{lstlisting}
+\[ \lim_{x\to a} f(x),\quad \limsup_{n\to\infty} a_n,\quad
+   \sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6} \]
+\end{lstlisting}
+produce:
+\[ \lim_{x\to a} f(x),\quad \limsup_{n\to\infty} a_n,\quad
+   \sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6} \]
+
+% =====================================================================
+\section{Delimitadores que escalan}
+% =====================================================================
+Los paréntesis fijos no crecen con su contenido. Para que escalen, usá
+\C{left} y \C{right} (con cualquier delimitador: \texttt{(} \texttt{[}
+\verb|\{| \verb;|; \dots):
+\begin{lstlisting}
+$( \frac{a}{b} )$   vs.   $\left( \frac{a}{b} \right)$
+\[ \left\{ x \in \R : \abs{x} \le 1 \right\} \]
+\end{lstlisting}
+produce: $( \frac{a}{b} )$ \;vs.\; $\left( \frac{a}{b} \right)$, y
+\[ \left\{ x \in \R : \abs{x} \le 1 \right\}. \]
+
+\begin{obs}
+\textbf{Mejor aún}: con \texttt{mathtools} se definen delimitadores
+\emph{semánticos} que escalan solos:
+\verb|\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}|. Luego $\abs{x}$ y la versión
+auto-escalada $\abs*{\dfrac{a}{b}}$.
+\end{obs}
+
+Otros delimitadores frecuentes (también como \emph{paired delimiters}): piso
+$\floor{x}$ (\C{floor}), techo $\ceil{x}$ (\C{ceil}) y producto interno
+$\langle u,v\rangle$ (\C{langle}\,\dots\,\C{rangle}).
+
+% =====================================================================
+\section{Matrices, sistemas y arreglos}
+% =====================================================================
+De \texttt{amsmath}/\texttt{mathtools}: \texttt{pmatrix} (paréntesis),
+\texttt{bmatrix} (corchetes), \texttt{vmatrix} (determinante), \texttt{cases}
+(definición por tramos). Las filas se separan con \verb|\\| y las columnas
+con \verb|&|.
+\begin{lstlisting}
+\[ A=\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad
+   \det\begin{vmatrix} a & b \\ c & d \end{vmatrix}=ad-bc \]
+\[ |x|=\begin{cases} x & \text{si } x\ge 0 \\ -x & \text{si } x<0 \end{cases} \]
+\end{lstlisting}
+produce:
+\[ A=\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad
+   \det\begin{vmatrix} a & b \\ c & d \end{vmatrix}=ad-bc \]
+\[ |x|=\begin{cases} x & \text{si } x\ge 0 \\ -x & \text{si } x<0 \end{cases} \]
+
+% =====================================================================
+\section{Ecuaciones multilínea y alineación}
+% =====================================================================
+El entorno \texttt{align} alinea varias ecuaciones por el \verb|&| (típicamente
+en el \verb|=|). Numera cada línea; con \verb|*| (\texttt{align*}) no numera, y
+\C{notag} saca el número de una línea puntual.
+\begin{lstlisting}
+\begin{align}
+  (x+1)^2 &= (x+1)(x+1) \\
+          &= x^2 + 2x + 1 \notag
+\end{align}
+\end{lstlisting}
+produce:
+\begin{align}
+  (x+1)^2 &= (x+1)(x+1) \\
+          &= x^2 + 2x + 1 \notag
+\end{align}
+
+Otros: \texttt{gather} (centra sin alinear), \texttt{split} (una ecuación en
+varias líneas con un solo número), \texttt{aligned} (como \texttt{align} pero
+dentro de otra fórmula), \texttt{alignat} (control fino de columnas) y
+\texttt{multline} (primera a la izquierda, última a la derecha).
+
+\paragraph{Etiqueta manual con \C{tag}.} Cuando querés un número/etiqueta a
+medida en vez de la numeración automática:
+\begin{lstlisting}
+\begin{equation} a^2+b^2=c^2 \tag{$\ast$} \end{equation}
+\end{lstlisting}
+produce:
+\begin{equation} a^2+b^2=c^2 \tag{$\ast$} \end{equation}
+
+\begin{obs}
+\textbf{No uses \texttt{eqnarray}} (obsoleto, espaciado roto): usá
+\texttt{align}.
+\end{obs}
+
+% =====================================================================
+\section{Acentos, decoraciones y texto}
+% =====================================================================
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\C{hat\{x\}} & $\hat{x}$ & \C{bar\{x\}} & $\bar{x}$ \\
+\C{vec\{v\}} & $\vec{v}$ & \C{tilde\{x\}} & $\tilde{x}$ \\
+\C{dot\{x\}} & $\dot{x}$ & \C{overline\{AB\}} & $\overline{AB}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\paragraph{Llaves, sombreros anchos y superposiciones.} Para señalar o agrupar
+partes de una fórmula:
+\begin{lstlisting}
+\[ \underbrace{1+2+\dots+n}_{n\text{ sumandos}} = \frac{n(n+1)}{2} \]
+\[ \widehat{ABC}, \quad \widetilde{xy}, \quad \overrightarrow{AB},
+   \quad a \overset{!}{=} b, \quad \stackrel{\text{def}}{=} \]
+\end{lstlisting}
+produce:
+\[ \underbrace{1+2+\dots+n}_{n\text{ sumandos}} = \frac{n(n+1)}{2} \]
+\[ \widehat{ABC}, \quad \widetilde{xy}, \quad \overrightarrow{AB},
+   \quad a \overset{!}{=} b, \quad \stackrel{\text{def}}{=}\ . \]
+
+Para \textbf{palabras dentro de una fórmula}, usá \C{text} (de
+\texttt{amsmath}), nunca texto pelado en math:
+\begin{lstlisting}
+\[ A = \pi r^2 \quad \text{(área del círculo)} \]
+\end{lstlisting}
+produce: \[ A = \pi r^2 \quad \text{(área del círculo)}. \]
+
+\paragraph{Espaciado manual} (cuando \LaTeX{} no acierta): \C{,} (fino),
+\C{;} (medio), \C{quad} y \C{qquad} (grandes), \C{!} (negativo).
+Ej.: $\int x\,dx$ usa \C{,} antes del $dx$.
+
+% =====================================================================
+\section{Color y tachado (para derivaciones)}
+% =====================================================================
+Para \textbf{resaltar} pasos de una cuenta usá color con \C{textcolor} (de
+\texttt{xcolor}); para \textbf{tachar} (simplificaciones, términos que se van),
+el paquete \texttt{cancel} con \C{cancel} y \C{cancelto}.
+\begin{lstlisting}
+\[ x^2+6x+5 = (x+3)^2 \textcolor{red}{-9+5} = (x+3)^2 \textcolor{red}{-4} \]
+\[ \frac{a\,\cancel{c}}{b\,\cancel{c}} = \frac{a}{b}, \qquad
+   \cancelto{0}{\,e^{-x}}\ \text{cuando } x\to\infty \]
+\end{lstlisting}
+produce:
+\[ x^2+6x+5 = (x+3)^2 \textcolor{red}{-9+5} = (x+3)^2 \textcolor{red}{-4} \]
+\[ \frac{a\,\cancel{c}}{b\,\cancel{c}} = \frac{a}{b}, \qquad
+   \cancelto{0}{\,e^{-x}}\ \text{cuando } x\to\infty \]
+\begin{obs}
+Usá el color \textbf{con moderación} y nunca como \emph{único} medio para
+transmitir información (accesibilidad): que el resaltado acompañe, no reemplace.
+\end{obs}
+
+% =====================================================================
+\section{Teoremas y demostraciones}
+% =====================================================================
+Es el corazón de los textos de matemática. Con \texttt{amsthm} se declaran los
+entornos en el preámbulo, eligiendo un \textbf{estilo} y, opcionalmente,
+\textbf{compartiendo el contador}:
+\begin{lstlisting}
+\theoremstyle{plain}        % enunciado en itálica
+\newtheorem{teorema}{Teorema}[section]
+\newtheorem{lema}[teorema]{Lema}            % comparte contador con teorema
+\newtheorem{corolario}[teorema]{Corolario}
+\newtheorem{proposicion}[teorema]{Proposición}
+\theoremstyle{definition}   % enunciado en redonda
+\newtheorem{definicion}{Definición}[section]
+\newtheorem{ejemplo}{Ejemplo}[section]
+\theoremstyle{remark}
+\newtheorem*{obs}{Observación}              % * = sin numerar
+\end{lstlisting}
+Tres \textbf{estilos}: \texttt{plain} (itálica; teoremas, lemas\dots),
+\texttt{definition} (redonda; definiciones, ejemplos) y \texttt{remark}
+(observaciones). El \verb|[teorema]| hace que \texttt{lema}, \texttt{corolario},
+etc.\ \textbf{compartan la numeración}. La demostración va en \texttt{proof}
+(cierra con $\square$ automático). Renderizado:
+
+\begin{definicion}\label{def:par}
+Una función $f:\R\to\R$ es \emph{par} si $f(-x)=f(x)$ para todo $x\in\R$.
+\end{definicion}
+
+\begin{teorema}[Pitágoras]\label{thm:pit}
+En un triángulo rectángulo de catetos $a,b$ e hipotenusa $c$ vale $a^2+b^2=c^2$.
+\end{teorema}
+\begin{proof}
+\dots (idea de la demostración) \dots
+\end{proof}
+
+\begin{lema}
+Toda función par queda determinada por sus valores en $[0,\infty)$.
+\end{lema}
+\begin{corolario}
+Si $f$ es par y $f$ se anula en $[0,\infty)$, entonces $f\equiv 0$.
+\end{corolario}
+\begin{ejemplo}
+$f(x)=x^2$ es par (\cref{def:par}); $g(x)=x^3$ no lo es.
+\end{ejemplo}
+
+\begin{obs}
+Para \textbf{referir} un resultado, etiquetá con \C{label} y citá con \C{cref}:
+\enquote{por el \cref{thm:pit}\dots}. El símbolo de fin de demostración se
+cambia con \verb|\renewcommand\qedsymbol{$\blacksquare$}|.
+\end{obs}
+
+% =====================================================================
+\section{Números y unidades con \texttt{siunitx}}
+% =====================================================================
+\texttt{siunitx} formatea números y unidades de manera consistente (separador
+de miles, unidad en redonda, espacio correcto). \textbf{Sintaxis v3}:
+\begin{lstlisting}
+\num{55000}              % numero con separador de miles
+\qty{10}{\celsius}       % cantidad + unidad
+\qty{250}{\litre\per\minute}
+\numrange{8}{12}         % rango
+\end{lstlisting}
+produce: $\num{55000}$;\quad \qty{10}{\celsius};\quad
+\qty{250}{\litre\per\minute};\quad \numrange{8}{12}.
+
+\begin{obs}
+En \texttt{siunitx} v3 los comandos viejos \C{SI}, \C{si} están desaconsejados:
+usá \C{qty} y \C{unit}.
+\end{obs}
+
+% =====================================================================
+\section{Referencias a ecuaciones}
+% =====================================================================
+Etiquetá con \C{label\{eq:nombre\}} y citá con \C{eqref} (da el número entre
+paréntesis) o \C{cref} (agrega \enquote{ecuación}). Por ejemplo, la
+\cref{eq:euler} es la identidad de Euler.
+\begin{lstlisting}
+\begin{equation}\label{eq:euler} e^{i\pi}+1=0 \end{equation}
+... la \eqref{eq:euler} ...   o   ... la \cref{eq:euler} ...
+\end{lstlisting}
+\begin{obs}
+Acá referenciamos \textbf{ecuaciones}. El sistema general de referencias
+cruzadas (\texttt{cleveref}, convenciones de etiquetas, índices) se trata en
+\emph{Referencias, índices y bibliografía}.
+\end{obs}
+
+% =====================================================================
+\section{Un ejemplo completo}
+% =====================================================================
+Combinamos varias herramientas para resolver un límite paso a paso, tachando lo
+que se simplifica (\C{cancel}) y enmarcando el resultado (\C{boxed}):
+\begin{lstlisting}
+\begin{align*}
+  \lim_{x\to 2}\frac{x^2-4}{x-2}
+    &= \lim_{x\to 2}\frac{(x-2)(x+2)}{x-2}
+     = \lim_{x\to 2}\frac{\cancel{(x-2)}\,(x+2)}{\cancel{(x-2)}} \\
+    &= \lim_{x\to 2}(x+2) = \boxed{4}
+\end{align*}
+\end{lstlisting}
+produce:
+\begin{align*}
+  \lim_{x\to 2}\frac{x^2-4}{x-2}
+    &= \lim_{x\to 2}\frac{(x-2)(x+2)}{x-2}
+     = \lim_{x\to 2}\frac{\cancel{(x-2)}\,(x+2)}{\cancel{(x-2)}} \\
+    &= \lim_{x\to 2}(x+2) = \boxed{4}
+\end{align*}
+
+% =====================================================================
+\section{Errores comunes}
+% =====================================================================
+\begin{itemize}[itemsep=2pt]
+  \item \textbf{Olvidar el modo math.} \verb|x^2| en texto da error; encerralo:
+    \verb|$x^2$| $\to x^2$.
+  \item \textbf{Faltan llaves.} \verb|x^10| da $x^10$ (es $x^1$ y luego $0$);
+    usá \verb|x^{10}| $\to x^{10}$.
+  \item \textbf{Multiplicación con \texttt{*}.} \verb|2*3| muestra $2*3$; usá
+    \verb|\cdot| ($2\cdot3$) o \verb|\times| ($2\times3$).
+  \item \textbf{Funciones \enquote{peladas}.} \verb|sen x| sale en itálica
+    ($sen\,x$); definí el operador para obtener $\sen x$.
+  \item \textbf{Espacios.} En modo math los espacios se ignoran: el espaciado se
+    fuerza con \verb|\,| \verb|\;| \verb|\quad|.
+  \item \textbf{\C{frac} fuera de math.} Va solo en modo matemático:
+    \verb|$\frac{a}{b}$|.
+\end{itemize}
+
+% =====================================================================
+\section{Buenas prácticas (do / don't)}\label{sec:bp}
+% =====================================================================
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{0.43\textwidth} p{0.5\textwidth}@{}}
+\toprule
+\textbf{Evitar} & \textbf{Usar} \\
+\midrule
+\texttt{\$\$\dots\$\$} & \C{[}\,\dots\,\C{]} o \texttt{equation} \\
+\texttt{eqnarray} & \texttt{align} \\
+\verb;|x|; a mano & \C{abs\{x\}} (paired delimiter) \\
+$sen\,x$ (pelado) & \C{sen} vía \C{DeclareMathOperator} \\
+palabras en math: $area$ & \C{text\{área\}} \\
+\C{bf}, \C{it} en math & \C{mathbf}, \C{bm}, \C{mathit} \\
+\texttt{...} & \C{dots} \\
+repetir \C{mathbb\{R\}} & macro \C{newcommand}\texttt{\{\textbackslash R\}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Macros semánticas} (en el preámbulo): definir
+$\R,\N,\Z,\Q$, operadores propios ($\sen$) y delimitadores
+($\abs{\cdot}$, $\norm{\cdot}$) hace el documento más corto, consistente y
+fácil de cambiar.
+
+% =====================================================================
+\section{Referencia rápida}
+% =====================================================================
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Para\dots} & \textbf{Escribís} \\
+\midrule
+fracción & \C{frac\{a\}\{b\}} \\
+raíz & \C{sqrt\{x\}}, \C{sqrt[n]\{x\}} \\
+sub/super & \verb|a_i|, \verb|x^2|, \verb|x_1^2| \\
+sumatoria & \C{sum\_\{i=1\}\^{}\{n\}} \\
+integral & \C{int\_a\^{}b f(x)\,}\C{,dx} \\
+límite & \C{lim\_\{x}\C{to 0\}} \\
+matriz & \texttt{pmatrix} / \texttt{bmatrix} \\
+por tramos & \texttt{cases} \\
+alinear & \texttt{align} con \verb|&| \\
+texto en math & \C{text\{\dots\}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep]
+  \item \emph{Quickstart} / \emph{Masterclass de \LaTeX} — para empezar de cero.
+  \item \emph{Gráficos y figuras} — graficar funciones, TikZ, \texttt{pgfplots}
+        y \textbf{diagramas conmutativos} (\texttt{tikz-cd}).
+  \item \emph{Referencias, índices y bibliografía} — \C{cref}, índices y citas.
+  \item \emph{Estándares y buenas prácticas} — preámbulo recomendado,
+        anti-patrones y bases mínima/máxima.
+  \item \emph{Hoja de referencia} — todos los comandos en una carilla.
+  \item Manuales oficiales (terminal): \texttt{texdoc amsmath},
+        \texttt{texdoc mathtools}, \texttt{texdoc siunitx}.
+\end{itemize}
+
+\end{document}

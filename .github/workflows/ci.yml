@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Lint · Typecheck · Tests · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deps
+        working-directory: plataforma
+        run: npm ci
+      - name: Lint
+        working-directory: plataforma
+        run: npm run lint
+      - name: Tests
+        working-directory: plataforma
+        run: npm run test
+      - name: Build (incluye el typecheck con tsc -b)
+        working-directory: plataforma
+        run: npm run build
+
+  content:
+    name: Compilar contenido (anti-bitrot)
+    runs-on: ubuntu-latest
+    # Job pesado (compila 154 documentos LaTeX). Solo en main / manual, no en cada PR.
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      # El compilador vive en el repo `lambdas` (es una lambda). Se clona para construir su
+      # imagen y verificar contra EL MISMO artefacto que se despliega: si un paquete de TeX
+      # falta en producción, tiene que fallar acá.
+      - uses: actions/checkout@v4
+        with:
+          repository: El-Gato-Consciente/lambdas
+          path: lambdas_repo
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: docker/setup-buildx-action@v3
+      - name: Construir la imagen del compilador
+        uses: docker/build-push-action@v6
+        with:
+          context: lambdas_repo/matex/compiler
+          tags: matex-compiler:ci
+          load: true
+          # Sin caché, cada corrida reinstala TeX Live (~13 min medidos).
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # La imagen trae los dos adaptadores de entrada: el handler de Lambda (CMD por
+      # defecto) y el servidor Fastify. Acá se usa el segundo, que habla HTTP plano.
+      - name: Levantar el compilador
+        run: |
+          docker run -d --name compiler -p 8787:8787 \
+            --entrypoint node matex-compiler:ci dist/server.js
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8787/health && exit 0
+            sleep 2
+          done
+          echo "El compilador no respondió en 60 s"; docker logs compiler; exit 1
+
+      - name: Frontend · deps
+        working-directory: plataforma
+        run: npm ci
+
+      - name: Verificar que lecciones, ejemplares y plantillas compilan
+        working-directory: plataforma
+        run: npm run verify:content
+
+      # QA-08 necesita el `.aux`, que la API no expone → corre `latexmk` directo, dentro
+      # del contenedor. Se monta el repo (con node_modules ya instalados: runner y
+      # contenedor son linux/amd64).
+      - name: Verificar que la numeración coincide con LaTeX (QA-08)
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo/plataforma \
+            --entrypoint npx matex-compiler:ci \
+            tsx --tsconfig tsconfig.scripts.json scripts/verify-numbering.ts
+
+      - name: Logs del compilador (si algo falló)
+        if: failure()
+        run: docker logs compiler

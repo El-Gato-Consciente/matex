@@ -1,0 +1,521 @@
+% =====================================================================
+%  Estándares y buenas prácticas de LaTeX — guía de referencia
+%  Suite de documentos LaTeX · Nivel 0 (Meta/referencia) · clase article.
+%  Compilar: latexmk -pdf estandares.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar (este documento es ejemplo de sí mismo) ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Estándares y buenas prácticas de LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\definecolor{okgreen}{RGB}{0,120,60}
+\definecolor{badred}{RGB}{170,30,40}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  xleftmargin=8pt, xrightmargin=4pt, framesep=4pt,
+  extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1 {°}{{\textdegree}}1,
+}
+\lstdefinestyle{tex}{language=[LaTeX]TeX, keywordstyle=\color{codekw}\bfseries}
+\lstdefinestyle{sh}{language=bash, keywordstyle=\ttfamily}
+\lstset{style=tex}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\si}{\textcolor{okgreen}{\boldmath$\checkmark$}}
+\newcommand{\no}{\textcolor{badred}{\boldmath$\times$}}
+
+\newenvironment{nota}{\par\smallskip\noindent\begin{center}%
+  \begin{minipage}{0.95\linewidth}\small\rule{\linewidth}{0.4pt}\par\nobreak}%
+  {\par\rule{\linewidth}{0.4pt}\end{minipage}\end{center}\smallskip}
+
+\title{\textbf{Estándares y buenas prácticas de \LaTeX}\\[2pt]
+       \large Guía de referencia}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent Referencia para \enquote{hacer las cosas bien}: qué cargar, cómo
+estructurar y qué evitar. Cada recomendación viene con su \textbf{porqué}. Pensá
+este documento en tres niveles: la \textbf{base mínima} (lo que casi todo
+documento debería tener), lo \textbf{recomendado} (el superconjunto razonable) y
+los \textbf{anti-patrones} (lo que conviene no usar). Las bases listas para
+copiar están en \cref{sec:bases}. \emph{(Para instalar y compilar, ver
+\emph{Flujo e instalación}; para el universo de temas, \emph{TEMARIO}.)}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Principios generales}
+% =====================================================================
+Toda la guía se apoya en cinco principios; el resto son consecuencias:
+\begin{enumerate}[noitemsep,leftmargin=*]
+  \item \textbf{Separar contenido de presentación.} Marcá \emph{qué es} cada cosa
+        (semántico), no \emph{cómo se ve} (visual): definí \C{conjunto\{\dots\}} en
+        vez de escribir las llaves a mano. Así, un cambio de estilo se hace en un
+        solo lugar.
+  \item \textbf{DRY} (\emph{Don't Repeat Yourself}). Lo que se repite va en una
+        macro o entorno. Menos errores, cambios centralizados.
+  \item \textbf{Compilar limpio.} La meta es \textbf{cero errores y warnings}; un
+        \texttt{Overfull \textbackslash hbox} o un \texttt{Font shape undefined}
+        son señales de algo a corregir, no ruido.
+  \item \textbf{Reproducibilidad.} Que cualquiera obtenga el mismo PDF: versiones,
+        \texttt{latexmk}, control de versiones.
+  \item \textbf{Legibilidad del fuente.} El \texttt{.tex} se lee y se mantiene:
+        comentarios, indentación y \textbf{una idea por línea}.
+\end{enumerate}
+
+% =====================================================================
+\section{Motor de compilación}
+% =====================================================================
+El \textbf{motor} es lo primero que define todo lo demás (sobre todo el bloque de
+fuentes). Las tres opciones:
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}l XXX@{}}
+\toprule
+ & \textbf{pdfLaTeX} & \textbf{XeLaTeX} & \textbf{LuaLaTeX} \\
+\midrule
+Entrada & UTF-8 (con \pkg{inputenc}) & UTF-8 nativo & UTF-8 nativo \\
+Fuentes & Solo las de TeX & Del sistema (\pkg{fontspec}) & Del sistema (\pkg{fontspec}) \\
+\pkg{microtype} & \textbf{Completo} & Parcial & Casi completo \\
+Velocidad & \textbf{La más rápida} & Media & La más lenta \\
+Scripting & No & No & \textbf{Sí (Lua)} \\
+Madurez & \textbf{Máxima} & Alta & Alta (futuro) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent\textbf{Por qué importa y qué elegir.} \texttt{pdfLaTeX} sigue siendo el
+\emph{default robusto} para matemática: máxima compatibilidad de paquetes y
+\pkg{microtype} completo. \texttt{LuaLaTeX} es el estándar \textbf{emergente};
+elegilo si necesitás fuentes del sistema, Unicode avanzado o programar con Lua.
+\texttt{XeLaTeX} es similar a Lua para fuentes, pero con menos futuro.
+
+\begin{nota}
+\textbf{Caveat.}\enspace Muchas plantillas de revistas/congresos están hechas para
+pdfLaTeX. Si vas a enviar a una, revisá sus \emph{submission guidelines} antes de
+cambiar de motor.
+\end{nota}
+
+% =====================================================================
+\section{Clase de documento}
+% =====================================================================
+La \textbf{clase} (\C{documentclass}) fija la estructura disponible. Según el
+propósito: \texttt{article} (artículos, TPs), \texttt{report} (con capítulos),
+\texttt{book} (libros), \texttt{beamer} (presentaciones), \texttt{standalone}
+(una figura suelta).
+
+\noindent\textbf{Alternativa \enquote{premium}:} las clases \textbf{KOMA-Script}
+(\texttt{scrartcl}/\texttt{scrreprt}/\texttt{scrbook}) reemplazan a
+\texttt{article}/\texttt{report}/\texttt{book} con mejor diseño por defecto y
+comandos consistentes (\C{setkomafont}, \C{KOMAoptions}). \texttt{memoir} es otra
+clase potente \enquote{todo en uno}. Para documentos largos/serios, muchos las
+prefieren.
+
+% =====================================================================
+\section{Codificación y fuentes}
+% =====================================================================
+Este bloque resuelve tres problemas concretos que, mal hechos, arruinan el PDF:
+acentos rotos, fuentes borrosas y guionado incorrecto.
+
+\paragraph{pdfLaTeX (lo más usado).}
+\begin{lstlisting}
+\usepackage[utf8]{inputenc}   % entrada UTF-8 (redundante desde 2018, pero explicito)
+\usepackage[T1]{fontenc}      % codificacion de SALIDA: acentos, guionado, copy-paste
+\usepackage{lmodern}          % Latin Modern: fuentes vectoriales (evita bitmaps)
+\usepackage{microtype}        % protrusion + expansion: el "pulido" tipografico
+\end{lstlisting}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \textbf{\pkg{fontenc} \texttt{[T1]} es casi obligatorio en español:} sin
+        él, las palabras con acento \textbf{no se guionan} (quedan feos huecos) y
+        el copy-paste del PDF falla (copiás \enquote{funci} en vez de
+        \enquote{función}). Define cómo se codifican los caracteres en la salida.
+  \item \textbf{\pkg{lmodern}} reemplaza las fuentes por defecto (que pueden salir
+        como \textbf{bitmaps} borrosos al hacer zoom) por versiones vectoriales.
+        Además, \pkg{microtype} necesita fuentes Type\,1 como estas para funcionar.
+  \item \textbf{\pkg{microtype}} hace ajustes finísimos (saca un poco de tinta
+        hacia el margen, estira/encoge letras imperceptiblemente) que mejoran el
+        gris de la página y reducen los \emph{overfull}. Casi gratis; cargalo
+        siempre.
+\end{itemize}
+
+\paragraph{XeLaTeX / LuaLaTeX (alternativa moderna).} \textbf{No} se usan
+\pkg{inputenc}/\pkg{fontenc}; en su lugar:
+\begin{lstlisting}
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}   % o cualquier fuente del sistema
+\usepackage{unicode-math}
+\setmathfont{Latin Modern Math}
+\end{lstlisting}
+
+% =====================================================================
+\section{Idioma}
+% =====================================================================
+\begin{lstlisting}
+\usepackage[spanish,es-noshorthands]{babel}
+\end{lstlisting}
+\pkg{babel} con \texttt{spanish} activa el guionado en español, traduce
+\enquote{Figura/Cuadro/Índice} y pone \C{today} en español.
+
+\noindent\textbf{Por qué \texttt{es-noshorthands}.} El español de \pkg{babel}
+define \enquote{shorthands}: hace que \verb|"|, \verb|~| y \verb|.| tomen
+significados especiales. Eso es cómodo para tipear, pero \textbf{rompe}
+\pkg{tikz}, \pkg{siunitx} y las URLs. Desactivarlos con \texttt{es-noshorthands}
+evita horas de errores misteriosos.
+
+\noindent\pkg{csquotes} + \C{enquote\{\dots\}} da \textbf{comillas tipográficas}
+correctas según el idioma, en lugar de escribir \verb|``...''| a mano.
+
+% =====================================================================
+\section{Matemática (el núcleo)}
+% =====================================================================
+\paragraph{Paquetes.}
+\begin{lstlisting}
+\usepackage{mathtools}  % superconjunto de amsmath: \coloneqq, \DeclarePairedDelimiter, fixes
+\usepackage{amssymb}    % \mathbb, \mathcal, \leq, flechas...
+\usepackage{amsthm}     % entornos theorem/definition/proof
+\usepackage{siunitx}    % numeros y unidades: \num, \qty
+\usepackage{bm}         % negrita matematica correcta (\bm{x}) para vectores
+\end{lstlisting}
+\textbf{Clave:} cargá \pkg{mathtools}, \textbf{no} solo \pkg{amsmath}: lo incluye
+y además corrige bugs y agrega herramientas. \pkg{amsmath} es prácticamente
+obligatorio (te da \texttt{align}, \C{text}, \C{DeclareMathOperator}, el espaciado
+correcto).
+
+\paragraph{Macros semánticas (alta prioridad).} Definir atajos hace el documento
+más corto, consistente y fácil de cambiar:
+\begin{lstlisting}
+\newcommand{\R}{\mathbb{R}}   \newcommand{\N}{\mathbb{N}}
+\DeclareMathOperator{\sen}{sen}                 % seno en espanol (redonda)
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}   % \abs{x} y \abs*{...} auto-escalado
+\end{lstlisting}
+Los \textbf{operadores} con \C{DeclareMathOperator} salen en redonda y con el
+espaciado correcto; los \textbf{delimitadores} con \C{DeclarePairedDelimiter}
+(de \pkg{mathtools}) escalan solos.
+
+\paragraph{Do / Don't.}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+\textbf{\no\ Evitar} & \textbf{\si\ Usar} & \textbf{Por qué} \\
+\midrule
+\verb|$$...$$| & \C{[}\,\dots\,\C{]} / \texttt{equation} & \verb|$$| es TeX plano: rompe el espaciado \\
+\texttt{eqnarray} & \texttt{align} & \texttt{eqnarray} tiene el espaciado roto \\
+\verb;|x|; a mano & \C{abs\{x\}} & escala y es semántico \\
+$sen\,x$ (pelado) & \C{sen} (operador) & espaciado y redonda correctos \\
+\C{bf}, \C{it} en math & \C{mathbf}, \C{bm} & los primeros son obsoletos \\
+\texttt{...} & \C{dots} & elige \texttt{\textbackslash ldots}/\texttt{\textbackslash cdots} según contexto \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{\pkg{siunitx} (números y unidades).} Evita escribir a mano separadores
+de miles y unidades, y mantiene todo consistente:
+\begin{lstlisting}
+\num{55000}            % 55 000
+\qty{10}{\celsius}     % 10 grados C  (v3; en v2 era \SI)
+\qty{250}{\litre\per\minute}
+\end{lstlisting}
+En \pkg{siunitx} v3 los comandos viejos \C{SI}/\C{si} están desaconsejados: usá
+\C{qty}/\C{unit}.
+
+% =====================================================================
+\section{Tipografía y diseño de página}
+% =====================================================================
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Paquete} & \textbf{Para qué (y por qué)} \\
+\midrule
+\pkg{microtype} & Pulido tipográfico. Casi siempre. \\
+\pkg{geometry} & Márgenes (\C{usepackage[margin=2.5cm]\{geometry\}}), en vez de tocar \C{textwidth} a mano. \\
+\pkg{setspace} & Interlineado (\C{onehalfspacing}) para tesis/borradores. \\
+\pkg{parskip} & Espacio entre párrafos en lugar de sangría (estilo \enquote{informe}). \\
+\pkg{enumitem} & Personalizar listas (espaciado, etiquetas). Reemplaza hacks con \C{vspace}. \\
+\pkg{titlesec} & Formato de títulos de sección (si KOMA no alcanza). \\
+\pkg{fancyhdr} & Encabezados/pies. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Canon:} márgenes con \pkg{geometry} (no redefinir \C{textwidth} a mano);
+listas con \pkg{enumitem}; \textbf{no} forzar saltos con \C{\textbackslash} en
+texto corrido (eso es para tablas y \texttt{align}).
+
+% =====================================================================
+\section{Gráficos y figuras}
+% =====================================================================
+\begin{lstlisting}
+\usepackage{graphicx}     % \includegraphics
+\usepackage{pgfplots}     % graficos de funciones/datos (carga tikz)
+\pgfplotsset{compat=1.18} % FIJAR la version: reproducibilidad
+\usepackage{caption}\usepackage{subcaption}
+\usepackage{float}        % opcion [H]
+\end{lstlisting}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \textbf{Vectorial} siempre que se pueda (PDF/TikZ/pgfplots); \emph{raster}
+        (PNG/JPG) solo para fotos. Lo vectorial no se pixela al hacer zoom.
+  \item Toda figura va en un entorno \texttt{figure} con \C{caption}
+        \textbf{y} \C{label} (el caption \emph{antes} del label).
+  \item \textbf{Fijar \texttt{compat}} en \pkg{pgfplots} evita que el aspecto
+        cambie entre versiones del paquete.
+  \item Con muchos TikZ, la \textbf{externalización} cachea cada figura y acelera
+        la compilación.
+\end{itemize}
+
+% =====================================================================
+\section{Tablas}
+% =====================================================================
+La regla de oro es \pkg{booktabs}: tablas con solo \C{toprule}, \C{midrule} y
+\C{bottomrule}, \textbf{sin líneas verticales} ni dobles. ¿Por qué? Las líneas
+verticales y el exceso de reglas \textbf{ensucian} y dificultan la lectura; el
+estilo \enquote{de libro} usa aire y reglas horizontales finas. Para columnas que
+ajustan su ancho, \pkg{tabularx}; para alinear números por el decimal, la columna
+\texttt{S} de \pkg{siunitx}; para tablas largas, \pkg{longtable}. \textbf{Nunca}
+\verb|\hline\hline| ni \verb#|c|c|#.
+
+% =====================================================================
+\section{Referencias cruzadas y bibliografía}
+% =====================================================================
+\begin{lstlisting}
+\usepackage{hyperref}                          % enlaces + metadatos (casi ULTIMO)
+\usepackage[capitalise,nameinlink]{cleveref}   % \cref -> "Figura 3"; DESPUES de hyperref
+\end{lstlisting}
+\C{label}/\C{ref} siempre; \textbf{mejor \C{cref}}, que agrega el tipo
+(\enquote{figura}, \enquote{ecuación}) y se adapta al idioma, así no escribís
+\enquote{la figura} a mano. \pkg{hyperref} se carga casi al final (excepción:
+\pkg{cleveref} va \emph{después}).
+
+\noindent\textbf{Bibliografía:} el enfoque \textbf{moderno} es \pkg{biblatex} +
+\textbf{biber} (flexible, internacionalizado, estilos \texttt{numeric}/
+\texttt{authoryear}/\texttt{ieee}\dots). El clásico \pkg{natbib} + BibTeX todavía
+se usa porque algunas revistas lo exigen.
+
+% =====================================================================
+\section{Color y código}
+% =====================================================================
+\textbf{Color} con \pkg{xcolor}: definí colores \textbf{nombrados} una vez
+(\C{definecolor\{azulUAI\}\{RGB\}\{\dots\}}) y reutilizalos; no dispersás
+\C{color[RGB]\{\dots\}}. \textbf{Accesibilidad:} contraste suficiente y no
+codificar información \emph{solo} por color.
+
+\noindent\textbf{Mostrar código:} \pkg{listings} (sin dependencias, lo que usa
+esta suite) o \pkg{minted} (resaltado superior con Pygments, pero requiere
+\texttt{-shell-escape}). En \pkg{beamer}, todo \texttt{frame} con código necesita
+\texttt{[fragile]}.
+
+% =====================================================================
+\section{Organización del proyecto y del código}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \textbf{Modularizar} documentos grandes: \C{input} (pega texto),
+        \C{include} (capítulos + \C{includeonly}), o \pkg{subfiles} (compilar cada
+        parte sola). El \textbf{preámbulo} en un archivo aparte y reutilizable.
+  \item \textbf{Una oración por línea} en el fuente: los diffs de git quedan
+        limpios y se ve exactamente qué cambió.
+  \item \textbf{Macros DRY} para lo repetido:
+\end{itemize}
+\begin{lstlisting}
+\newcommand{\cs}[1]{\texttt{\textbackslash#1}}  % \cs{align} en vez de \texttt{\textbackslash align}
+\end{lstlisting}
+
+% =====================================================================
+\section{Beamer (presentaciones)}
+% =====================================================================
+\pkg{beamer} ya carga \pkg{hyperref}, \pkg{xcolor}, \pkg{amsmath}, \pkg{tikz}
+(no hace falta recargarlos). Lo esencial:
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \texttt{[fragile]} en todo \texttt{frame} con código verbatim/listings.
+  \item \textbf{Una idea por diapositiva}; bloques semánticos
+        (\texttt{block}/\texttt{alertblock}/\texttt{exampleblock}).
+  \item \textbf{Overlays} (\C{pause}, \texttt{<n->}) con moderación; \texttt{handout}
+        para imprimir sin animaciones.
+  \item Anchos de columnas + separación \textbf{$\le$} \C{textwidth} (si no, se
+        van al margen).
+  \item \C{hypersetup\{unicode\}} para que el índice/marcadores muestren bien los
+        acentos y \enquote{¿}.
+\end{itemize}
+
+% =====================================================================
+\section{Reproducibilidad, compilación y diagnóstico}
+% =====================================================================
+\textbf{\texttt{latexmk}} es el estándar para compilar (resuelve pasadas, biber,
+índices). El objetivo es un \textbf{log limpio}: revisá \texttt{Overfull},
+\texttt{Font shape}, \texttt{Reference/Citation undefined}.
+
+\noindent\textbf{Paquetes de diagnóstico} (quitar en la versión final) que
+\emph{automatizan} el control de calidad mientras escribís:
+\begin{lstlisting}
+\usepackage[l2tabu,orthodox]{nag}     % AVISA en el log si usas comandos obsoletos
+\usepackage[notref,notcite]{showkeys} % muestra los \label en el PDF (borrador)
+\overfullrule=2cm                     % marca con una barra los Overfull \hbox
+\usepackage{todonotes}                % \todo{...} y \listoftodos
+\end{lstlisting}
+\pkg{nag} es el complemento natural de \pkg{l2tabu} (\cref{sec:anti}): convierte
+la lista de anti-patrones en \textbf{avisos automáticos al compilar}.
+
+% =====================================================================
+\section{Anti-patrones (qué NO usar)}\label{sec:anti}
+% =====================================================================
+Resumen de \pkg{l2tabu} (\emph{An essential guide to \LaTeXe{} usage: Obsolete
+commands and packages}). Los obsoletos suelen \textbf{romper} el sistema de
+fuentes moderno o tener bugs:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{\no\ Obsoleto / malo} & \textbf{\si\ Reemplazo} \\
+\midrule
+\C{bf} \C{it} \C{rm} \C{sc} \C{sl} \C{tt} & \C{textbf} \C{textit}\dots / \C{bfseries}\dots \\
+\verb|$$...$$| & \C{[}\,\dots\,\C{]} \\
+\texttt{eqnarray} & \texttt{align} \\
+\C{over} & \C{frac} \\
+\C{centerline} & \C{centering} / \texttt{center} \\
+\texttt{a4}, \texttt{a4wide} & \pkg{geometry} \\
+\pkg{epsfig}, \pkg{psfig} & \pkg{graphicx} \\
+\C{def} para todo & \C{newcommand} (chequea redefiniciones) \\
+Tablas con \verb#|# y \verb|\hline\hline| & \pkg{booktabs} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\section{Bases concretas: MÍNIMA y MÁXIMA}\label{sec:bases}
+% =====================================================================
+\textbf{\enquote{Máxima} no significa \enquote{cargar todo siempre}}, sino el
+\emph{superconjunto recomendado}; en cada documento se usa el subconjunto que el
+contenido pide (cargar paquetes que no se usan también es un anti-patrón).
+
+\paragraph{\texttt{article} — base MÍNIMA.}
+\begin{lstlisting}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{microtype}
+\usepackage{hyperref}
+\end{lstlisting}
+
+\paragraph{\texttt{article} — base MÁXIMA (matemática).}
+\begin{lstlisting}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}\usepackage[T1]{fontenc}\usepackage{lmodern}\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}\usepackage{csquotes}
+\usepackage{mathtools}\usepackage{amssymb}\usepackage{amsthm}\usepackage{bm}\usepackage{siunitx}
+\usepackage{booktabs}\usepackage{tabularx}
+\usepackage{graphicx}\usepackage{pgfplots}\pgfplotsset{compat=1.18}
+\usepackage{caption}\usepackage{subcaption}\usepackage{float}
+\usepackage[margin=2.5cm]{geometry}\usepackage{enumitem}
+\usepackage[backend=biber,style=numeric]{biblatex}\addbibresource{refs.bib}
+\usepackage{hyperref}\usepackage{cleveref}     % cleveref DESPUES de hyperref
+\hypersetup{unicode, pdftitle={...}, pdfauthor={...}, hidelinks}
+\newcommand{\R}{\mathbb{R}}\DeclareMathOperator{\sen}{sen}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\theoremstyle{plain}\newtheorem{teo}{Teorema}[section]
+\end{lstlisting}
+
+\paragraph{\texttt{beamer} — base MÍNIMA.}
+\begin{lstlisting}
+\documentclass[10pt,aspectratio=169]{beamer}
+\usetheme{Madrid}
+\usepackage[utf8]{inputenc}\usepackage[T1]{fontenc}\usepackage{lmodern}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{amsmath,amssymb}
+\hypersetup{unicode}   % beamer ya cargo hyperref
+\end{lstlisting}
+
+\paragraph{\texttt{beamer} — base MÁXIMA (presentación de matemática).}
+\begin{lstlisting}
+\documentclass[10pt,aspectratio=169]{beamer}
+\usetheme{Madrid}\usecolortheme{whale}\setbeamertemplate{navigation symbols}{}
+\usepackage[utf8]{inputenc}\usepackage[T1]{fontenc}\usepackage{lmodern}\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}\usepackage{csquotes}
+\usepackage{mathtools}\usepackage{amssymb}\usepackage{bm}\usepackage{siunitx}
+\usepackage{booktabs}\usepackage{pgfplots}\pgfplotsset{compat=1.18}
+\usepackage{listings}
+\hypersetup{unicode, pdftitle={...}, pdfauthor={...}}
+\newcommand{\R}{\mathbb{R}}\DeclareMathOperator{\sen}{sen}
+\end{lstlisting}
+
+% =====================================================================
+\section{Checklist antes de entregar}
+% =====================================================================
+\begin{itemize}[label=$\square$,leftmargin=*,itemsep=2pt]
+  \item Compila \textbf{sin errores} y, idealmente, \textbf{sin warnings}.
+  \item \pkg{fontenc}\texttt{[T1]} + \pkg{lmodern} (o \pkg{fontspec}); \pkg{microtype}.
+  \item Idioma con \pkg{babel} y \texttt{es-noshorthands}.
+  \item Matemática con \pkg{amsmath}/\pkg{mathtools}; nada de \verb|$$|/\texttt{eqnarray}.
+  \item Figuras y tablas con \C{caption}+\C{label}; tablas con \pkg{booktabs}.
+  \item Referencias con \C{cref}/\C{eqref}; sin \enquote{??} en el PDF.
+  \item Metadatos del PDF (\texttt{pdftitle}, \texttt{pdfauthor}); \C{hypersetup\{unicode\}}.
+  \item \texttt{.gitignore} para intermedios.
+  \item (Beamer) \texttt{[fragile]} en frames con código.
+\end{itemize}
+
+% =====================================================================
+\section{Validación contra fuentes (junio 2026)}
+% =====================================================================
+Esta guía se contrastó con fuentes web frescas: la base se \textbf{confirma}.
+Confirmado: \pkg{inputenc} redundante desde 2018 (pero inofensivo); usar
+\pkg{mathtools}; pdfLaTeX como default y LuaLaTeX como emergente;
+\pkg{fontenc}+\pkg{lmodern}+\pkg{microtype}; \pkg{biblatex}+biber moderno.
+Sutilezas incorporadas: \pkg{siunitx} v3 (\C{SI}$\to$\C{qty}); en Beamer
+\texttt{metropolis} está sin mantenimiento y su fork \texttt{moloch} lo continúa;
+los \textbf{paquetes de diagnóstico} (\pkg{nag}\dots); y opciones
+\texttt{cleveref[capitalise,nameinlink]}, \texttt{csquotes[strict=true]}.
+
+\paragraph{Recursos autoritativos.}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \pkg{l2tabu} — comandos/paquetes obsoletos: \url{https://ctan.org/pkg/l2tabu}
+  \item \emph{The Not So Short Introduction to LaTeX} (\texttt{lshort}).
+  \item \url{https://tex.stackexchange.com} y \texttt{texdoc <paquete>}.
+  \item Manuales: \texttt{texdoc amsmath}, \texttt{mathtools}, \texttt{siunitx},
+        \texttt{biblatex}, \texttt{beamer}, \texttt{microtype}.
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Flujo e instalación} — compilar, distribuciones, herramientas.
+  \item \emph{Plantillas} — \texttt{article.tex} y \texttt{beamer.tex} con estas bases.
+  \item \emph{TEMARIO} y \emph{README} de la suite.
+\end{itemize}
+
+\end{document}

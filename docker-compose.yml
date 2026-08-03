@@ -1,0 +1,55 @@
+# Stack COMPLETO local (frontend estático + compilador), en paridad con la forma de AWS: dos
+# capas separadas, CORS configurado, y el compilador corriendo LA MISMA imagen que se despliega.
+#
+#   docker compose up --build
+#
+#   → frontend    http://localhost:8080   (nginx sirviendo el build de Vite, como S3/CloudFront)
+#   → compilador  http://localhost:8787   (la MISMA imagen que va a Lambda)
+#
+# ⚠️ **El compilador vive en el repo `lambdas`**, no en este. Su código es el de una lambda
+# (`lambdas/matex/compiler/`) y desde ahí lo despliega el pipeline de `iac`. Este compose lo
+# construye por ruta relativa, así que necesita los dos repos **clonados como hermanos**:
+#
+#     …/el-gato-consciente/
+#     ├── matex/      ← este repo
+#     └── lambdas/    ← el compilador
+#
+# Es la disposición estándar del workspace. Si falta, `docker compose` falla con un error de
+# ruta claro. Para levantar solo el compilador, se puede hacer desde su propia carpeta:
+#
+#     cd ../lambdas/matex/compiler
+#     docker build -t matex-compiler . && docker run --rm -p 8787:8787 \
+#       --entrypoint node matex-compiler dist/server.js
+
+services:
+  frontend:
+    build:
+      context: ./plataforma
+      args:
+        # La URL del compilador se hornea en build. El navegador (en el host) habla con
+        # el compilador expuesto en localhost:8787.
+        VITE_COMPILE_API_URL: http://localhost:8787
+    ports:
+      - '8080:80'
+    depends_on:
+      - compiler
+    restart: unless-stopped
+
+  compiler:
+    build:
+      context: ../lambdas/matex/compiler
+    # La imagen trae dos adaptadores de entrada: el handler de Lambda (su `CMD`) y el servidor
+    # HTTP. Acá se usa el segundo. Un solo artefacto — igual que `server.ts` y `lambda.ts`
+    # comparten `app.ts`.
+    entrypoint: ['node', 'dist/server.js']
+    ports:
+      - '8787:8787'
+    environment:
+      # Debe coincidir con el origen del frontend. Se incluyen localhost Y 127.0.0.1
+      # porque el navegador los trata como orígenes distintos (coma-separado).
+      CORS_ORIGIN: 'http://localhost:8080,http://127.0.0.1:8080'
+      COMPILE_TIMEOUT_MS: '20000'
+    restart: unless-stopped
+    # Mismos límites de defensa que en producción (ajustables por el deployer).
+    mem_limit: 1g
+    pids_limit: 256

@@ -1,0 +1,377 @@
+% =====================================================================
+%  Quickstart de LaTeX — tu primer documento
+%  Suite de documentos LaTeX · Nivel 1 (Empezar) · clase article.
+%  Compilar: latexmk -pdf quickstart.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar (ver ESTANDARES_LATEX.md) ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Quickstart de LaTeX}, pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}  % después de hyperref
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{120,120,120}
+\lstset{
+  language=[LaTeX]TeX,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  xleftmargin=10pt, xrightmargin=4pt, framesep=4pt,
+  extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1 {°}{{\textdegree}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}   % imprime el nombre de un comando
+
+% --- Cajas de ayuda ---
+\newcommand{\pagina}[1]{%
+  \begin{center}\fbox{\begin{minipage}{0.82\linewidth}\small #1\end{minipage}}\end{center}}
+\newenvironment{tip}{\par\smallskip\noindent\begin{center}%
+  \begin{minipage}{0.94\linewidth}\small\color{codekw!85!black}\rule{\linewidth}{0.4pt}\par\nobreak
+  \textbf{Tip.}\enspace}{\par\rule{\linewidth}{0.4pt}\end{minipage}\end{center}\smallskip}
+
+\title{\textbf{Quickstart de \LaTeX}\\[2pt]\large Tu primer documento, de cero}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{¿Para quién es esto?} Para quien \emph{nunca} usó \LaTeX{} (o lo
+usó muy por arriba). Es tu \textbf{primer encuentro} con la herramienta: arrancamos
+de cero, instalamos, escribimos, compilamos y armamos un documento de verdad,
+explicando el \emph{porqué} de cada cosa y anticipando las dudas típicas del
+principio. No profundiza en ningún tema (para eso están los demás documentos de la
+suite); el objetivo es que termines \textbf{cómodo y compilando}.
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{¿Qué es LaTeX y en qué se diferencia de Word?}
+% =====================================================================
+\LaTeX{} es un \textbf{sistema de composición de documentos}: vos escribís texto
+plano con \emph{instrucciones} (comandos que empiezan con \texttt{\textbackslash})
+y \LaTeX{} se encarga de la \textbf{apariencia} (tipografía, espaciado, fórmulas,
+numeración).
+
+La diferencia clave con Word es que \LaTeX{} \textbf{no es \enquote{lo que ves es
+lo que obtenés}} (no WYSIWYG): mientras escribís, ves \emph{código}, no el
+resultado final; para ver cómo queda, \textbf{compilás} (un paso que convierte tu
+texto en un PDF). A cambio, \LaTeX{} \textbf{separa el contenido de la
+presentación}: vos decís \emph{qué} es cada cosa (\enquote{esto es un título},
+\enquote{esto es una fórmula}) y \LaTeX{} decide cómo se ve, de forma consistente
+en todo el documento. Por eso es el estándar para matemática y textos técnicos.
+
+\begin{tip}
+Al principio se trabaja \enquote{a ciegas}: escribís un poco y compilás para ver.
+Es normal que cueste los primeros días; no hace falta memorizar nada (más adelante
+vemos cómo buscar lo que necesites).
+\end{tip}
+
+% =====================================================================
+\section{Instalación}
+% =====================================================================
+Tenés dos caminos. Si querés evitar instalar, empezá por el A.
+
+\paragraph{Opción A — Sin instalar nada (Overleaf).}
+\begin{enumerate}[noitemsep]
+  \item Entrá a \texttt{overleaf.com} y creá una cuenta gratis.
+  \item \emph{New Project} $\to$ \emph{Blank Project}.
+  \item Ya tenés un editor que \textbf{compila en el navegador}. Ideal para arrancar.
+\end{enumerate}
+
+\paragraph{Opción B — Instalar en tu computadora.} Necesitás \emph{dos} cosas:
+\begin{enumerate}[noitemsep]
+  \item Una \textbf{distribución} de \LaTeX{} (el motor + los paquetes): bajá
+        \texttt{MiKTeX} de \texttt{miktex.org} (Windows), o \texttt{TeX~Live}
+        (multiplataforma) / \texttt{MacTeX} (macOS). Corré el instalador.
+  \item Un \textbf{editor}: \texttt{TeXstudio} (\texttt{texstudio.org}) o
+        \texttt{VS~Code} con la extensión \emph{LaTeX Workshop}.
+\end{enumerate}
+Después abrís el editor, creás un archivo \texttt{.tex} y compilás (sección
+siguiente).
+
+\begin{tip}
+La \textbf{primera} vez que compiles, MiKTeX te va a ofrecer instalar los paquetes
+que falten: aceptá. (Para el detalle de distribuciones y sus problemáticas, ver el
+documento \emph{Flujo e instalación}.)
+\end{tip}
+
+% =====================================================================
+\section{Tu primer documento (\enquote{hola mundo})}
+% =====================================================================
+Creá un archivo \texttt{hola.tex} con \emph{exactamente} esto:
+\begin{lstlisting}
+\documentclass{article}     % tipo de documento
+\begin{document}            % --- empieza el cuerpo ---
+Hola, mundo.
+\end{document}              % --- termina el cuerpo ---
+\end{lstlisting}
+Al compilarlo (próxima sección) obtenés una página con:
+\pagina{Hola, mundo.}
+
+\noindent\textbf{Las tres partes de todo \texttt{.tex}:}
+\begin{enumerate}[noitemsep]
+  \item \C{documentclass\{...\}}: el \textbf{tipo} de documento
+        (\texttt{article} para artículos/TPs, \texttt{report} con capítulos,
+        \texttt{beamer} para presentaciones\dots).
+  \item \textbf{Preámbulo}: todo lo que va \emph{entre} el \C{documentclass} y el
+        \C{begin\{document\}}. Acá se cargan paquetes y se configuran cosas (más
+        abajo lo completamos).
+  \item \textbf{Cuerpo}: lo que va entre \C{begin\{document\}} y
+        \C{end\{document\}}. Es lo que realmente aparece en el PDF.
+\end{enumerate}
+Las líneas que empiezan con \texttt{\%} son \textbf{comentarios}: \LaTeX{} las
+ignora (sirven para anotarte cosas).
+
+% =====================================================================
+\section{Compilar (y qué pasa cuando compilás)}
+% =====================================================================
+\emph{Compilar} es convertir tu \texttt{.tex} en un \texttt{.pdf}:
+\[ \texttt{archivo.tex} \;\xrightarrow{\;\text{compilar}\;}\; \texttt{archivo.pdf} \]
+\begin{itemize}[noitemsep]
+  \item \textbf{En el editor:} apretá \emph{Compilar} / \emph{Build} (en TeXstudio,
+        la tecla \texttt{F5}; en Overleaf, \emph{Recompile}).
+  \item \textbf{En la terminal:} \texttt{latexmk -pdf archivo.tex} (resuelve solo
+        todas las pasadas necesarias).
+\end{itemize}
+Al compilar, además del \texttt{.pdf} aparecen \textbf{archivos auxiliares}
+(\texttt{.aux}, \texttt{.log}, \texttt{.toc}\dots): son normales y se pueden
+ignorar; el \texttt{.log} guarda el detalle de errores. Si hay un \textbf{error}, la
+compilación se detiene y el editor te marca la línea (ver \cref{sec:errores}).
+
+\begin{tip}
+Cuando uses \textbf{referencias} o \textbf{índice}, hay que compilar \textbf{dos
+veces} (la primera \enquote{anota} los números, la segunda los coloca).
+\texttt{latexmk} lo hace solo.
+\end{tip}
+
+El ciclo de trabajo es: \textbf{escribir $\to$ compilar $\to$ mirar el PDF $\to$
+corregir $\to$ repetir}.
+
+% =====================================================================
+\section{Los ladrillos: comandos, entornos y paquetes}
+% =====================================================================
+Casi todo en \LaTeX{} es una de estas tres cosas. Entenderlas te ahorra el 80\,\%
+de la confusión inicial.
+
+\paragraph{Comando.} Empieza con \texttt{\textbackslash} y puede llevar
+argumentos \textbf{obligatorios} entre llaves \texttt{\{\}} y \textbf{opcionales}
+entre corchetes \texttt{[]}:
+\begin{lstlisting}
+\textbf{en negrita}        % un argumento obligatorio
+\textcolor{red}{rojo}      % dos argumentos
+\rule[2pt]{2cm}{1pt}       % uno opcional [2pt] y dos obligatorios
+\end{lstlisting}
+
+\paragraph{Entorno.} Un \textbf{bloque} con apertura y cierre, que afecta a todo
+lo que está adentro:
+\begin{lstlisting}
+\begin{center}
+  esto queda centrado
+\end{center}
+\end{lstlisting}
+Todo \C{begin\{X\}} debe tener su \C{end\{X\}}. Olvidarlo es un error clásico.
+
+\paragraph{Paquete.} Una \textbf{extensión} que cargás en el preámbulo con
+\C{usepackage} para tener más comandos disponibles:
+\begin{lstlisting}
+\usepackage{graphicx}   % habilita \includegraphics para poner imágenes
+\usepackage{amsmath}    % matematica avanzada
+\end{lstlisting}
+
+\begin{tip}
+Muchos errores de \enquote{comando indefinido} se arreglan cargando el paquete
+correspondiente en el preámbulo.
+\end{tip}
+
+% =====================================================================
+\section{Reglas básicas del texto (lo que sorprende al principio)}
+% =====================================================================
+\begin{itemize}[itemsep=3pt]
+  \item \textbf{Espacios:} varios espacios seguidos cuentan como \textbf{uno}
+        solo. Para forzar más espacio usá comandos (\C{quad}, \C{hspace\{1cm\}}).
+  \item \textbf{Párrafos:} una \textbf{línea en blanco} empieza un párrafo nuevo.
+        Un solo \emph{Enter} (sin línea en blanco) \textbf{no} corta el párrafo.
+  \item \textbf{Caracteres especiales:} estos diez tienen significado propio y no
+        se escriben directo: \verb|% $ & # _ { } ~ ^ \|. Para que aparezcan
+        literales: \verb|\% \$ \& \# \_ \{ \}| (y \C{textbackslash} para la
+        \enquote{\textbackslash}).
+  \item \textbf{Comillas:} no uses las rectas del teclado. Escribí
+        \verb|`así'| (simples) o \verb|``así''| (dobles) —o mejor
+        \C{enquote\{así\}} (del paquete \texttt{csquotes})—.
+  \item \textbf{Guiones:} \verb|-| (guion), \verb|--| (rango: \enquote{8--12}),
+        \verb|---| (raya de inciso).
+\end{itemize}
+\noindent\textbf{Ejemplo:}
+\begin{lstlisting}
+El 50\% de los casos (a--b) usa \LaTeX, dijo ``el profe''.
+\end{lstlisting}
+produce: El 50\% de los casos (a--b) usa \LaTeX, dijo \enquote{el profe}.
+
+% =====================================================================
+\section{Texto, listas y matemática básica}
+% =====================================================================
+Lo más usado para empezar a escribir:
+\begin{lstlisting}
+Texto \textbf{en negrita} y \emph{con énfasis}.
+
+\begin{itemize}
+  \item Una viñeta
+  \item Otra viñeta
+\end{itemize}
+
+\begin{enumerate}
+  \item Primer paso
+  \item Segundo paso
+\end{enumerate}
+
+En línea: $a^2 + b^2 = c^2$. Y centrada:
+\[ x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \]
+\end{lstlisting}
+produce:
+\begin{quote}
+Texto \textbf{en negrita} y \emph{con énfasis}.
+\begin{itemize}[noitemsep]
+  \item Una viñeta
+  \item Otra viñeta
+\end{itemize}
+\begin{enumerate}[noitemsep]
+  \item Primer paso
+  \item Segundo paso
+\end{enumerate}
+En línea: $a^2 + b^2 = c^2$. Y centrada:
+\[ x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \]
+\end{quote}
+\noindent La matemática va entre \texttt{\$...\$} (en línea) o \C{[}\,\dots\,\C{]}
+(centrada). Para todo lo de matemática a fondo, ver el documento \emph{Matemática}.
+
+% =====================================================================
+\section{Construí tu documento paso a paso}
+% =====================================================================
+Un documento de verdad se arma sumando piezas. La idea es ir \textbf{de a poco},
+compilando en cada paso:
+\begin{enumerate}[noitemsep]
+  \item Arrancás con el \textbf{esqueleto} mínimo (\enquote{hola mundo}).
+  \item Completás el \textbf{preámbulo} con idioma y fuentes
+        (\texttt{babel}, \texttt{fontenc}).
+  \item Agregás \textbf{título} (\C{maketitle}).
+  \item Dividís en \textbf{secciones} (\C{section}, se numeran solas).
+  \item Ponés el \textbf{contenido} (texto, listas, fórmulas, imágenes).
+\end{enumerate}
+El resultado de juntar todo:
+\begin{lstlisting}
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}     % preámbulo:
+\usepackage[T1]{fontenc}        %   idioma y
+\usepackage[spanish]{babel}     %   fuentes
+
+\title{Mi primer informe}
+\author{Yo}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introducción}
+Esto es la introducción.
+
+\section{Desarrollo}
+Y esto el desarrollo.
+\end{document}
+\end{lstlisting}
+produce (una página):
+\pagina{%
+  \centering {\large\textbf{Mi primer informe}}\\[2pt]
+  Yo \quad\textbullet\quad \today\\[8pt]
+  \raggedright
+  \textbf{1\quad Introducción}\\ Esto es la introducción.\\[4pt]
+  \textbf{2\quad Desarrollo}\\ Y esto el desarrollo.}
+
+\noindent\textbf{¿Una imagen?} Cargá \C{usepackage\{graphicx\}} y usá
+\C{includegraphics[width=...]\{foto.png\}} dentro de un entorno \texttt{figure}
+(lo vemos en \emph{Gráficos y figuras}).
+
+% =====================================================================
+\section{Errores comunes del día 1}\label{sec:errores}
+% =====================================================================
+Cuando algo falla, la compilación se \textbf{detiene} y el editor te marca la
+línea. Los más típicos:
+\begin{itemize}[itemsep=3pt]
+  \item \texttt{Missing \$ inserted}: pusiste un símbolo matemático (como
+        \verb|_| o \verb|^|) fuera del modo math. Encerralo en \texttt{\$...\$}.
+  \item \texttt{Undefined control sequence}: comando mal escrito o falta un
+        \C{usepackage}. Revisá la ortografía y, si es de un paquete, cargalo.
+  \item \texttt{Runaway argument} / \texttt{Missing \}}: una llave o un entorno
+        sin cerrar. Revisá los \C{begin}/\C{end} y las llaves.
+  \item \textbf{Referencias o índice como \enquote{??}}: faltó compilar
+        \textbf{dos veces} (o usá \texttt{latexmk}).
+  \item \C{usepackage} \textbf{después} de \C{begin\{document\}}: los paquetes van
+        en el \textbf{preámbulo}, nunca en el cuerpo.
+\end{itemize}
+\begin{tip}
+\textbf{Leé la \emph{primera} línea de error y el número de línea}: casi siempre el
+problema está ahí (o una línea antes). Los errores siguientes suelen ser
+\enquote{efecto dominó} del primero.
+\end{tip}
+
+% =====================================================================
+\section{Cómo seguir y pedir ayuda}
+% =====================================================================
+\textbf{Nadie memoriza \LaTeX:} se busca. Las tres herramientas clave:
+\begin{itemize}[noitemsep]
+  \item \texttt{texdoc <paquete>} en la terminal abre el \textbf{manual oficial}
+        (p.\,ej.\ \texttt{texdoc amsmath}).
+  \item Buscar en internet \enquote{\textbf{LaTeX cómo hacer X}} o directamente en
+        \texttt{tex.stackexchange.com} (casi todo ya está preguntado).
+  \item Para pedir ayuda, armá un \textbf{MWE} (\emph{minimal working example}): el
+        documento más \textbf{chico} que reproduce el problema. Quien te ayuda lo
+        puede compilar y ver al toque.
+\end{itemize}
+
+\paragraph{Mini-glosario.}
+\begin{description}[noitemsep,leftmargin=2.4cm,style=nextline]
+  \item[Comando] orden que empieza con \texttt{\textbackslash} (ej.\ \C{section}).
+  \item[Entorno] bloque \C{begin\{X\}}\,\dots\,\C{end\{X\}}.
+  \item[Paquete] extensión que se carga con \C{usepackage}.
+  \item[Preámbulo] lo que va antes de \C{begin\{document\}}.
+  \item[Compilar] convertir el \texttt{.tex} en \texttt{.pdf}.
+  \item[MWE] ejemplo mínimo que reproduce un problema.
+\end{description}
+
+% =====================================================================
+\section*{Próximos pasos / Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Próximos pasos / Ver también}
+¡Listo, ya compilás y entendés los fundamentos! Para seguir, según lo que necesites:
+\begin{itemize}[noitemsep]
+  \item \emph{Masterclass de \LaTeX} — una recorrida general en formato charla.
+  \item \emph{Matemática} — escribir matemática a fondo.
+  \item \emph{Gráficos y figuras} — imágenes y graficar funciones.
+  \item \emph{Hoja de referencia} — los comandos más usados en una carilla.
+  \item \emph{Estándares y buenas prácticas} — el preámbulo recomendado y cómo
+        hacer las cosas bien.
+  \item \texttt{Overleaf} y la guía \emph{The Not So Short Introduction to \LaTeX}.
+\end{itemize}
+
+\end{document}

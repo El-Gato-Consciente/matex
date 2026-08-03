@@ -1,0 +1,215 @@
+% =====================================================================
+%  Documentos largos (informe / tesina) — suite de documentos LaTeX
+%  Nivel 3 (Tipos de documento) · clase report · autodemostrativo.
+%  Compilar: latexmk -pdf documentos-largos.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{report}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+% --- Específicos de documentos largos ---
+\usepackage{fancyhdr}      % encabezados/pies
+\usepackage{setspace}      % interlineado
+\usepackage{makeidx}\makeindex   % índice analítico
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Documentos largos en LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  language=[LaTeX]TeX, xleftmargin=8pt, framesep=4pt, extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+
+% --- Encabezados/pies con fancyhdr (demostración) ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}  % capítulo a la izquierda
+\fancyhead[R]{\thepage}                  % página a la derecha
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{Documentos largos en \LaTeX}\\[4pt]
+       \large Informe / tesina: estructura, numeración y modularización}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+
+% --- Carátula ---
+\maketitle
+\thispagestyle{empty}
+
+% --- Índice(s) en hojas aparte ---
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage
+
+% =====================================================================
+\chapter{Estructura jerárquica}
+% =====================================================================
+Los documentos largos usan las clases \texttt{report} o \texttt{book} (o sus
+versiones KOMA, \texttt{scrreprt}/\texttt{scrbook}), que habilitan el nivel
+\C{chapter}. La jerarquía completa, de mayor a menor:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Comando} & \textbf{Nivel} & \textbf{Numeración} \\
+\midrule
+\C{part}          & $-1$ & Parte I, II\dots \\
+\C{chapter}       & $0$  & 1, 2, 3 (solo report/book) \\
+\C{section}       & $1$  & 1.1, 1.2 \\
+\C{subsection}    & $2$  & 1.1.1 \\
+\C{subsubsection} & $3$  & 1.1.1.1 \\
+\C{paragraph}     & $4$  & (sin número) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent La versión con \texttt{*} (p.\,ej.\ \C{section*\{\dots\}}) crea el
+título \textbf{sin numerar} y sin entrada en el índice; para que igual aparezca
+en el índice se usa \C{addcontentsline}.
+
+\section{Front, main y back matter}
+En \texttt{book} (y KOMA) se separan tres zonas con \C{frontmatter} (portada,
+índices; numeración romana \texttt{i, ii}), \C{mainmatter} (el cuerpo;
+reinicia a \texttt{1}) y \C{backmatter} (apéndices, bibliografía, índice). En
+\texttt{report} se imita con \C{pagenumbering}:
+\begin{lstlisting}
+\pagenumbering{roman}   % i, ii, iii para indices
+\tableofcontents
+\pagenumbering{arabic}  % 1, 2, 3 desde el cuerpo
+\end{lstlisting}
+
+\section{Una sección de ejemplo}\label{sec:ejemplo}
+Este texto sirve para que el \cref{cap:numeracion} muestre referencias cruzadas
+\textbf{entre capítulos}: \C{cref} resuelve el número aunque esté en otro
+archivo. Véase también la \cref{fig:demo} y la \cref{tab:demo}.
+
+\begin{figure}[h]
+  \centering
+  \fbox{\rule{0pt}{2cm}\rule{4cm}{0pt}}
+  \caption{Figura de ejemplo (entra en el \emph{Índice de figuras}).}
+  \label{fig:demo}
+\end{figure}
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{@{}lr@{}}\toprule Concepto & Valor \\\midrule $a$ & 1 \\ $b$ & 2 \\\bottomrule\end{tabular}
+  \caption{Tabla de ejemplo (entra en el \emph{Índice de tablas}).}
+  \label{tab:demo}
+\end{table}
+
+% =====================================================================
+\chapter{Numeración y profundidad}\label{cap:numeracion}
+% =====================================================================
+\LaTeX{} numera solo, pero podés controlar \textbf{cuánto} numera y muestra:
+\begin{lstlisting}
+\setcounter{secnumdepth}{2}  % numera hasta subsection (nivel 2)
+\setcounter{tocdepth}{2}     % el indice muestra hasta subsection
+\end{lstlisting}
+Subir \texttt{secnumdepth} numera más niveles; bajarlo, menos. \texttt{tocdepth}
+hace lo mismo para el índice.
+
+\section{Atar la numeración a los capítulos}
+Por defecto, en \texttt{report}, las ecuaciones se numeran corrido (1, 2, 3\dots)
+en todo el documento. Para que se numeren \textbf{por capítulo} (1.1, 1.2,
+2.1\dots) se usa \C{numberwithin} de \pkg{amsmath}:
+\begin{lstlisting}
+\numberwithin{equation}{chapter}   % ecuaciones: 1.1, 1.2, 2.1...
+\numberwithin{figure}{chapter}
+\end{lstlisting}
+El mismo mecanismo reinicia el contador al empezar cada capítulo. Para forzar un
+valor puntual: \C{setcounter\{equation\}\{0\}}.
+
+\section{Reiniciar y dar formato a páginas}
+\C{pagenumbering\{roman\}}/\texttt{\{arabic\}} cambia el estilo \emph{y} reinicia
+el contador. Para el estilo de página (qué va en encabezado/pie) se usa
+\C{pagestyle}; este documento define uno con \pkg{fancyhdr}:
+\begin{lstlisting}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}  % nombre del capitulo
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\end{lstlisting}
+\C{leftmark} contiene el capítulo actual (mirá el encabezado de esta página).
+
+% =====================================================================
+\chapter{Modularización}
+% =====================================================================
+Un documento de 100 páginas en un solo \texttt{.tex} es inmanejable. La práctica
+es \textbf{partirlo en archivos} y un \enquote{maestro} que los reúne:
+\begin{lstlisting}
+% archivo maestro: tesina.tex
+\documentclass{report}
+... preambulo ...
+\begin{document}
+  \include{cap1-intro}     % cada \include EMPIEZA en pagina nueva
+  \include{cap2-metodos}
+  \include{cap3-resultados}
+\end{document}
+\end{lstlisting}
+
+\section{\texttt{\textbackslash input} vs.\ \texttt{\textbackslash include}}
+\begin{itemize}[leftmargin=*]
+  \item \C{input\{archivo\}} \enquote{pega} el contenido tal cual, en cualquier
+        lado (sirve para el preámbulo o trozos pequeños).
+  \item \C{include\{archivo\}} agrega un \C{clearpage} antes y después (pensado
+        para \textbf{capítulos}) y, sobre todo, habilita\dots
+  \item \C{includeonly\{cap2-metodos\}} en el preámbulo: compila \textbf{solo}
+        ese capítulo, pero \textbf{conservando} la numeración y las referencias
+        del resto. Acelera muchísimo mientras trabajás en una parte.
+\end{itemize}
+La alternativa moderna es el paquete \pkg{subfiles}, donde cada capítulo es
+compilable \textbf{por sí solo} (con su propio preámbulo compartido).
+
+\section{Buenas prácticas de organización}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item Preámbulo en un archivo aparte (\C{input\{preambulo\}}); reutilizable.
+  \item Un archivo por capítulo, nombrado con sentido.
+  \item Figuras en \texttt{figuras/}; bibliografía en \texttt{refs.bib}.
+  \item \textbf{Una oración por línea} en el fuente: diffs de git limpios.
+\end{itemize}
+
+% =====================================================================
+\appendix
+\chapter{Apéndice: índices especiales}
+% =====================================================================
+\C{appendix} cambia la numeración de capítulos a letras (A, B\dots). Acá van
+materiales complementarios.
+
+Un \textbf{índice analítico} (\emph{index}) se arma con \pkg{makeidx}: marcás
+términos con \C{index\{término\}}\index{índice analítico}\index{makeidx} y al
+final \C{printindex} los lista con sus páginas. Requiere una corrida de
+\texttt{makeindex} (que \texttt{latexmk} hace solo).
+
+\printindex
+\addcontentsline{toc}{chapter}{Índice analítico}
+
+\end{document}

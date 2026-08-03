@@ -1,0 +1,103 @@
+% =====================================================================
+%  PLANTILLA · presentación beamer (matemática) — suite LaTeX
+%  Copiá este archivo y editá los frames.
+%  Compilar:  latexmk -pdf beamer.tex
+%  beamer YA carga hyperref, xcolor, amsmath y tikz (no recargarlos).
+% =====================================================================
+\documentclass[10pt,aspectratio=169]{beamer}
+
+% --- Tema -----------------------------------------------------------
+\usetheme{Madrid}
+\usecolortheme{whale}
+\setbeamertemplate{navigation symbols}{}   % oculta la barra de navegación
+
+% --- Codificación y fuentes -----------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Idioma ---------------------------------------------------------
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+
+% --- Matemática y contenido -----------------------------------------
+\usepackage{mathtools}\usepackage{amssymb}\usepackage{bm}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{pgfplots}\pgfplotsset{compat=1.18}
+
+\hypersetup{unicode,   % marcadores/índice con acentos correctos
+  pdftitle={Título de la presentación}, pdfauthor={Tu Nombre}}
+\newcommand{\R}{\mathbb{R}}
+\DeclareMathOperator{\sen}{sen}
+
+% --- Metadatos del título -------------------------------------------
+\title[Título corto]{Título de la presentación}
+\subtitle{Subtítulo opcional}
+\author{Tu Nombre}
+\institute[UAI]{Universidad Abierta Interamericana}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\begin{frame}{Contenido}
+  \tableofcontents
+\end{frame}
+
+% =====================================================================
+\section{Primera sección}
+% =====================================================================
+\begin{frame}{Una idea por diapositiva}
+  Texto principal del frame.
+  \begin{itemize}
+    \item Punto uno.
+    \item Punto dos.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Bloques semánticos}
+  \begin{block}{Definición}
+    Un bloque normal para enunciar.
+  \end{block}
+  \begin{exampleblock}{Ejemplo}
+    $f(x) = x^2$ es una parábola.
+  \end{exampleblock}
+  \begin{alertblock}{Atención}
+    Un bloque de alerta para lo importante.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Dos columnas}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      Columna izquierda: texto, ítems o ecuaciones.
+      \[ \int_0^1 x^2 \, dx = \tfrac{1}{3}. \]
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{tikzpicture}
+        \begin{axis}[width=\textwidth, height=4cm, axis lines=middle,
+                     xlabel=$x$, samples=60]
+          \addplot[blue, thick, domain=0:1] {x^2};
+        \end{axis}
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% Un frame con código verbatim/listings necesita [fragile]:
+% \begin{frame}[fragile]{Con código}
+%   \begin{verbatim}
+%   codigo aqui
+%   \end{verbatim}
+% \end{frame}
+
+\begin{frame}[plain]
+  \centering \Large ¿Preguntas?
+\end{frame}
+
+\end{document}

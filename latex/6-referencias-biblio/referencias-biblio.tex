@@ -1,0 +1,260 @@
+% =====================================================================
+%  Referencias, índices y bibliografía — suite de documentos LaTeX
+%  Nivel 2 (Capacidades) · clase article.
+%  Compilar: latexmk -pdf referencias-biblio.tex  (corre biber solo)
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}     % requerido por biblatex para comillas correctas
+\usepackage{amsmath}\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+% --- Bibliografía moderna ---
+\usepackage[backend=biber, style=numeric, sorting=nyt]{biblatex}
+\addbibresource{refs.bib}
+% --- Enlaces y referencias cruzadas ---
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Referencias, índices y bibliografía},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black,
+            citecolor=green!45!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  xleftmargin=8pt, framesep=4pt, extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+
+\title{\textbf{Referencias, índices y bibliografía}\\[2pt]
+       \large El \enquote{aparato} del documento}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent Todo lo que \textbf{conecta} el documento: referencias cruzadas
+internas, enlaces, notas, índices y la \textbf{bibliografía}. La idea común es la
+misma que en toda la suite: \textbf{nunca escribir un número a mano}; dejá que
+\LaTeX{} lo resuelva y se renumere solo. \emph{(El índice analítico se trata en
+\emph{Documentos largos}.)}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Referencias cruzadas internas}
+% =====================================================================
+El mecanismo base son tres comandos: \C{label\{clave\}} marca un lugar (sección,
+ecuación, figura\dots) y \C{ref\{clave\}}/\C{pageref\{clave\}} lo citan por
+número o página:
+\begin{lstlisting}
+\section{Resultados}\label{sec:res}
+...como vimos en la seccion~\ref{sec:res} (pagina~\pageref{sec:res}).
+\end{lstlisting}
+\begin{quote}\small
+\textbf{Importante:} el \C{label} va \emph{después} del \C{caption} (en figuras/
+tablas) o pegado al título de sección. Y hay que \textbf{compilar dos veces}
+(o usar \texttt{latexmk}) para que los números se resuelvan; si ves \enquote{??}
+en el PDF, falta una pasada.
+\end{quote}
+
+\paragraph{Mejor: \texttt{cleveref}.} En vez de escribir \enquote{la
+figura}~\C{ref\{\dots\}} a mano, \C{cref} pone \textbf{el tipo y el número}
+juntos, en el idioma correcto:
+\begin{lstlisting}
+\usepackage[spanish,capitalise,nameinlink]{cleveref} % DESPUES de hyperref
+...
+\cref{fig:a}        % -> figura 3
+\Cref{fig:a}        % -> Figura 3  (al inicio de oracion)
+\cref{eq:1,eq:2}    % -> ecuaciones 1 y 2  (agrupa solo)
+\end{lstlisting}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Comando} & \textbf{Da} & \textbf{Cuándo} \\
+\midrule
+\C{ref}      & \texttt{3}            & número pelado \\
+\C{eqref}    & \texttt{(3)}          & ecuaciones (con paréntesis) \\
+\C{cref}     & \texttt{figura 3}     & \textbf{recomendado} (tipo + número) \\
+\C{autoref}  & \texttt{figura 3}     & similar (de \pkg{hyperref}) \\
+\C{pageref}  & \texttt{7}            & número de página \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Convención de claves.} Prefijá la clave según el tipo: \texttt{sec:},
+\texttt{fig:}, \texttt{tab:}, \texttt{eq:}, \texttt{cap:}, \texttt{thm:}. Hace el
+fuente legible y evita choques.
+
+% =====================================================================
+\section{Enlaces, marcadores y metadatos: \texttt{hyperref}}
+% =====================================================================
+\pkg{hyperref} convierte todas las referencias en \textbf{enlaces clicables},
+genera los \textbf{marcadores} del PDF y guarda los metadatos. Se carga
+\textbf{casi al final} (única excepción: \pkg{cleveref}, que va después):
+\begin{lstlisting}
+\usepackage{hyperref}
+\hypersetup{
+  unicode,                       % marcadores con acentos correctos
+  pdftitle={Mi documento}, pdfauthor={Mi Nombre},
+  colorlinks=true, linkcolor=blue, citecolor=green, urlcolor=blue,
+  % hidelinks                    % alternativa: enlaces sin color (para imprimir)
+}
+\end{lstlisting}
+URLs y enlaces externos:
+\begin{lstlisting}
+\url{https://ctan.org}                 % muestra la URL
+\href{https://ctan.org}{el repositorio CTAN}  % texto con enlace
+\end{lstlisting}
+\begin{quote}\small
+\textbf{Siempre} \C{hypersetup\{unicode\}}: sin eso, los marcadores del PDF
+muestran símbolos raros en acentos y \enquote{¿}.
+\end{quote}
+
+% =====================================================================
+\section{Notas e índices de contenido}
+% =====================================================================
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Notas al pie:} \C{footnote\{texto\}}.\footnote{Así se ve una nota
+        al pie.} Se numeran solas.
+  \item \textbf{Índice general:} \C{tableofcontents}; \C{listoffigures} y
+        \C{listoftables} para los índices de figuras/tablas.
+  \item \textbf{Agregar algo sin numerar al índice} (una sección \texttt{*}, la
+        bibliografía): \C{addcontentsline\{toc\}\{section\}\{Bibliografía\}}.
+  \item \textbf{Profundidad:} \C{setcounter\{tocdepth\}\{2\}} controla hasta qué
+        nivel baja el índice.
+  \item \textbf{Glosario / siglas:} paquete \pkg{glossaries} (\C{gls},
+        \C{newacronym}); el \textbf{índice analítico}, \pkg{makeidx} (ver
+        \emph{Documentos largos}).
+\end{itemize}
+
+% =====================================================================
+\section{Bibliografía: el enfoque moderno (\texttt{biblatex} + biber)}
+% =====================================================================
+La forma recomendada hoy es \pkg{biblatex} con el motor \textbf{biber}: flexible,
+internacionalizado y con muchos estilos. Tres pasos:
+
+\paragraph{1) Un archivo \texttt{.bib}} con las fuentes (lo exportan Zotero,
+Mendeley o JabRef):
+\begin{lstlisting}
+@book{spivak,
+  author = {Spivak, Michael}, title = {Calculus},
+  edition = {4}, publisher = {Publish or Perish}, year = {2008},
+}
+@article{shannon1948,
+  author = {Shannon, Claude E.},
+  title = {A Mathematical Theory of Communication},
+  journal = {The Bell System Technical Journal},
+  volume = {27}, pages = {379--423}, year = {1948},
+}
+\end{lstlisting}
+Cada entrada tiene un \textbf{tipo} (\texttt{@book}, \texttt{@article},
+\texttt{@online}\dots), una \textbf{clave} (\texttt{spivak}) y \textbf{campos}.
+
+\paragraph{2) En el preámbulo:}
+\begin{lstlisting}
+\usepackage[backend=biber, style=numeric, sorting=nyt]{biblatex}
+\addbibresource{refs.bib}
+\end{lstlisting}
+
+\paragraph{3) Citar y listar.} Se cita en el texto y, al final, \C{printbibliography}
+arma la lista solo con lo citado:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Comando} & \textbf{Produce (estilo numeric)} \\
+\midrule
+\C{cite\{spivak\}}      & \cite{spivak} \\
+\C{parencite\{spivak\}} & \parencite{spivak} \\
+\C{textcite\{shannon1948\}} & \textcite{shannon1948} \\
+\C{footcite\{ctan\}}    & nota al pie con la cita \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent Ejemplo real en una oración: el cálculo se estudia en \textcite{spivak},
+y la teoría de la información nace con \textcite{shannon1948}; el repositorio
+central es CTAN \parencite{ctan}.
+
+\paragraph{Estilos.} La opción \texttt{style=} cambia todo el formato sin tocar el
+texto: \texttt{numeric} ([1], [2]), \texttt{alphabetic} ([Spi08]),
+\texttt{authoryear} (Spivak 2008), \texttt{ieee}, \texttt{apa}\dots Cambiás una
+palabra y se reformatea la bibliografía entera.
+
+% =====================================================================
+\section{El enfoque clásico (BibTeX + \texttt{natbib})}
+% =====================================================================
+El método antiguo usa \textbf{BibTeX} (no biber) y, para ciencias, el paquete
+\pkg{natbib}:
+\begin{lstlisting}
+\usepackage[numbers]{natbib}
+...
+\citep{spivak}   % (cita entre parentesis)
+\citet{spivak}   % cita textual: Autor (anio)
+...
+\bibliographystyle{plainnat}
+\bibliography{refs}   % sin la extension .bib
+\end{lstlisting}
+Sigue vivo porque \textbf{muchas revistas} traen plantillas con su \texttt{.bst}.
+Para trabajo nuevo y propio, preferí \pkg{biblatex}; si una revista exige BibTeX,
+usá el que pidan.
+
+\begin{quote}\small
+\textbf{Compilación:} con \pkg{biblatex} la secuencia es
+\texttt{pdflatex → biber → pdflatex → pdflatex}; con BibTeX,
+\texttt{pdflatex → bibtex → pdflatex → pdflatex}. En ambos casos,
+\texttt{latexmk -pdf} lo hace solo.
+\end{quote}
+
+% =====================================================================
+\section{Buenas prácticas}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \C{label}/\C{cref} para \textbf{todo} lo numerado; nunca el número a mano.
+  \item \pkg{biblatex}\,+\,biber para trabajo nuevo; un gestor (Zotero/JabRef)
+        para mantener el \texttt{.bib}.
+  \item \pkg{hyperref} casi al final; \pkg{cleveref} después; \texttt{unicode} en
+        \C{hypersetup}.
+  \item Claves de cita y de \C{label} \textbf{con prefijo} y estables.
+  \item Compilá con \texttt{latexmk} para no olvidar las pasadas de biber.
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Documentos largos} — índice analítico, índices de figuras/tablas.
+  \item \emph{Estándares} — \pkg{hyperref}/\pkg{cleveref} en el preámbulo.
+  \item Manuales: \texttt{texdoc biblatex}, \texttt{texdoc hyperref},
+        \texttt{texdoc cleveref}.
+\end{itemize}
+
+\printbibliography[heading=bibintoc, title={Bibliografía}]
+
+\end{document}

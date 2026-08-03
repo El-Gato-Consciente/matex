@@ -1,0 +1,354 @@
+% =====================================================================
+%  Flujo, herramientas e instalación de LaTeX — guía de referencia
+%  Suite de documentos LaTeX · Nivel 0 (Meta/referencia) · clase article.
+%  Compilar: latexmk -pdf flujo-instalacion.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Flujo, herramientas e instalación de LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código (comandos de terminal y snippets) ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  xleftmargin=8pt, xrightmargin=4pt, framesep=4pt,
+  extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1 {°}{{\textdegree}}1,
+}
+\lstdefinestyle{sh}{language=bash, keywordstyle=\ttfamily}
+\lstdefinestyle{tex}{language=[LaTeX]TeX, keywordstyle=\color{codekw}\bfseries}
+\lstset{style=sh}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+
+% --- Caja de nota ---
+\newenvironment{nota}{\par\smallskip\noindent\begin{center}%
+  \begin{minipage}{0.95\linewidth}\small\rule{\linewidth}{0.4pt}\par\nobreak}%
+  {\par\rule{\linewidth}{0.4pt}\end{minipage}\end{center}\smallskip}
+
+\title{\textbf{Flujo, herramientas e instalación de \LaTeX}\\[2pt]
+       \large Guía de referencia}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent Documento de \textbf{referencia} de la suite: cómo \textbf{instalar}
+\LaTeX, \textbf{compilar}, qué \textbf{herramientas} usar y cómo resolver las
+\textbf{problemáticas} típicas. A diferencia del \emph{Quickstart} (que te lleva
+de la mano a tu primer PDF), acá explicamos \emph{cómo funcionan} las piezas, para
+que entiendas qué pasa y puedas resolver cuando algo falla. No es un tutorial
+lineal: se consulta. (Para el universo de temas, ver \emph{TEMARIO}; para el
+preámbulo recomendado, \emph{Estándares y buenas prácticas}.)
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Distribuciones de LaTeX}
+% =====================================================================
+\LaTeX{} no es un solo programa, sino un \textbf{ecosistema}. Para usarlo
+instalás una \textbf{distribución}: un paquete grande que incluye el
+\textbf{motor} (el programa que compila), miles de \textbf{paquetes} de extensión
+(bajados del repositorio central, \texttt{CTAN}) y herramientas auxiliares
+(\texttt{latexmk}, \texttt{biber}, \texttt{texdoc}\dots). Sin una distribución
+instalada, no podés compilar nada.
+
+Hay dos grandes distribuciones, y se diferencian sobre todo en la \textbf{filosofía
+de instalación de paquetes}; más una opción en la nube:
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}l XXX@{}}
+\toprule
+ & \textbf{MiKTeX} & \textbf{TeX~Live} & \textbf{Overleaf} \\
+\midrule
+Plataforma & Windows (también Linux/Mac) & Multiplataforma & Navegador (nube) \\
+Instalación & Liviana; instala paquetes \textbf{al vuelo} & Completa (\texttt{scheme-full} $\sim$varios GB, o \texttt{scheme-basic}) & \textbf{Ninguna} \\
+Gestor & \texttt{mpm} / MiKTeX Console & \texttt{tlmgr} & — (siempre al día) \\
+En macOS & — & viene como \textbf{MacTeX} & — \\
+Ideal para & Empezar en Windows & Setup completo/reproducible & Evitar instalar; colaborar \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent\textbf{La diferencia clave.} \textbf{MiKTeX} instala cada paquete
+\emph{la primera vez} que un documento lo pide (cómodo y liviano, pero esa
+primera compilación puede frenarse unos segundos a descargar). \textbf{TeX~Live}
+en su esquema completo instala \emph{todo de entrada}: ocupa varios GB de disco,
+pero nunca te frena ni te falta nada —ideal para servidores, CI o trabajar sin
+conexión—. \textbf{Overleaf} elimina el problema de raíz: el entorno vive en la
+nube, siempre actualizado, y solo necesitás un navegador.
+
+\noindent\textbf{Recomendación:} en Windows para empezar, \textbf{MiKTeX}; para un
+setup completo o reproducible, \textbf{TeX~Live full}; sin instalar nada o para
+trabajar en equipo, \textbf{Overleaf}.
+
+% =====================================================================
+\section{Editores e IDE}
+% =====================================================================
+Técnicamente podrías escribir el \texttt{.tex} en cualquier editor de texto y
+compilar por terminal. Pero un \textbf{editor de \LaTeX} te ahorra muchísimo:
+resalta la sintaxis (ves de un vistazo comandos, llaves y errores de tipeo),
+compila con un \textbf{botón}, te muestra el \textbf{PDF al lado} y —gracias a
+\texttt{SyncTeX}— te deja saltar entre una línea del código y su lugar en el PDF
+(y al revés). Además marca los \textbf{errores} sobre la línea que los causa.
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Editor} & \textbf{Notas} \\
+\midrule
+\textbf{TeXstudio} & Dedicado, \enquote{todo incluido}, muy usado. Compilar: \texttt{F5}. \\
+\textbf{VS~Code + LaTeX Workshop} & Popular; integra compilación y \emph{preview}. \\
+\textbf{Overleaf} & Online, sin instalar; botón \emph{Recompile}. \\
+TeXmaker, Emacs/AUCTeX, Vim & Alternativas. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{nota}
+\textbf{Aviso.}\enspace \textbf{LaTeX Workshop} (VS~Code) auto-compila al guardar.
+Eso es cómodo, pero deja procesos (\texttt{latexmk}, \texttt{pdflatex}) corriendo
+en segundo plano que a veces \textbf{bloquean archivos} y rompen las
+actualizaciones de paquetes; cómo resolverlo, en \cref{sec:trouble}.
+\end{nota}
+
+% =====================================================================
+\section{Compilar: motores y automatización}
+% =====================================================================
+Compilar \textbf{no siempre es un paso único}: \LaTeX{} a veces necesita
+\textbf{varias pasadas}. Por ejemplo, para numerar referencias o armar el índice,
+la primera pasada \enquote{anota} los números en archivos auxiliares
+(\texttt{.aux}, \texttt{.toc}) y la segunda los coloca en su lugar. Por eso
+conviene \textbf{no} compilar a mano, sino con \texttt{latexmk}, que detecta
+cuántas pasadas hacen falta y corre también \texttt{biber} (bibliografía) y los
+índices.
+
+\paragraph{El motor.} Es el programa que efectivamente compila. \texttt{pdflatex}
+es el más rápido y compatible (el \emph{default}). \texttt{xelatex} y
+\texttt{lualatex} permiten usar \textbf{fuentes del sistema} y Unicode nativo;
+\texttt{lualatex} además trae \textbf{Lua} para programar. Salvo que necesites
+eso, quedate con \texttt{pdflatex} (más en \emph{Estándares}, sección de motor).
+
+\paragraph{\texttt{latexmk} (el estándar).} Resuelve solas todas las pasadas:
+\begin{lstlisting}
+latexmk -pdf archivo.tex        # compila a PDF (pdflatex)
+latexmk -pdf -pvc archivo.tex   # modo "watch": recompila al guardar
+latexmk -xelatex archivo.tex    # con otro motor
+latexmk -outdir=build archivo.tex   # intermedios en build/
+latexmk -c                      # limpia intermedios (deja el PDF)
+\end{lstlisting}
+Para fijar opciones de forma permanente se usa un archivo \texttt{.latexmkrc}.
+Alternativas: \texttt{arara} (lee directivas escritas en el propio \texttt{.tex})
+y \texttt{make}.
+
+\paragraph{\texttt{-shell-escape} (con cuidado).} Algunos paquetes
+(\texttt{minted} para resaltar código, \texttt{pythontex} para correr Python,
+gnuplot) necesitan que \LaTeX{} \textbf{ejecute programas externos} durante la
+compilación; eso se habilita con \texttt{-shell-escape}. Como deja correr
+comandos del sistema, \textbf{no} compiles con \texttt{-shell-escape} documentos
+de origen desconocido (riesgo de seguridad).
+
+% =====================================================================
+\section{Instalar y actualizar paquetes}
+% =====================================================================
+Los paquetes viven en \textbf{CTAN} (el repositorio central, unos 6000); tu
+distribución los baja de ahí. \textbf{MiKTeX} puede instalarlos \emph{al vuelo}:
+la primera vez que un \C{usepackage} pide algo que no está, te ofrece bajarlo
+(aceptá). En \textbf{TeX~Live} se instalan a mano con \texttt{tlmgr}. Conviene
+\textbf{actualizar} de vez en cuando: corrige errores y, sobre todo, mantiene los
+paquetes \textbf{compatibles entre sí} (mezclar versiones viejas y nuevas causa
+fallas; ver \cref{sec:trouble}).
+
+\textbf{MiKTeX} (manual):
+\begin{lstlisting}
+mpm --install=NOMBRE
+mpm --update=NOMBRE        # (o MiKTeX Console > Updates)
+initexmf --update-fndb     # refrescar la base de nombres de archivo
+\end{lstlisting}
+\textbf{TeX~Live:}
+\begin{lstlisting}
+tlmgr install NOMBRE
+tlmgr update --self --all  # actualizar tlmgr y todo
+\end{lstlisting}
+\textbf{Documentación offline} de cualquier paquete (abre su manual oficial en
+PDF) —el mejor reflejo cuando no sabés cómo usar algo—:
+\begin{lstlisting}
+texdoc amsmath
+\end{lstlisting}
+
+% =====================================================================
+\section{Problemáticas típicas (troubleshooting)}\label{sec:trouble}
+% =====================================================================
+Tarde o temprano algo falla. La buena noticia: los errores de \LaTeX, aunque
+crípticos, son \textbf{repetitivos}. La estrategia es siempre la misma:
+\textbf{leer la primera línea} del error, ir al \textbf{número de línea} que
+indica, y aislar el problema. Los más comunes:
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\linewidth}{@{}X X X@{}}
+\toprule
+\textbf{Síntoma} & \textbf{Causa} & \textbf{Solución} \\
+\midrule
+\texttt{File 'X.sty' not found} & Falta el paquete & MiKTeX lo ofrece instalar; o \texttt{tlmgr install X} \\
+\texttt{\textbackslash l\_\_siunitx\_...\_str undefined} & \texttt{l3kernel}/\texttt{expl3} desfasado vs.\ un paquete nuevo & Actualizar el kernel (receta abajo) \\
+Update falla: \emph{file in use} / \emph{Windows API error 32} & Un proceso TeX bloquea el \texttt{.fndb} & Matar los procesos TeX y reintentar \\
+Fuentes borrosas / bitmaps & Falta \texttt{lmodern} (o \texttt{cm-super}) & \C{usepackage\{lmodern\}} \\
+Acentos rotos / \enquote{Invalid UTF-8} & Encoding / fuente & \texttt{inputenc[utf8]} + \texttt{fontenc[T1]} \\
+Marcadores del PDF con símbolos raros & \texttt{hyperref} sin Unicode & \C{hypersetup\{unicode\}} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Receta — kernel desfasado.} Cuando \texttt{siunitx} (u otro paquete
+moderno) tira errores \texttt{\textbackslash l\_\_\dots}, casi siempre el
+\texttt{l3kernel}/\texttt{expl3} (la base de programación de \LaTeX) quedó viejo
+respecto del paquete. Se arregla actualizando el kernel \emph{(incidente real de
+este proyecto)}:
+\begin{lstlisting}
+# Cerrar antes los procesos TeX que bloqueen archivos (Git Bash en Windows):
+taskkill //F //IM latexmk.exe //IM pdflatex.exe //IM perl.exe
+mpm --update=l3kernel --update=l3backend --update=l3packages
+\end{lstlisting}
+
+\paragraph{Receta — archivos bloqueados.} En Windows, el auto-compilado del
+editor deja procesos TeX corriendo que \textbf{traban} el \texttt{.fndb} (la base
+de nombres de archivo de MiKTeX) y hacen fallar cualquier \emph{update} con
+\enquote{file in use}. Solución: matarlos antes \emph{(también nos pasó)}:
+\begin{lstlisting}
+taskkill //F //IM latexmk.exe //IM pdflatex.exe //IM perl.exe
+\end{lstlisting}
+
+\begin{nota}
+\textbf{Cómo leer un error.}\enspace Mirá \textbf{la primera} línea
+\texttt{! \dots} y el \textbf{número de línea}: casi siempre el problema está ahí
+(o una antes). Los errores que siguen suelen ser \enquote{efecto dominó} del
+primero. El \texttt{.log} guarda el detalle completo.
+\end{nota}
+
+% =====================================================================
+\section{Diagnóstico y calidad}
+% =====================================================================
+Además de los errores que \textbf{frenan} la compilación, \LaTeX{} emite
+\textbf{advertencias} (\emph{warnings}) que conviene atender: un
+\texttt{Overfull \textbackslash hbox} significa que una línea se pasó del margen;
+\texttt{Reference undefined}, que una referencia no resolvió (¿compilaste dos
+veces?). El objetivo de un documento prolijo es compilar \textbf{sin warnings}.
+
+\begin{itemize}[noitemsep]
+  \item \textbf{\texttt{nag}} — te \textbf{avisa} en el log si usás comandos o
+        paquetes obsoletos (te educa mientras escribís):
+        \lstinline[style=tex]|\usepackage[l2tabu,orthodox]{nag}|
+  \item \textbf{\texttt{l2tabu}} — la guía de referencia de \textbf{anti-patrones}
+        (qué \emph{no} usar y por qué).
+  \item \textbf{Leer el log:} buscá \texttt{Overfull \textbackslash hbox},
+        \texttt{Font shape undefined}, \texttt{Reference/Citation undefined}.
+\end{itemize}
+
+% =====================================================================
+\section{Control de versiones (git)}
+% =====================================================================
+Como un \texttt{.tex} es \textbf{texto plano}, encaja perfecto con \texttt{git}:
+podés ver \emph{exactamente} qué cambió entre versiones, volver atrás y colaborar
+sin pisarte. La clave es \textbf{no} versionar los archivos intermedios
+(\texttt{.aux}, \texttt{.log}\dots), que se regeneran al compilar; para eso está
+el \texttt{.gitignore}:
+\begin{lstlisting}
+*.aux *.log *.out *.toc *.nav *.snm *.vrb
+*.fls *.fdb_latexmk *.synctex.gz
+*.bbl *.bcf *.run.xml   # bibliografia
+\end{lstlisting}
+\textbf{\texttt{latexdiff}} va un paso más allá: compara dos versiones del
+\texttt{.tex} y genera un PDF con lo \textbf{agregado y borrado resaltado} (ideal
+para que un docente vea los cambios entre entregas):
+\begin{lstlisting}
+latexdiff viejo.tex nuevo.tex > diff.tex && latexmk -pdf diff.tex
+\end{lstlisting}
+Para comentarios y marcas de revisión dentro del documento están
+\texttt{changes} y \texttt{todonotes}. \textbf{Overleaf} trae integración con git
+e historial propio.
+
+% =====================================================================
+\section{Reproducibilidad y CI}
+% =====================================================================
+\textbf{¿Por qué importa?} Para que el PDF salga \textbf{igual} en tu computadora,
+en la del docente y dentro de un año. Dos herramientas ayudan:
+\begin{itemize}[noitemsep]
+  \item \textbf{Docker:} una imagen \texttt{texlive/texlive} fija el entorno
+        entero (misma versión de todo), así la compilación es idéntica en
+        cualquier máquina.
+  \item \textbf{GitHub Actions (CI):} compila el PDF \textbf{automáticamente} en
+        cada \emph{push}; siempre hay un PDF actualizado sin que nadie compile a
+        mano. Muy útil para entregables.
+\end{itemize}
+
+% =====================================================================
+\section{Velocidad (documentos grandes/lentos)}
+% =====================================================================
+Un documento con muchos gráficos \texttt{TikZ} puede tardar \textbf{minutos},
+porque cada figura se \textbf{redibuja} en cada compilación. Las técnicas de acá
+apuntan a \textbf{no recalcular lo que no cambió}:
+\begin{itemize}[noitemsep]
+  \item \textbf{Externalización de TikZ} (\C{usetikzlibrary\{external\}}): cachea
+        cada figura como un PDF; mientras no la toques, la reusa.
+  \item \textbf{Modo \texttt{draft}}: no dibuja las imágenes (solo su recuadro) y
+        marca los overfull; sirve para revisar texto rápido.
+  \item \textbf{Preámbulo precompilado} (\texttt{mylatexformat}): si tu preámbulo
+        es pesado, lo \enquote{congela} para no procesarlo cada vez.
+  \item \textbf{\texttt{latexmk -pvc}}: no acelera la compilación, pero te da
+        \textbf{feedback} inmediato recompilando al guardar.
+\end{itemize}
+
+% =====================================================================
+\section{Recetas rápidas}
+% =====================================================================
+\begin{lstlisting}
+latexmk -pdf archivo.tex        # compilar (recomendado)
+latexmk -pdf -pvc archivo.tex   # compilar y mirar cambios
+latexmk -c                      # limpiar intermedios (deja el PDF)
+latexmk -C                      # limpiar TODO (incluido el PDF)
+texdoc PAQUETE                  # documentacion de un paquete
+mpm --install=PAQUETE           # instalar (MiKTeX)
+tlmgr install PAQUETE           # instalar (TeX Live)
+\end{lstlisting}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep]
+  \item \emph{Estándares y buenas prácticas} — preámbulo recomendado y bases
+        mínima/máxima.
+  \item \emph{Quickstart} — instalar y compilar tu primer documento.
+  \item \emph{README} y \emph{TEMARIO} de la suite.
+\end{itemize}
+
+\end{document}

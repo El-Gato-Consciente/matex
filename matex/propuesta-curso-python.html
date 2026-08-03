@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matex · Curso de Python — demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F1E9;
+    --paper-2:#EAE7DB;
+    --paper-3:#DDD9CA;
+    --ink:#2B2A25;
+    --ink-soft:#5B594E;
+    --code-bg:#1C2128;
+    --code-line:#333A44;
+    --gold:#B9822C;
+    --gold-ink:#7A5518;
+    --teal:#2E6B5E;
+    --lock:#9B9788;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:'IBM Plex Sans',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+  }
+  code{font-family:'IBM Plex Mono',monospace;font-size:.93em;}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 20px;height:52px;flex:0 0 auto;
+    background:var(--paper-2);border-bottom:1px solid var(--paper-3);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-family:'IBM Plex Serif',serif;font-weight:600;font-size:15px;}
+  .brand .mark{
+    width:22px;height:22px;border-radius:5px;background:var(--ink);color:var(--paper);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;
+  }
+  .crumbs{font-size:13px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .crumbs .sep{margin:0 6px;color:var(--paper-3);}
+  .crumbs .cur{color:var(--ink);}
+
+  .layout{flex:1 1 auto;display:flex;min-height:0;}
+
+  /* activity rail */
+  .rail{
+    width:48px;flex:0 0 48px;background:var(--paper-2);
+    border-right:1px solid var(--paper-3);
+    display:flex;flex-direction:column;align-items:center;
+    padding-top:10px;gap:4px;
+  }
+  .rail-btn{
+    width:36px;height:36px;border:none;background:transparent;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);cursor:pointer;
+  }
+  .rail-btn:hover{background:var(--paper-3);color:var(--ink);}
+  .rail-btn.active{background:var(--paper);color:var(--gold-ink);box-shadow:inset 2px 0 0 var(--gold);}
+  .rail-btn svg{width:18px;height:18px;}
+  .rail-spacer{flex:1;}
+  .rail-hint{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--ink-soft);opacity:.55;writing-mode:vertical-rl;padding-bottom:10px;}
+
+  /* collapsible side panel */
+  .side-panel{
+    flex:0 0 auto;width:0;overflow:hidden;
+    background:var(--paper-2);border-right:1px solid var(--paper-3);
+    transition:width .16s ease;
+  }
+  .side-panel.closed{border-right:none;}
+  .panel-view{display:none;height:100%;overflow-y:auto;}
+  .panel-view.active{display:block;}
+
+  .side-title{
+    font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-soft);padding:14px 18px 10px;font-weight:500;
+  }
+  #tree, #files{padding:0 8px 30px;}
+  ul.tree{list-style:none;margin:0;padding:0;}
+  ul.tree ul{list-style:none;margin:0;padding-left:16px;}
+  .node{
+    display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;
+    font-size:13.5px;line-height:1.3;color:var(--ink);border:1px solid transparent;
+  }
+  .node:hover{background:var(--paper-3);}
+  .node.selected{background:var(--paper);border-color:var(--paper-3);font-weight:500;}
+  .node.group{font-weight:600;cursor:default;font-family:'IBM Plex Serif',serif;font-size:14px;padding-top:10px;}
+  .node.group:hover{background:transparent;}
+  .node.locked{color:var(--lock);}
+  .status-icon{flex:0 0 auto;display:flex;color:var(--teal);}
+  .node.locked .status-icon{color:var(--lock);}
+  .node.active .status-icon{color:var(--gold-ink);}
+  .id-tag{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);opacity:.7;}
+
+  /* theory view (inside panel) */
+  .theory{padding:22px 26px 60px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--gold-ink);margin-bottom:8px;
+  }
+  .theory h1{font-family:'IBM Plex Serif',serif;font-size:23px;font-weight:600;margin:0 0 6px;line-height:1.25;}
+  .theory .lede{font-size:14px;color:var(--ink-soft);line-height:1.6;margin:0 0 22px;}
+  .theory h3{font-family:'IBM Plex Serif',serif;font-size:15px;font-weight:600;margin:24px 0 4px;}
+  .theory p{font-size:14px;line-height:1.7;margin:0 0 10px;color:var(--ink);}
+  .formula{
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;background:var(--paper);
+    border:1px solid var(--paper-3);border-radius:6px;padding:9px 13px;margin:9px 0 13px;
+  }
+  .step{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--paper-3);}
+  .step:first-of-type{border-top:none;}
+  .step-num{
+    flex:0 0 auto;width:23px;height:23px;border-radius:50%;
+    background:var(--paper);border:1px solid var(--gold);color:var(--gold-ink);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step-body{flex:1;}
+  .step-title{font-weight:500;font-size:13.5px;margin-bottom:3px;}
+  .step-text{font-size:13px;color:var(--ink-soft);line-height:1.6;margin-bottom:8px;}
+  .goto-code{
+    display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    color:var(--gold-ink);background:transparent;border:1px solid var(--gold);border-radius:5px;
+    padding:3px 8px;cursor:pointer;
+  }
+  .goto-code:hover{background:var(--gold);color:var(--paper);}
+  .goto-code svg{width:10px;height:10px;}
+
+  /* main content */
+  main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+
+  .message-view{display:none;flex:1;align-items:center;justify-content:center;padding:40px;}
+  .message-view.show{display:flex;}
+  .message-card{max-width:440px;background:var(--paper-2);border:1px solid var(--paper-3);border-radius:10px;padding:26px 28px;}
+  .message-card h2{font-family:'IBM Plex Serif',serif;font-size:18px;margin:0 0 8px;}
+  .message-card p{font-size:14px;line-height:1.6;color:var(--ink-soft);margin:0 0 6px;}
+  .req-list{margin:10px 0 0;padding:0;list-style:none;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  .req-list li{padding:4px 0;border-top:1px solid var(--paper-3);color:var(--ink);}
+
+  .lesson-view{display:none;flex:1;min-height:0;}
+  .lesson-view.show{display:flex;}
+
+  .code-pane{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--code-bg);}
+  .code-toolbar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--code-line);flex:0 0 auto;}
+  .filename{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#B9B6AA;}
+  .run-btn{
+    font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:13px;
+    background:var(--gold);color:#2B1E08;border:none;border-radius:6px;padding:6px 14px;
+    cursor:pointer;display:flex;align-items:center;gap:6px;margin-left:auto;
+  }
+  .run-btn:disabled{background:#4A5058;color:#8B909A;cursor:not-allowed;}
+  .run-btn svg{width:11px;height:11px;}
+  .py-status{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8B909A;display:flex;align-items:center;gap:6px;}
+  .spin{width:9px;height:9px;border-radius:50%;border:1.5px solid #5C6470;border-top-color:var(--gold);animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  #editor{flex:1 1 auto;overflow:auto;min-height:0;}
+  #editor .cm-editor{height:100%;}
+  #editor .cm-scroller{font-family:'IBM Plex Mono',monospace !important;}
+
+  .console-wrap{flex:0 0 34%;border-top:1px solid var(--code-line);display:flex;flex-direction:column;min-height:120px;}
+  .console-head{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#8B909A;padding:8px 16px 4px;}
+  #console{flex:1;overflow-y:auto;margin:0;padding:6px 16px 16px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;color:#D8D5C9;white-space:pre-wrap;}
+  #console .placeholder{color:#6B7078;}
+  #console .err{color:#E08A73;}
+
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--paper-3);border-radius:6px;}
+  .code-pane ::-webkit-scrollbar-thumb{background:#3A414C;}
+  button:focus-visible,.node:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="mark">M</span> Matex · Curso de Python</div>
+  <div class="crumbs" id="crumbs">Matemática <span class="sep">/</span> Métodos numéricos y algoritmos <span class="sep">/</span> <span class="cur">Newton-Raphson</span></div>
+</header>
+
+<div class="layout">
+
+  <nav class="rail">
+    <button class="rail-btn" data-tab="indice" title="Índice del curso" aria-label="Índice del curso">
+      <svg viewBox="0 0 20 20"><path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>
+    </button>
+    <button class="rail-btn" data-tab="archivos" title="Explorador de archivos" aria-label="Explorador de archivos">
+      <svg viewBox="0 0 20 20"><path d="M3 6.5a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="rail-btn" data-tab="teoria" title="Teoría de la lección" aria-label="Teoría de la lección">
+      <svg viewBox="0 0 20 20"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H10v14H5.5c-.8 0-1.5-.7-1.5-1.5z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M16 4.5c0-.8-.7-1.5-1.5-1.5H10v14h4.5c.8 0 1.5-.7 1.5-1.5z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+    </button>
+    <div class="rail-spacer"></div>
+  </nav>
+
+  <aside class="side-panel" id="sidePanel">
+
+    <div class="panel-view" data-view="indice" id="viewIndice">
+      <div class="side-title">Índice del curso</div>
+      <div id="tree"></div>
+    </div>
+
+    <div class="panel-view" data-view="archivos" id="viewArchivos">
+      <div class="side-title">Explorador de archivos</div>
+      <div id="files"></div>
+    </div>
+
+    <div class="panel-view" data-view="teoria" id="viewTeoria">
+      <div class="theory">
+        <div class="eyebrow">PY-M1 · Métodos numéricos y algoritmos · Aprender</div>
+        <h1>Newton-Raphson</h1>
+        <p class="lede">Un método para encontrar raíces de una función usando la recta tangente para
+        acercarse cada vez más al punto donde <code>f(x) = 0</code>.</p>
+
+        <div class="step" data-line="17">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Punto de partida</div>
+            <div class="step-text">Elegimos un <code>x₀</code> razonablemente cerca de la raíz que
+            buscamos. El método no garantiza converger si arrancamos muy lejos.</div>
+            <button class="goto-code" data-line="17">
+              <svg viewBox="0 0 16 16"><path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ver en el código
+            </button>
+          </div>
+        </div>
+
+        <div class="step" data-line="10">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">La fórmula</div>
+            <div class="step-text">En cada paso avanzamos siguiendo la tangente en <code>x_n</code>:</div>
+            <div class="formula">x_(n+1) = x_n − f(x_n) / f'(x_n)</div>
+            <button class="goto-code" data-line="10">
+              <svg viewBox="0 0 16 16"><path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ver en el código
+            </button>
+          </div>
+        </div>
+
+        <div class="step" data-line="3">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Repetir hasta acercarnos lo suficiente</div>
+            <div class="step-text">Iteramos hasta que <code>|f(x_n)|</code> sea menor que una tolerancia,
+            o hasta agotar un número máximo de iteraciones — nunca confiamos en que el método converja
+            solo.</div>
+            <button class="goto-code" data-line="3">
+              <svg viewBox="0 0 16 16"><path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ver en el código
+            </button>
+          </div>
+        </div>
+
+        <div class="step" data-line="8">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Cuidado con la derivada</div>
+            <div class="step-text">Si <code>f'(x_n)</code> es cero (o casi), la fórmula divide por un
+            número minúsculo y el método diverge. Por eso lo chequeamos explícitamente en vez de dejar
+            que Python explote solo.</div>
+            <button class="goto-code" data-line="8">
+              <svg viewBox="0 0 16 16"><path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ver en el código
+            </button>
+          </div>
+        </div>
+
+        <h3>Por qué importa para Matex</h3>
+        <p>Esta es exactamente la clase de contenido que vive del lado "código" de un nodo ejecutable:
+        el algoritmo es la materia — no hay forma de expresar "las iteraciones de Newton-Raphson" con el
+        motor semántico nativo sin, en el fondo, escribir el algoritmo.</p>
+      </div>
+    </div>
+
+  </aside>
+
+  <main>
+
+    <div class="message-view" id="messageView">
+      <div class="message-card" id="messageCard"></div>
+    </div>
+
+    <div class="lesson-view show" id="lessonView">
+      <div class="code-pane">
+        <div class="code-toolbar">
+          <span class="filename">newton_raphson.py</span>
+          <span class="py-status" id="pyStatus"><span class="spin"></span> cargando Pyodide…</span>
+          <button class="run-btn" id="runBtn" disabled>
+            <svg viewBox="0 0 16 16"><path d="M4 2.5v11l10-5.5z" fill="currentColor"/></svg>
+            Ejecutar
+          </button>
+        </div>
+        <div id="editor"></div>
+        <div class="console-wrap">
+          <div class="console-head">Consola</div>
+          <pre id="console"><span class="placeholder">Presioná «Ejecutar» para correr este código con Pyodide, directamente en tu navegador — nada viaja a un servidor.</span></pre>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script type="module">
+import {EditorView, basicSetup} from "https://esm.sh/codemirror@6.0.1";
+import {python} from "https://esm.sh/@codemirror/lang-python@6.1.6";
+import {oneDark} from "https://esm.sh/@codemirror/theme-one-dark@6.1.2";
+
+/* ---------- panel colapsable con 3 pestañas ---------- */
+
+const PANEL_WIDTH = { indice: "300px", archivos: "260px", teoria: "440px" };
+let panelOpen = true;
+let activeTab = "teoria";
+
+function renderPanel(){
+  document.querySelectorAll(".rail-btn").forEach(b=>{
+    b.classList.toggle("active", panelOpen && b.dataset.tab === activeTab);
+  });
+  document.querySelectorAll(".panel-view").forEach(v=>{
+    v.classList.toggle("active", v.dataset.view === activeTab);
+  });
+  const panel = document.getElementById("sidePanel");
+  panel.style.width = panelOpen ? PANEL_WIDTH[activeTab] : "0px";
+  panel.classList.toggle("closed", !panelOpen);
+}
+
+document.querySelectorAll(".rail-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const tab = btn.dataset.tab;
+    if(panelOpen && activeTab === tab){ panelOpen = false; }
+    else { activeTab = tab; panelOpen = true; }
+    renderPanel();
+  });
+});
+renderPanel();
+
+/* ---------- índice del curso (árbol de prerrequisitos) ---------- */
+
+const tree = [
+  { id:"PY-N", label:"Núcleo", group:true, status:"done", children:[
+    { id:"PY-N1", label:"Fundamentos", status:"done" },
+    { id:"PY-N2", label:"Estructuras y funciones", status:"done" },
+    { id:"PY-N3", label:"POO con objetos matemáticos", status:"done" },
+  ]},
+  { id:"PY-M", label:"Matemática", group:true, status:"active", children:[
+    { id:"PY-M1", label:"Métodos numéricos y algoritmos", status:"active", children:[
+      { id:"m1-1", label:"1. Precisión de punto flotante", status:"done" },
+      { id:"m1-2", label:"2. Búsqueda de raíces: bisección", status:"done" },
+      { id:"m1-3", label:"3. Newton-Raphson", status:"active", lesson:"newton" },
+      { id:"m1-4", label:"4. Tablas de iteración", status:"todo" },
+      { id:"m1-5", label:"5. Integración numérica", status:"todo" },
+      { id:"m1-6", label:"6. Complejidad algorítmica", status:"todo" },
+    ]},
+    { id:"PY-M2", label:"Álgebra lineal (NumPy)", status:"todo" },
+    { id:"PY-M3", label:"Matemática simbólica (SymPy)", status:"locked",
+      requires:["PY-M1 · Métodos numéricos y algoritmos (en curso)"] },
+    { id:"PY-M4", label:"Matemática avanzada", status:"locked",
+      requires:["PY-M1 · Métodos numéricos y algoritmos","PY-M2 · Álgebra lineal (NumPy)"] },
+  ]},
+  { id:"PY-C", label:"Computación", group:true, status:"locked", children:[
+    { id:"PY-C1", label:"Estructuras de datos clásicas", status:"todo" },
+    { id:"PY-C2", label:"Paradigmas de diseño de algoritmos", status:"locked",
+      requires:["PY-C1 · Estructuras de datos clásicas","PY-M1 · Métodos numéricos y algoritmos (en curso)"] },
+    { id:"PY-C3", label:"Algoritmos sobre grafos", status:"locked",
+      requires:["PY-C1 · Estructuras de datos clásicas"] },
+    { id:"PY-C4", label:"Computabilidad y lenguajes formales", status:"locked",
+      requires:["PY-C2 · Paradigmas de diseño de algoritmos"] },
+  ]},
+  { id:"PY-E", label:"Entorno", group:true, status:"active", children:[
+    { id:"PY-E1", label:"Pyodide y el navegador", status:"todo" },
+    { id:"PY-E2", label:"Stdlib amplia y buenas prácticas", status:"todo" },
+    { id:"PY-E3", label:"Datos reales (pandas)", status:"locked",
+      requires:["PY-M2 · Álgebra lineal (NumPy)","PY-E2 · Stdlib amplia y buenas prácticas"] },
+    { id:"PY-E4", label:"Python dentro de Matex", status:"locked",
+      requires:["PY-M1 · Métodos numéricos y algoritmos (en curso)","PY-E1 · Pyodide y el navegador","el Nivel 2 de nodos ejecutables (no disponible aún)"] },
+  ]},
+];
+
+function iconFor(status){
+  if(status==="done") return `<svg viewBox="0 0 16 16" width="13" height="13"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if(status==="locked") return `<svg viewBox="0 0 16 16" width="12" height="12"><rect x="3.5" y="7" width="9" height="7" rx="1.2" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5.5 7V5A2.5 2.5 0 0 1 10.5 5V7" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>`;
+  if(status==="active") return `<svg viewBox="0 0 16 16" width="10" height="10"><circle cx="8" cy="8" r="4" fill="currentColor"/></svg>`;
+  return `<svg viewBox="0 0 16 16" width="10" height="10"><circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`;
+}
+
+function findNode(nodes, id){
+  for(const n of nodes){
+    if(n.id===id) return n;
+    if(n.children){ const f = findNode(n.children, id); if(f) return f; }
+  }
+  return null;
+}
+
+function renderTree(nodes){
+  const ul = document.createElement("ul");
+  ul.className = "tree";
+  for(const n of nodes){
+    const li = document.createElement("li");
+    const row = document.createElement("div");
+    row.className = "node" + (n.group ? " group" : "") + (n.status==="locked" ? " locked" : "") + (n.status==="active" ? " active" : "");
+    row.dataset.id = n.id;
+    row.tabIndex = n.group ? -1 : 0;
+    row.innerHTML = `<span class="status-icon">${iconFor(n.status)}</span><span>${n.label}</span>` + (!n.group ? `<span class="id-tag">${n.id}</span>` : "");
+    li.appendChild(row);
+    if(n.children){ li.appendChild(renderTree(n.children)); }
+    ul.appendChild(li);
+  }
+  return ul;
+}
+document.getElementById("tree").appendChild(renderTree(tree));
+
+document.getElementById("tree").addEventListener("click", (e)=>{
+  const row = e.target.closest(".node");
+  if(!row || row.classList.contains("group")) return;
+  const node = findNode(tree, row.dataset.id);
+  if(!node) return;
+
+  document.querySelectorAll("#tree .node.selected").forEach(el=>el.classList.remove("selected"));
+  row.classList.add("selected");
+
+  if(node.status === "locked"){
+    showMessage(node.label, node.id, node.requires);
+  } else if(node.lesson === "newton"){
+    showLesson();
+    activeTab = "teoria"; panelOpen = true; renderPanel();
+    syncFileSelection("newton_raphson.py");
+  } else {
+    showMessage(node.label, node.id, null);
+  }
+});
+
+/* ---------- explorador de archivos (ilustrativo) ---------- */
+
+document.getElementById("files").innerHTML = `
+  <ul class="tree">
+    <li><div class="node group"><span class="status-icon">${folderIcon()}</span>proyecto-metodos-numericos</div>
+      <ul>
+        <li><div class="node selected" data-file="newton_raphson.py"><span class="status-icon">${fileIcon()}</span>newton_raphson.py</div></li>
+        <li><div class="node" data-file="biseccion.py"><span class="status-icon">${fileIcon()}</span>biseccion.py</div></li>
+        <li><div class="node" data-file="notas.md"><span class="status-icon">${fileIcon()}</span>notas.md</div></li>
+        <li><div class="node group"><span class="status-icon">${folderIcon()}</span>datos</div>
+          <ul><li><div class="node" data-file="mediciones.csv"><span class="status-icon">${fileIcon()}</span>mediciones.csv</div></li></ul>
+        </li>
+      </ul>
+    </li>
+  </ul>`;
+
+function folderIcon(){ return `<svg viewBox="0 0 20 20" width="12" height="12"><path d="M3 6.5a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>`; }
+function fileIcon(){ return `<svg viewBox="0 0 16 16" width="12" height="12"><path d="M4 2h5l3 3v9H4z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/><path d="M9 2v3h3" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>`; }
+
+function syncFileSelection(filename){
+  document.querySelectorAll("#files .node.selected").forEach(el=>el.classList.remove("selected"));
+  const row = document.querySelector(`#files .node[data-file="${filename}"]`);
+  if(row) row.classList.add("selected");
+}
+
+document.getElementById("files").addEventListener("click", (e)=>{
+  const row = e.target.closest(".node");
+  if(!row || row.classList.contains("group") || !row.dataset.file) return;
+  syncFileSelection(row.dataset.file);
+  if(row.dataset.file === "newton_raphson.py"){
+    showLesson();
+    document.querySelectorAll("#tree .node.selected").forEach(el=>el.classList.remove("selected"));
+    const idxRow = document.querySelector('#tree .node[data-id="m1-3"]');
+    if(idxRow) idxRow.classList.add("selected");
+  } else {
+    showMessage(row.dataset.file, "archivo", null, true);
+  }
+});
+
+/* ---------- panel central: lección vs. mensaje ---------- */
+
+function showLesson(){
+  document.getElementById("lessonView").classList.add("show");
+  document.getElementById("messageView").classList.remove("show");
+  document.getElementById("crumbs").innerHTML = `Matemática <span class="sep">/</span> Métodos numéricos y algoritmos <span class="sep">/</span> <span class="cur">Newton-Raphson</span>`;
+}
+
+function showMessage(label, id, requires, isFile){
+  document.getElementById("lessonView").classList.remove("show");
+  document.getElementById("messageView").classList.add("show");
+  const card = document.getElementById("messageCard");
+  document.getElementById("crumbs").innerHTML = `<span class="cur">${label}</span>`;
+  if(requires){
+    card.innerHTML = `
+      <h2>Bloqueado por ahora</h2>
+      <p><strong>${label}</strong> (${id}) requiere terminar antes:</p>
+      <ul class="req-list">${requires.map(r=>`<li>${r}</li>`).join("")}</ul>`;
+  } else if(isFile){
+    card.innerHTML = `
+      <h2>${label}</h2>
+      <p>Este archivo es ilustrativo — la demo sólo implementa <code>newton_raphson.py</code> por completo.</p>`;
+  } else {
+    card.innerHTML = `
+      <h2>${label}</h2>
+      <p>${id} — contenido de ejemplo.</p>
+      <p>Esta demo implementa en profundidad una sola lección (Newton-Raphson, PY-M1) para mostrar la
+      relación entre teoría y código. El resto del árbol está representado sólo como estructura e
+      indica su estado de desbloqueo.</p>`;
+  }
+}
+
+/* ---------- editor ---------- */
+
+const PYTHON_CODE = `def newton_raphson(f, df, x0, tol=1e-10, max_iter=50):
+    x = x0
+    for i in range(max_iter):          # Paso 3: repetir
+        fx = f(x)
+        if abs(fx) < tol:               # Paso 3: condición de parada
+            return x, i
+        dfx = df(x)
+        if abs(dfx) < 1e-14:            # Paso 4: cuidado con la derivada
+            raise ZeroDivisionError("derivada casi nula")
+        x = x - fx / dfx                # Paso 2: la fórmula
+    return x, max_iter
+
+# Ejemplo: raíz cuadrada de 2, como cero de f(x) = x^2 - 2
+f  = lambda x: x**2 - 2
+df = lambda x: 2*x
+
+raiz, iteraciones = newton_raphson(f, df, x0=1.0)   # Paso 1: punto inicial
+print(f"raíz encontrada: {raiz:.10f}")
+print(f"iteraciones: {iteraciones}")
+print(f"sqrt(2) real:   {2**0.5:.10f}")
+`;
+
+const view = new EditorView({
+  doc: PYTHON_CODE,
+  extensions: [
+    basicSetup,
+    python(),
+    oneDark,
+    EditorView.theme({ "&": { fontSize: "13.5px" }, ".cm-content": { fontFamily: "'IBM Plex Mono', monospace" } }),
+  ],
+  parent: document.getElementById("editor"),
+});
+
+document.getElementById("viewTeoria").addEventListener("click", (e)=>{
+  const btn = e.target.closest("[data-line]");
+  if(!btn) return;
+  const n = parseInt(btn.dataset.line, 10);
+  if(!n) return;
+  const line = view.state.doc.line(n);
+  view.dispatch({ selection: { anchor: line.from, head: line.from }, scrollIntoView: true });
+  view.focus();
+});
+
+/* ---------- pyodide ---------- */
+
+const runBtn = document.getElementById("runBtn");
+const statusEl = document.getElementById("pyStatus");
+const consoleEl = document.getElementById("console");
+let pyodide = null;
+
+async function boot(){
+  try{
+    pyodide = await loadPyodide();
+    statusEl.innerHTML = `<svg viewBox="0 0 16 16" width="11" height="11"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Pyodide listo`;
+    runBtn.disabled = false;
+  } catch(err){
+    statusEl.textContent = "no se pudo cargar Pyodide (¿sin conexión a jsdelivr?)";
+  }
+}
+boot();
+
+runBtn.addEventListener("click", async ()=>{
+  if(!pyodide) return;
+  runBtn.disabled = true;
+  consoleEl.innerHTML = "";
+  const lines = [];
+  pyodide.setStdout({ batched: (s)=>lines.push(s) });
+  pyodide.setStderr({ batched: (s)=>lines.push(s) });
+  try{
+    await pyodide.runPythonAsync(view.state.doc.toString());
+    consoleEl.textContent = lines.join("\n") || "(sin salida)";
+  } catch(err){
+    consoleEl.innerHTML = (lines.join("\n") ? lines.join("\n")+"\n" : "") + `<span class="err">${String(err)}</span>`;
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

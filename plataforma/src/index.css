@@ -1,0 +1,1146 @@
+@import 'tailwindcss';
+
+/* Design tokens — tema dark premium. Centralizado: cambiar la estética es una
+   sola edición (máxima: mantenible, sin parches dispersos). */
+@theme {
+  --color-surface: #161922;
+  --color-surface-muted: #0e1016;
+  --color-border: #272b36;
+  --color-ink: #e7e9ee;
+  --color-ink-muted: #98a1b3;
+  --color-primary: #6366f1;
+  --color-primary-ink: #ffffff;
+  --color-danger: #f87171;
+  --color-success: #34d399;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* La app maneja su propio scroll interno (paneles); el shell no debe scrollear. */
+#root {
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  color-scheme: dark;
+}
+
+/* ── Editor visual de Matex (TipTap) ─────────────────────────────────────── */
+.matex-prose {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.75rem 2rem 4rem;
+  color: var(--color-ink);
+  line-height: 1.65;
+  outline: none;
+  font-size: 15px;
+}
+.matex-prose h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 1.4rem 0 0.6rem;
+}
+.matex-prose h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 1.2rem 0 0.5rem;
+}
+.matex-prose h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.4rem;
+}
+.matex-prose p {
+  margin: 0.6rem 0;
+}
+.matex-prose ul,
+.matex-prose ol {
+  margin: 0.6rem 0;
+  padding-left: 1.6rem;
+}
+.matex-prose ul {
+  list-style: disc;
+}
+.matex-prose ol {
+  list-style: decimal;
+}
+.matex-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-surface-muted);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+/* Bloque de código (nodo `codeBlock` → `listings` al compilar). */
+.matex-prose pre {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.45;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.7em 0.9em;
+  margin: 0.6rem 0;
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+.matex-prose pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.matex-math-inline {
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 3px;
+  /* Fondo sutil: el atom se distingue del texto como un "chip" editable. */
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+.matex-math-inline:hover,
+.matex-math-display:hover,
+.matex-raw-latex:hover,
+.matex-ref:hover {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+.matex-math-display {
+  cursor: pointer;
+  text-align: center;
+  margin: 0.9rem 0;
+  border-radius: 4px;
+  padding: 0.2rem 0;
+  position: relative;
+}
+/* Número de ecuación `plain` en vivo, a la derecha (como LaTeX). Los de align/gather
+   los pone KaTeX con `\tag` por línea, ya alineados con cada renglón. */
+.matex-eq-number-inline {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  font-size: 0.85em;
+}
+/* Los números de `align`/`gather` los renderiza KaTeX (span.tag). Los igualamos al
+   estilo sutil del número de `plain` (mismo tono apagado y tamaño). */
+.matex-math-display .katex .tag {
+  color: var(--color-ink-muted);
+  font-size: 0.85em;
+}
+/* Números de sección/subsección en vivo (los pone MatexNumbering vía data-sec-number). */
+.matex-prose h1[data-sec-number]::before,
+.matex-prose h2[data-sec-number]::before,
+.matex-prose h3[data-sec-number]::before {
+  content: attr(data-sec-number) '\00a0\00a0';
+  color: var(--color-ink-muted);
+  font-weight: 400;
+}
+/* Parte (ME-46): «Parte I» arriba del título, centrada, con filete. */
+.matex-prose .matex-part {
+  text-align: center;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.3rem;
+  margin-top: 2rem;
+}
+.matex-prose .matex-part[data-part-number]::before {
+  content: 'Parte ' attr(data-part-number);
+  display: block;
+  font-size: 0.6em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  font-weight: 600;
+}
+/* Atom seleccionado al navegar con el cursor (PM no agrega su clase si hay selectNode). */
+.matex-selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+/* Gapcursor: cursor horizontal para escribir en huecos (p. ej. entre dos bloques).
+   Barra sólida (no `border-top`), sin blink y sin gate de foco, para que sea
+   inequívocamente visible (el elemento solo existe cuando hay un gapcursor). */
+.ProseMirror-gapcursor {
+  display: block;
+  pointer-events: none;
+  position: absolute;
+}
+.ProseMirror-gapcursor::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: -2px;
+  height: 3px;
+  width: 2.5rem;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+.matex-raw-latex {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+  background: var(--color-surface-muted);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px dashed var(--color-border);
+  white-space: pre-wrap;
+  margin: 0.7rem 0;
+}
+/* Caja / callout (tcolorbox): color por variante. */
+.matex-callout {
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--callout-accent, var(--color-primary));
+  margin: 0.9rem 0;
+  overflow: hidden;
+}
+.matex-callout-header {
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  color: var(--color-ink);
+  background: var(--callout-bg, var(--color-surface-muted));
+}
+.matex-callout-body {
+  padding: 0.2rem 0.8rem;
+}
+/* Diapositiva (presentación, ME-23). */
+.matex-slide {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin: 0.9rem 0;
+  overflow: hidden;
+}
+.matex-slide-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+.matex-slide-badge {
+  flex: none;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+}
+.matex-slide-title {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0.15rem 0.4rem;
+  color: var(--color-ink);
+  outline: none;
+}
+.matex-slide-title:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+.matex-slide-reveal {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-ink-muted);
+  font-size: 0.8rem;
+}
+.matex-slide-body {
+  padding: 0.4rem 0.8rem;
+}
+/* Columnas (presentación). */
+.matex-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.7rem 0;
+  align-items: flex-start;
+}
+.matex-column {
+  flex: 1;
+  min-width: 10rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+}
+.matex-callout[data-variant='note'] {
+  --callout-accent: #3b6fe0;
+  --callout-bg: color-mix(in srgb, #3b6fe0 8%, transparent);
+}
+.matex-callout[data-variant='tip'] {
+  --callout-accent: #2f9e44;
+  --callout-bg: color-mix(in srgb, #2f9e44 9%, transparent);
+}
+.matex-callout[data-variant='warning'] {
+  --callout-accent: #e08a2f;
+  --callout-bg: color-mix(in srgb, #e08a2f 11%, transparent);
+}
+.matex-callout[data-variant='important'] {
+  --callout-accent: #e0553a;
+  --callout-bg: color-mix(in srgb, #e0553a 9%, transparent);
+}
+
+/* Inclusión de archivo (\input): chip de bloque, como rawLatex pero file-based. */
+.matex-include {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  background: var(--color-surface-muted);
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  margin: 0.7rem 0;
+}
+
+/* Figura: imagen centrada + epígrafe (con su número en vivo), estilo "float". */
+.matex-figure {
+  margin: 1rem 0;
+  cursor: pointer;
+  text-align: center;
+}
+/* Partes de la figura (imagen | gráfico): 1 = centrada; ≥2 = lado a lado (subfiguras). */
+.matex-figure-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+.matex-figure-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+/* Leyenda del gráfico como overlay HTML/MathML (misma que el HTML; ver `plotLegendHtml`). */
+.mx-legend {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 12px;
+  color: var(--color-ink);
+  pointer-events: none;
+  max-width: 72%;
+}
+.mx-legend[data-pos='top-left'] {
+  top: 6px;
+  left: 6px;
+}
+.mx-legend[data-pos='top-right'],
+.mx-legend[data-pos='outside-right'] {
+  top: 38px;
+  right: 6px;
+}
+.mx-legend[data-pos='bottom-left'] {
+  bottom: 6px;
+  left: 6px;
+}
+.mx-legend[data-pos='bottom-right'] {
+  bottom: 6px;
+  right: 6px;
+}
+.mx-leg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.mx-leg-swatch {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  flex-shrink: 0;
+}
+/* Botonera flotante del preview: fila fija de íconos (mismo lenguaje visual que el HTML web).
+   Semi-transparente en reposo, plena al pasar/enfocar; los slots deshabilitados quedan atenuados
+   pero **ocupan su lugar** → la fila no se reordena. */
+.matex-plot-tools {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+  max-width: 96%;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+.matex-figure-item:hover .matex-plot-tools,
+.matex-plot-tools:focus-within {
+  opacity: 1;
+}
+.matex-plot-tools button {
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: 0.82rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.matex-plot-tools button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.matex-plot-tools button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* Fijar (📌): acción de "commit" → resalte sutil cuando está activo. */
+.matex-plot-tools button.matex-plot-pin:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+/* Hover (ME-43): punto sobre la curva + tooltip de coordenadas (no capturan el mouse). */
+.matex-hover-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--color-surface);
+  pointer-events: none;
+  z-index: 6;
+}
+.matex-hover-tip {
+  position: absolute;
+  transform: translateY(-100%);
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 6;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+}
+/* Leyenda de rasgos (ME-43): panel con raíces/extremos/asíntotas + coords (overlay, esquina inf. izq.). */
+.mx-featleg {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: 62%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 7px;
+  font-size: 0.68rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.mx-featleg-fn {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+}
+.mx-featleg-sw {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-top: 2px;
+}
+.mx-featleg-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+/* Subfiguras (≥2 partes): reparten la fila en anchos iguales. */
+.matex-figure-items.is-multi > .matex-figure-item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.matex-subfigure-caption {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+.matex-figure-item img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+/* Preview del gráfico (SVG = backend web de la misma spec que compila a pgfplots).
+   Los estilos de ejes/grilla/rótulos/puntos viven **dentro del SVG** (self-contained,
+   `currentColor`) → rinden igual en el editor y en el backend HTML. Ver `relationSvg.ts`. */
+.matex-plot-svg {
+  width: 100%;
+  height: auto;
+}
+.matex-figure-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+  width: 100%;
+  padding: 1rem;
+  color: var(--color-ink-muted);
+  font-size: 0.85rem;
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+}
+.matex-figure-caption {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+/* Epígrafe de tabla en el editor: "Cuadro N: …" debajo de la tabla (como las figuras).
+   Es un widget de decoración (no editable), centrado y en tono apagado. */
+.matex-table-caption {
+  margin: 0.3rem 0 0.9rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+.matex-prose .katex {
+  color: var(--color-ink);
+}
+
+/* Popover flotante para editar un atom (math/rawLatex/ref): el LaTeX se edita acá
+   mientras el KaTeX se actualiza en vivo en el lienzo, sin mover nada. */
+.matex-atom-popover {
+  position: fixed;
+  z-index: 60;
+  max-width: 92vw;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  padding: 0.4rem;
+}
+
+/* Autocompletado inline del editor de fórmulas (ME-16): dropdown de comandos \… que
+   aparece al tipear en un input de matemática. Flotante (fixed), sobre el popover. */
+.matex-mathac {
+  position: fixed;
+  z-index: 70;
+  min-width: 12rem;
+  max-width: 22rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+  padding: 0.2rem;
+}
+.matex-mathac-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.matex-mathac-row.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+.matex-mathac-cmd {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+.matex-mathac-desc {
+  font-size: 0.72rem;
+  color: var(--color-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.matex-mathac-row.is-active .matex-mathac-desc {
+  color: var(--color-primary-ink);
+  opacity: 0.85;
+}
+
+/* Asistente de fórmulas (paleta de símbolos/plantillas). Vive en el desplegable
+   "Símbolos" de la barra contextual e inserta en la fórmula que se está editando. */
+.matex-palette {
+  width: 27rem;
+  max-width: 88vw;
+}
+.matex-palette-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-bottom: 0.35rem;
+}
+.matex-palette-tab {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+.matex-palette-tab:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+}
+.matex-palette-tab-active {
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+.matex-palette-tab-active:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+.matex-palette-search {
+  width: 100%;
+  margin-bottom: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.78rem;
+  outline: none;
+}
+.matex-palette-search:focus {
+  border-color: var(--color-primary);
+}
+.matex-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+  gap: 0.25rem;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+.matex-palette-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 3rem;
+  height: 3rem;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.matex-palette-item:hover {
+  background: var(--color-surface-muted);
+  border-color: var(--color-primary);
+}
+.matex-palette-sym {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.2rem;
+}
+/* Etiqueta del comando LaTeX bajo el símbolo (enseña qué escribir). */
+.matex-palette-cmd {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1;
+  color: var(--color-ink-muted);
+}
+.matex-palette-empty {
+  grid-column: 1 / -1;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+/* KaTeX dentro de los botones de la paleta: sin saltos ni márgenes raros. */
+.matex-palette-item .katex {
+  font-size: 1em;
+  line-height: 1;
+}
+.matex-atom-popover-field {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  outline: none;
+  padding: 0.3rem 0.45rem;
+  min-width: 16rem;
+  max-width: 100%;
+  resize: vertical;
+}
+.matex-atom-popover-field:focus {
+  border-color: var(--color-primary);
+}
+textarea.matex-atom-popover-field {
+  min-height: 3.5rem;
+}
+
+/* Referencia rota (destino inexistente) y picker de referencias. */
+.matex-ref-broken {
+  color: #d14343;
+  background: color-mix(in srgb, #d14343 12%, transparent);
+}
+.matex-ref-picker {
+  position: fixed;
+  z-index: 60;
+  width: 24rem;
+  max-height: 18rem;
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  padding: 0.4rem;
+}
+.matex-ref-picker .matex-atom-popover-field {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.matex-ref-list {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.matex-ref-item {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.matex-ref-item:hover,
+.matex-ref-item-active {
+  background: var(--color-surface-muted);
+}
+.matex-ref-empty {
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+}
+/* Editor de filas de una fórmula en bloque (un input por renglón; para align/gather,
+   checkbox "Nº" y quitar por fila, más "agregar fila"). Flota como el popover de atom. */
+.matex-eq-editor {
+  position: fixed;
+  z-index: 60;
+  max-width: 92vw;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+.matex-eq-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 100%;
+}
+.matex-eq-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.matex-eq-row .matex-atom-popover-field {
+  flex: none; /* usa su ancho auto-crecido (autoGrowInput), no estira */
+}
+.matex-eq-row-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.matex-eq-row-rm {
+  color: var(--color-ink-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.matex-eq-row-rm:hover {
+  background: var(--color-surface-muted);
+  color: #d14343;
+}
+.matex-eq-add {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.matex-eq-add:hover {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+/* ── Derivación (razonamiento paso a paso) ── */
+.matex-derivation {
+  cursor: pointer;
+  margin: 0.9rem 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border-left: 3px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+.matex-derivation:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+.matex-deriv-title {
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 0.3rem;
+}
+.matex-deriv-steps {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 1.2rem;
+  align-items: baseline;
+}
+.matex-deriv-step {
+  display: contents;
+}
+.matex-deriv-math {
+  justify-self: start;
+}
+.matex-deriv-note {
+  color: var(--color-ink-muted);
+  font-size: 0.85em;
+  justify-self: start;
+}
+.matex-deriv-empty {
+  grid-column: 1 / -1;
+  color: var(--color-ink-muted);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+/* Popover de edición de la derivación. */
+.matex-deriv-editor {
+  position: fixed;
+  z-index: 60;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+.matex-deriv-titlefield,
+.matex-deriv-notefield {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  outline: none;
+}
+.matex-deriv-titlefield:focus,
+.matex-deriv-notefield:focus {
+  border-color: var(--color-primary);
+}
+.matex-deriv-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.matex-deriv-editrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.matex-deriv-boxed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+/* ── Razonamiento en dos columnas (contenido rico por celda) ── */
+.matex-reasoning {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.9rem 0;
+  padding: 0.3rem 0 0.3rem 0.7rem;
+  border-left: 3px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+.matex-reasoning[data-title]::before {
+  content: attr(data-title);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 0.1rem;
+}
+.matex-reasoning-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.matex-reasoning-addrow {
+  align-self: flex-start;
+  font-size: 0.72rem;
+  color: var(--color-primary);
+  padding: 0.15rem 0.6rem;
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 45%, transparent);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+.matex-reasoning-addrow:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+.matex-reasoning-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.matex-reasoning-row.is-boxed {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+/* La celda derecha, más tenue (es la justificación). */
+.matex-reasoning-cell:last-child {
+  color: var(--color-ink-muted);
+  border-left: 1px solid var(--color-border);
+  padding-left: 1rem;
+}
+.matex-reasoning-cell {
+  min-width: 0;
+}
+.matex-reasoning-cell > *:first-child {
+  margin-top: 0;
+}
+.matex-reasoning-cell > *:last-child {
+  margin-bottom: 0;
+}
+
+/* El atom que se está editando queda resaltado (feedback de "estás acá"). */
+.matex-editing {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Referencia cruzada en línea (chip). */
+.matex-ref {
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+/* Nota al pie en línea: marcador superíndice «†» (el número lo pone LaTeX). */
+.matex-footnote {
+  cursor: pointer;
+  vertical-align: super;
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--color-primary);
+  padding: 0 1px;
+}
+
+/* Cita bibliográfica en línea (chip). */
+.matex-cite {
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.matex-cite-broken {
+  color: #d14343;
+  background: color-mix(in srgb, #d14343 12%, transparent);
+  border-color: color-mix(in srgb, #d14343 35%, transparent);
+}
+/* Picker de cita: input de claves + toggle de estilo + chips de claves disponibles. */
+.matex-cite-picker {
+  position: fixed;
+  z-index: 60;
+  width: 22rem;
+  max-height: 20rem;
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.matex-cite-picker .matex-atom-popover-field {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.matex-cite-style {
+  display: flex;
+  gap: 0.3rem;
+}
+.matex-cite-style-btn {
+  flex: 1;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+.matex-cite-style-btn.is-active {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+.matex-cite-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.matex-cite-chip {
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+  background: var(--color-surface-muted);
+  cursor: pointer;
+}
+.matex-cite-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Tablas editables (TipTap). Mostramos bordes de celda para editar cómodo; el PDF
+   sale booktabs (sin verticales) — el borde es solo una ayuda visual del editor. */
+.matex-prose table {
+  border-collapse: collapse;
+  margin: 0.9rem auto;
+  table-layout: fixed;
+}
+.matex-prose th,
+.matex-prose td {
+  border: 1px solid var(--color-border);
+  padding: 0.3rem 0.6rem;
+  min-width: 4rem;
+  vertical-align: top;
+  position: relative;
+}
+.matex-prose th {
+  /* Sin negrita (booktabs): el encabezado se distingue por el fondo y el \midrule. */
+  font-weight: inherit;
+  background: var(--color-surface-muted);
+}
+.matex-prose table p {
+  margin: 0;
+}
+.matex-prose .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  pointer-events: none;
+}
+
+/* Entornos tipo teorema. */
+.matex-theorem {
+  margin: 0.9rem 0;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  padding: 0.6rem 0.85rem;
+}
+.matex-theorem-header {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 0.35rem;
+}
+.matex-theorem[data-variant='proof'] {
+  border-left-style: dashed;
+  background: transparent;
+}
+.matex-theorem[data-variant='proof'] .matex-theorem-header {
+  font-weight: 500;
+  font-style: italic;
+}
+.matex-theorem-body > :first-child {
+  margin-top: 0;
+}
+.matex-theorem-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* Nodo seleccionado (atom) resaltado. */
+.matex-prose .ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}

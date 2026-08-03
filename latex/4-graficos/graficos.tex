@@ -1,0 +1,764 @@
+% =====================================================================
+%  Gráficos y figuras en LaTeX — suite de documentos LaTeX
+%  Nivel 2 (Capacidades) · clase article.
+%  Compilar: latexmk -pdf graficos.tex
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Base estándar ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{csquotes}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+% --- Gráficos ---
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{tikz}
+\usetikzlibrary{calc,arrows.meta,positioning,patterns,shapes.geometric,
+                decorations.pathreplacing,angles,quotes}
+\usepackage{tikz-cd}
+\usepackage{forest}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{fillbetween,polar}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{placeins}
+% --- Enlaces ---
+\usepackage{hyperref}
+\hypersetup{unicode, pdftitle={Gráficos y figuras en LaTeX},
+            pdfauthor={Rodrigo Martín Vidal Galán},
+            colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage[spanish,capitalise,nameinlink]{cleveref}
+
+% --- Estilo de código ---
+\definecolor{codeback}{RGB}{245,247,250}
+\definecolor{codekw}{RGB}{20,60,120}
+\definecolor{codecom}{RGB}{110,120,135}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codeback},
+  frame=single, rulecolor=\color{codekw!30},
+  breaklines=true, showstringspaces=false, columns=fullflexible,
+  language=[LaTeX]TeX, xleftmargin=8pt, xrightmargin=4pt, framesep=4pt,
+  extendedchars=true,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {¿}{{?`}}1 {¡}{{!`}}1 {°}{{\textdegree}}1,
+}
+\newcommand{\C}[1]{\texttt{\textbackslash #1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\produce}{\par\smallskip\noindent\textit{produce:}\par\smallskip}
+
+% estilo de eje reutilizable para los ejemplos
+\pgfplotsset{
+  ejemplo/.style={width=9cm, height=5.6cm, axis lines=middle,
+    xlabel=$x$, ylabel=$y$, every axis x label/.style={at={(ticklabel* cs:1)},anchor=west},
+    every axis y label/.style={at={(ticklabel* cs:1)},anchor=south},
+    samples=100, grid=both, grid style={gray!18},
+    label style={font=\small}, tick label style={font=\footnotesize}},
+}
+
+\title{\textbf{Gráficos y figuras en \LaTeX}\\[2pt]
+       \large Imágenes, TikZ y graficar funciones con \pkg{pgfplots}}
+\author{Rodrigo Martín Vidal Galán}
+\date{Junio de 2026}
+
+\begin{document}
+\maketitle
+
+\noindent Cómo poner \textbf{imágenes} y, sobre todo, cómo \textbf{graficar
+funciones y datos} sin salir de \LaTeX. El foco es \pkg{pgfplots} (gráficos
+matemáticos de calidad, vectoriales y consistentes con el texto), pero también
+se cubre \pkg{TikZ} (dibujo general y diagramas) y la inserción de imágenes.
+Formato: cada idea muestra el \textbf{código} y debajo su \textbf{resultado}.
+\emph{(Para el preámbulo recomendado, ver \emph{Estándares}.)}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Panorama: vectorial vs.\ raster}
+% =====================================================================
+Hay dos grandes familias de imágenes, y elegir bien define la calidad del PDF:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+ & \textbf{Formatos} & \textbf{Cuándo usar} \\
+\midrule
+\textbf{Vectorial} & PDF, EPS; TikZ, \pkg{pgfplots} & Gráficos de funciones, diagramas, esquemas. \textbf{No se pixela}; escala perfecto. \\
+\textbf{Raster} & PNG, JPG & Solo fotos o capturas de pantalla. Se \textbf{pixela} al ampliar. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+La gran ventaja de generar los gráficos \emph{dentro} de \LaTeX{} (con TikZ/
+\pkg{pgfplots}) es que usan \textbf{la misma fuente y tamaño} que el texto: las
+etiquetas $x$, $\pi$ o $\sqrt{2}$ se ven idénticas a las del cuerpo, y todo queda
+vectorial. Por eso, en matemática, preferí siempre dibujar el gráfico antes que
+pegar una captura. La regla práctica: \textbf{si lo podés describir, dibujalo};
+reservá PNG/JPG para fotografías.
+
+% =====================================================================
+\section{Imágenes externas: \texttt{graphicx}}
+% =====================================================================
+Para insertar un archivo de imagen se usa \pkg{graphicx} y \C{includegraphics}:
+\begin{lstlisting}
+\usepackage{graphicx}
+\graphicspath{{figuras/}{img/}}   % carpetas donde buscar (con la barra final)
+...
+\includegraphics[width=0.6\textwidth]{foto}        % sin extension: la elige solo
+\includegraphics[height=4cm]{esquema}
+\includegraphics[scale=0.5, angle=90]{plano}       % escalar y rotar
+\includegraphics[width=3cm, trim=10 20 10 5, clip]{captura}  % recortar bordes
+\end{lstlisting}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Opción} & \textbf{Efecto} \\
+\midrule
+\texttt{width} / \texttt{height} & Fija ancho o alto (lo más usado: \texttt{width=0.8\C{linewidth}}). \\
+\texttt{scale} & Factor de escala respecto del tamaño natural. \\
+\texttt{angle} & Rota la imagen (grados, antihorario). \\
+\texttt{trim=l b r t}, \texttt{clip} & Recorta \emph{left/bottom/right/top} y oculta lo recortado. \\
+\texttt{keepaspectratio} & Evita deformar si das ancho \emph{y} alto. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{quote}\small
+\textbf{Buenas prácticas:} fijá el ancho \textbf{relativo} al texto
+(\texttt{0.6\C{textwidth}}) para que la figura se adapte a los márgenes; guardá
+las imágenes en una subcarpeta declarada con \C{graphicspath}; nombrá los
+archivos con sentido (\texttt{parabola.pdf}, no \texttt{img1.png}). Para recortes
+y encuadres más cómodos está el paquete \pkg{adjustbox}.
+\end{quote}
+
+% =====================================================================
+\section{El entorno \texttt{figure} y el posicionamiento}
+% =====================================================================
+Una imagen \enquote{de verdad} va dentro de un entorno \texttt{figure}, que la
+convierte en un \textbf{flotante} numerado, con epígrafe y referenciable:
+\begin{lstlisting}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.5\textwidth]{parabola}
+  \caption{Una parabola.}      % SIEMPRE antes del label
+  \label{fig:parabola}         % para citarla con \cref
+\end{figure}
+\end{lstlisting}
+
+\paragraph{Cómo funcionan los flotantes.} \LaTeX{} no necesariamente pone la
+figura donde la escribiste: la \enquote{flota} hasta un lugar donde no deje
+huecos feos. Vos \textbf{sugerís} con la especificación de posición:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Especificador} & \textbf{Significado} \\
+\midrule
+\texttt{h} & \emph{here}: aproximadamente acá. \\
+\texttt{t} / \texttt{b} & arriba (\emph{top}) / abajo (\emph{bottom}) de una página. \\
+\texttt{p} & en una página solo de flotantes. \\
+\texttt{!} & ignorá las restricciones estéticas internas (probá más fuerte). \\
+\texttt{H} & \textbf{exactamente acá} (requiere \pkg{float}); no flota. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Lo habitual es \texttt{[htbp]} (dejá que \LaTeX{} decida) y, solo si \emph{tiene}
+que ir en un punto exacto, \texttt{[H]}. Si los flotantes se te \enquote{escapan}
+hacia adelante, \C{FloatBarrier} (paquete \pkg{placeins}) los obliga a resolverse
+antes de seguir. \textbf{Citá siempre con} \C{cref\{fig:\dots\}}: si agregás otra
+figura, la numeración se ajusta sola.
+
+\paragraph{Texto alrededor de la figura (\texttt{wrapfig}).} Para que el texto
+\textbf{envuelva} una figura chica:
+\begin{lstlisting}
+\begin{wrapfigure}{r}{0.32\textwidth}   % r = a la derecha; 0.32\textwidth de ancho
+  \centering
+  \includegraphics[width=0.28\textwidth]{esquema}
+  \caption{Al margen.}
+\end{wrapfigure}
+\end{lstlisting}
+
+% =====================================================================
+\section{Subfiguras (lado a lado)}
+% =====================================================================
+Para varias imágenes con su propia letra (a), (b)\dots dentro de una figura, se
+usa \pkg{subcaption}:
+\begin{lstlisting}
+\begin{figure}[H]\centering
+  \begin{subfigure}{0.45\textwidth}\centering
+    ... \caption{Creciente}\label{fig:a}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.45\textwidth}\centering
+    ... \caption{Decreciente}\label{fig:b}
+  \end{subfigure}
+  \caption{Dos comportamientos.}\label{fig:dos}
+\end{figure}
+\end{lstlisting}
+Se referencian con \C{cref\{fig:a\}} (la subfigura) o \C{cref\{fig:dos\}} (el
+conjunto). El \C{hfill} entre subfiguras reparte el espacio sobrante; con tres o
+más, \C{hfill} entre todas las distribuye parejo.
+
+% =====================================================================
+\section{TikZ a fondo}
+% =====================================================================
+\pkg{TikZ} es el \enquote{lenguaje de dibujo} de \LaTeX. Todo ocurre dentro de
+\texttt{tikzpicture}, sobre un plano de \textbf{coordenadas} (en cm por defecto).
+
+\paragraph{Trazos, nodos y rellenos.}
+\begin{lstlisting}
+\begin{tikzpicture}
+  \draw[->] (0,0) -- (3,0) node[right]{$x$};    % flecha + etiqueta al final
+  \draw[blue, thick] (0,0) -- (2,1.5);          % segmento
+  \draw[red] (0,0) circle (1);                   % circunferencia r=1
+  \fill[green!60] (2,1.5) circle (2pt);          % punto relleno
+  \node[draw, rounded corners] at (1,2) {caja};  % nodo con borde
+\end{tikzpicture}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}[scale=0.9]
+  \draw[->] (0,0) -- (3,0) node[right]{$x$};
+  \draw[blue, thick] (0,0) -- (2,1.5);
+  \draw[red] (0,0) circle (1);
+  \fill[green!60!black] (2,1.5) circle (2pt);
+  \node[draw, rounded corners] at (1,2) {caja};
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Curvas, arcos y ángulos.} Más allá de las rectas, TikZ traza curvas
+Bézier (\texttt{.. controls ..}) o suaves (\texttt{to[out=,in=]}), arcos y marcas
+de ángulo:
+\begin{lstlisting}
+\draw (0,0) to[out=60,in=180] (3,1);        % curva suave por direcciones
+\draw (0,0) .. controls (1,2) .. (3,0);     % Bezier con punto de control
+\draw (2,0) arc (0:120:2);                  % arco: de 0 a 120 grados, radio 2
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+  \draw[thick,blue] (0,0) to[out=60,in=180] (3,1);
+  \draw[thick,red] (0,-1.2) .. controls (1,0.8) .. (3,-1.2);
+  \draw[thick,green!50!black] (5,0) arc (0:120:1);
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Estilos y \texttt{positioning}.} En vez de repetir opciones, se definen
+\textbf{estilos}; y con la librería \texttt{positioning} se ubican nodos
+\emph{relativos} entre sí (\texttt{right=of}, \texttt{below=of}). Esto es la base
+de los diagramas:
+\begin{lstlisting}
+\begin{tikzpicture}[
+    caja/.style={draw, rounded corners, fill=blue!10, minimum width=2cm},
+    flecha/.style={-{Stealth}, thick}]
+  \node[caja] (a) {Inicio};
+  \node[caja, right=1.5cm of a] (b) {Proceso};
+  \node[caja, right=1.5cm of b] (c) {Fin};
+  \draw[flecha] (a) -- (b);   \draw[flecha] (b) -- (c);
+\end{tikzpicture}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}[
+    caja/.style={draw, rounded corners, fill=blue!10, minimum width=1.9cm, font=\small},
+    flecha/.style={-{Stealth}, thick}]
+  \node[caja] (a) {Inicio};
+  \node[caja, right=1.2cm of a] (b) {Proceso};
+  \node[caja, right=1.2cm of b] (c) {Fin};
+  \draw[flecha] (a) -- (b);   \draw[flecha] (b) -- (c);
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Repetir con \texttt{\textbackslash foreach}.} Para grillas o elementos
+repetidos sin copiar y pegar:
+\begin{lstlisting}
+\foreach \x in {0,1,...,5}{ \fill (\x,0) circle (2pt); }
+\foreach \x in {0,...,3}\foreach \y in {0,...,3}{ \draw (\x,\y) circle (1pt); }
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}[scale=0.55]
+  \foreach \x in {0,...,3}\foreach \y in {0,...,3}{ \fill[blue!50] (\x,\y) circle (2pt); }
+\end{tikzpicture}
+\end{center}
+TikZ es enorme (sombras, patrones, capas, animaciones); acá vimos lo esencial.
+Para \textbf{graficar funciones}, conviene su capa especializada: \pkg{pgfplots}.
+
+% =====================================================================
+\section{El entorno \texttt{axis} de \texttt{pgfplots}}
+% =====================================================================
+\pkg{pgfplots} agrega el entorno \texttt{axis}, con ejes, escalas, grilla y
+leyenda automáticos. Una función se dibuja con \C{addplot} dando su
+\textbf{dominio} y la cantidad de \textbf{muestras}:
+\begin{lstlisting}
+\begin{tikzpicture}
+  \begin{axis}[axis lines=middle, xlabel=$x$, ylabel=$y$,
+      width=9cm, height=6cm, samples=100, grid=both, domain=-3:3]
+    \addplot[blue, thick] {x^2};
+    \addplot[red,  thick] {x^3 - 2*x};
+    \legend{$x^2$, $x^3-2x$}
+  \end{axis}
+\end{tikzpicture}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+  \begin{axis}[ejemplo, domain=-3:3, legend pos=north west, legend style={font=\footnotesize}]
+    \addplot[blue, thick] {x^2};
+    \addplot[red,  thick] {x^3 - 2*x};
+    \legend{$x^2$, $x^3-2x$}
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+
+\noindent\textbf{Opciones del entorno \texttt{axis} (referencia).}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Opción} & \textbf{Para qué} \\
+\midrule
+\texttt{axis lines=middle/box/left} & ejes cruzados en el origen / marco / en L. \\
+\texttt{domain=a:b}, \texttt{samples=N} & rango de $x$ y cantidad de puntos (subilo si se ve quebrada). \\
+\texttt{xmin/xmax/ymin/ymax} & recorta la ventana visible. \\
+\texttt{grid=both}, \texttt{grid style=} & grilla mayor/menor y su estilo. \\
+\texttt{xlabel/ylabel/title} & rótulos. \\
+\texttt{xtick=\{...\}}, \texttt{xticklabels=\{...\}} & marcas y etiquetas a medida. \\
+\texttt{enlargelimits} & margen alrededor de los datos. \\
+\texttt{legend pos}, \C{legend\{...\}} & ubicación y textos de la leyenda. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{quote}\small
+\textbf{Sintaxis de las expresiones:} la multiplicación es explícita (\texttt{2*x},
+no \texttt{2x}) y el exponente es \texttt{\^{}} (\texttt{x\^{}2}). Funciones:
+\texttt{sqrt(x)}, \texttt{exp(x)}, \texttt{ln(x)}, \texttt{abs(x)}. La
+trigonometría trabaja en \textbf{grados}: usá \texttt{sin(deg(x))} para que el eje
+esté en radianes.
+\end{quote}
+
+\paragraph{Ejes a medida.} Cuando el dominio es trigonométrico conviene poner las
+marcas en múltiplos de $\pi$:
+\begin{lstlisting}
+\begin{axis}[domain=0:2*pi, samples=200, axis lines=middle,
+    xtick={0,1.5708,3.1416,4.7124,6.2832},
+    xticklabels={$0$,$\frac{\pi}{2}$,$\pi$,$\frac{3\pi}{2}$,$2\pi$}]
+  \addplot[blue,thick]{sin(deg(x))};
+\end{axis}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=11cm,height=4.5cm,domain=0:2*pi, samples=200, axis lines=middle,
+    xlabel=$x$, ymin=-1.3,ymax=1.3,
+    xtick={0,1.5708,3.1416,4.7124,6.2832},
+    xticklabels={$0$,$\frac{\pi}{2}$,$\pi$,$\frac{3\pi}{2}$,$2\pi$},
+    tick label style={font=\footnotesize}]
+  \addplot[blue,thick]{sin(deg(x))};
+  \addplot[red,thick,dashed]{cos(deg(x))};
+  \legend{$\sin x$,$\cos x$}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+% =====================================================================
+\section{Tipos de funciones: a trozos, paramétricas y polares}
+% =====================================================================
+\paragraph{Funciones definidas a trozos.} Se dibujan con un \C{addplot} por tramo,
+cada uno con su \texttt{domain}:
+\begin{lstlisting}
+\addplot[blue,thick,domain=-2:0]{-x};      % rama izquierda
+\addplot[blue,thick,domain=0:2]{x^2};      % rama derecha
+\addplot[holdot] coordinates {(0,0)};      % opcional: punto vacio/lleno
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[ejemplo, width=8cm, height=5cm, domain=-2:2, ymin=-0.5, ymax=4]
+  \addplot[blue,thick,domain=-2:0]{-x};
+  \addplot[red,thick,domain=0:2]{x^2};
+  \node[anchor=south] at (axis cs:-1.4,1.4) {$-x$};
+  \node[anchor=west]  at (axis cs:1.2,1.6)  {$x^2$};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Curvas paramétricas.} Dando $x(t)$ e $y(t)$ entre paréntesis se trazan
+curvas que una función $y=f(x)$ no puede (círculos, lazos, Lissajous):
+\begin{lstlisting}
+\addplot[domain=0:360, samples=200] ({sin(2*x)}, {sin(3*x)});  % figura de Lissajous
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=6cm,height=6cm,axis equal,axis lines=middle,
+             xlabel=$x$,ylabel=$y$,tick label style={font=\footnotesize}]
+  \addplot[blue,thick,domain=0:360,samples=200] ({sin(2*x)}, {sin(3*x)});
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Coordenadas polares.} Con la librería \texttt{polar} y el entorno
+\texttt{polaraxis} se grafican curvas $r(\theta)$ (rosas, espirales, cardioides):
+\begin{lstlisting}
+\usepgfplotslibrary{polar}   % en el preambulo
+...
+\begin{polaraxis}
+  \addplot[blue,thick,domain=0:360,samples=200] {cos(2*x)};  % rosa de 4 petalos
+\end{polaraxis}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{polaraxis}[width=6.5cm]
+  \addplot[blue,thick,domain=0:360,samples=300] {cos(2*x)};
+\end{polaraxis}
+\end{tikzpicture}
+\end{center}
+
+% =====================================================================
+\section{Estilo: líneas, marcadores, leyenda y anotaciones}
+% =====================================================================
+Cada \C{addplot} acepta opciones de estilo; las más usadas:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Opción} & \textbf{Efecto} \\
+\midrule
+\texttt{thick}, \texttt{very thick}, \texttt{line width=} & grosor del trazo. \\
+\texttt{dashed}, \texttt{dotted}, \texttt{dash dot} & tipo de línea. \\
+\texttt{mark=*/o/square*/triangle*/x} & marcador en cada punto. \\
+\texttt{only marks} & solo marcadores (nube de puntos), sin línea. \\
+\texttt{smooth} & une los puntos con una curva suave. \\
+\texttt{fill=, opacity=} & relleno y transparencia. \\
+\texttt{nodes near coords} & escribe el valor sobre cada punto. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Para \textbf{anotar} (marcar un punto, poner una etiqueta), se usan nodos en
+coordenadas del eje, \texttt{axis cs:$x$,$y$}, que significan \enquote{el punto
+$(x,y)$ \emph{en las unidades de la función}} (no en cm del dibujo):
+\begin{lstlisting}
+\node[pin=30:{máximo}] at (axis cs:1,1) {};
+\draw[<-] (axis cs:1,1) -- (axis cs:2,2) node[right]{aquí};
+\end{lstlisting}
+
+% =====================================================================
+\section{Análisis de funciones: extremos, asíntotas y áreas}
+% =====================================================================
+Lo que más se necesita al estudiar funciones.
+
+\paragraph{Marcar un punto / un extremo y una asíntota.}
+\begin{lstlisting}
+\addplot[blue, thick] {ln(x)};
+\draw[dashed] (axis cs:0,-3) -- (axis cs:0,3);     % asintota vertical x=0
+\addplot[only marks, mark=*] coordinates {(1,0)};  % el punto (1,0)
+\node[above right] at (axis cs:1,0) {$(1,0)$};
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[ejemplo, width=8.5cm, height=5cm, domain=0.08:4, ymin=-3, ymax=2]
+  \addplot[blue, thick] {ln(x)};
+  \draw[dashed, gray] (axis cs:0,-3) -- (axis cs:0,2);
+  \addplot[only marks, mark=*] coordinates {(1,0)};
+  \node[above right, font=\footnotesize] at (axis cs:1,0) {$(1,0)$};
+  \node[gray, font=\footnotesize, anchor=south] at (axis cs:0.05,-2.5) {asíntota};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Área bajo la curva (la integral).} Con la librería \texttt{fillbetween}
+se rellena entre la curva y el eje:
+\begin{lstlisting}
+\usepgfplotslibrary{fillbetween}   % en el preambulo
+...
+\addplot[blue, thick, name path=f, domain=0:2] {x^2};
+\path[name path=eje] (axis cs:0,0) -- (axis cs:2,0);
+\addplot[blue!20] fill between[of=f and eje];
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[ejemplo, width=8cm, height=5cm, domain=0:2, samples=80,
+             ymin=0, xmin=-0.3, xmax=2.4, grid=none]
+  \addplot[blue, thick, name path=f] {x^2};
+  \path[name path=eje] (axis cs:0,0) -- (axis cs:2,0);
+  \addplot[blue!20] fill between[of=f and eje];
+  \node at (axis cs:1.3,1) {$\displaystyle\int_0^2 x^2\,dx$};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Área entre dos curvas.} El mismo mecanismo, rellenando entre dos
+\texttt{name path}:
+\begin{lstlisting}
+\addplot[name path=f, domain=0:1]{sqrt(x)};
+\addplot[name path=g, domain=0:1]{x^2};
+\addplot[orange!30] fill between[of=f and g];
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[ejemplo, width=7.5cm, height=5cm, domain=0:1, samples=80,
+             xmin=-0.1,xmax=1.1, ymin=-0.1, ymax=1.1, grid=none]
+  \addplot[blue,thick,name path=f]{sqrt(x)};
+  \addplot[red,thick,name path=g]{x^2};
+  \addplot[orange!30] fill between[of=f and g];
+  \legend{$\sqrt{x}$,$x^2$}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+% =====================================================================
+\section{Escalas logarítmicas, barras e incertidumbre}
+% =====================================================================
+\paragraph{Escala logarítmica.} Para datos que abarcan varios órdenes de magnitud
+están \texttt{semilogyaxis} (log solo en $y$), \texttt{semilogxaxis} y
+\texttt{loglogaxis}:
+\begin{lstlisting}
+\begin{semilogyaxis}[xlabel=$x$, ylabel=$y$]
+  \addplot[blue,thick,domain=0:6,samples=50]{exp(x)};   % recta en escala log-y
+\end{semilogyaxis}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{semilogyaxis}[width=8.5cm,height=4.6cm,xlabel=$x$,ylabel=$e^x$,grid=both,
+                     tick label style={font=\footnotesize}]
+  \addplot[blue,thick,domain=0:6,samples=50]{exp(x)};
+\end{semilogyaxis}
+\end{tikzpicture}
+\end{center}
+
+\paragraph{Gráfico de barras.} Con \texttt{ybar} (o \texttt{xbar}); \texttt{symbolic
+x coords} permite categorías de texto y \texttt{nodes near coords} pone el valor:
+\begin{lstlisting}
+\begin{axis}[ybar, symbolic x coords={A,B,C,D}, xtick=data, nodes near coords]
+  \addplot coordinates {(A,3) (B,5) (C,2) (D,4)};
+\end{axis}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[ybar, width=8.5cm, height=4.6cm, symbolic x coords={A,B,C,D},
+   xtick=data, nodes near coords, ymin=0, enlarge x limits=0.2,
+   bar width=14pt, tick label style={font=\footnotesize},
+   nodes near coords style={font=\footnotesize}]
+  \addplot[fill=blue!50] coordinates {(A,3) (B,5) (C,2) (D,4)};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+Para \textbf{histogramas} a partir de datos crudos está la librería
+\texttt{statistics} (\texttt{\textbackslash addplot+[hist]\dots}).
+
+\paragraph{Barras de error.} Para mediciones con incertidumbre:
+\begin{lstlisting}
+\addplot+[error bars/.cd, y dir=both, y explicit]
+  table[y error=err] {x  y    err
+                      1  2.0  0.3
+                      2  3.1  0.2
+                      3  3.9  0.4};
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=8.5cm,height=4.6cm,axis lines=left,xlabel=$x$,ylabel=$y$,
+             tick label style={font=\footnotesize}, xmin=0.5,xmax=3.5]
+  \addplot+[only marks, error bars/.cd, y dir=both, y explicit]
+    table[y error=err] {x  y    err
+                        1  2.0  0.3
+                        2  3.1  0.2
+                        3  3.9  0.4};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+% =====================================================================
+\section{Graficar datos (coordenadas, tablas y archivos)}
+% =====================================================================
+\pkg{pgfplots} dibuja datos discretos escritos a mano, en una tabla \emph{inline}
+o leídos de un archivo externo:
+\begin{lstlisting}
+\addplot[only marks, mark=*] coordinates {(1,2) (2,3.5) (3,3) (4,5)};
+\addplot[mark=square*] table { x  y
+                               1  2
+                               2  3.5 };
+\addplot table[x=t, y=v] {datos.dat};   % columnas por nombre, desde archivo
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=8.5cm,height=4.6cm,axis lines=left,xlabel=$x$,ylabel=$y$,grid=both,
+             tick label style={font=\footnotesize}]
+  \addplot[only marks, mark=*, blue] coordinates {(1,2) (2,3.5) (3,3) (4,5)};
+  \addplot[red, thick] table { x  y
+                               1  2
+                               2  3.5
+                               3  3
+                               4  5 };
+  \legend{datos, poligonal}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+Esto es ideal para mediciones de laboratorio o resultados de un cálculo: los datos
+viven en un \texttt{.dat} aparte y el gráfico se actualiza solo al cambiarlos.
+
+% =====================================================================
+\section{Gráficos en 3D}
+% =====================================================================
+\pkg{pgfplots} también grafica superficies $z=f(x,y)$ con \C{addplot3}. Los estilos
+\texttt{surf} (superficie coloreada), \texttt{mesh} (malla) y \texttt{contour}
+(curvas de nivel) son los más usados:
+\begin{lstlisting}
+\begin{axis}[xlabel=$x$, ylabel=$y$, zlabel=$z$, colormap/viridis]
+  \addplot3[surf, domain=-2:2, domain y=-2:2, samples=25]
+    {exp(-x^2-y^2)};      % campana gaussiana
+\end{axis}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=9cm,height=6.5cm,xlabel=$x$,ylabel=$y$,zlabel=$z$,
+             tick label style={font=\footnotesize}, view={40}{30}]
+  \addplot3[surf, domain=-2:2, domain y=-2:2, samples=24]
+    {exp(-x^2-y^2)};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\texttt{view=\{azimut\}\{elevación\}} gira la cámara. Con \texttt{samples} alto el
+3D se vuelve lento: ahí conviene externalizar (más abajo).
+
+% =====================================================================
+\section{Estilos reutilizables, \texttt{cycle list} y \texttt{colormap}}
+% =====================================================================
+Para no repetir opciones en cada gráfico, se definen \textbf{estilos} con
+\C{pgfplotsset} (principio DRY):
+\begin{lstlisting}
+\pgfplotsset{
+  mi eje/.style={axis lines=middle, grid=both, width=9cm, height=6cm,
+                 xlabel=$x$, ylabel=$y$}}
+...
+\begin{axis}[mi eje, domain=-3:3] ... \end{axis}   % aplica todo el bloque
+\end{lstlisting}
+El \texttt{cycle list} define los colores/estilos que se asignan automáticamente a
+curvas sucesivas; y \texttt{colormap} (\texttt{viridis}, \texttt{hot},
+\texttt{cool}\dots) controla los degradados de \texttt{surf} y mapas de calor. Este
+mismo documento usa un estilo \texttt{ejemplo} para todas sus figuras.
+
+% =====================================================================
+\section{Otros motores: gnuplot y Python}
+% =====================================================================
+Además de su propio motor, \pkg{pgfplots} puede delegar el cálculo:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{gnuplot} para fórmulas que el motor interno no maneja bien (o datos
+        complejos). Requiere \texttt{gnuplot} instalado y compilar con
+        \texttt{-shell-escape}:
+\begin{lstlisting}
+\addplot gnuplot[domain=0:5] {besj0(x)};   % funcion de Bessel via gnuplot
+\end{lstlisting}
+  \item \textbf{Python} (con \pkg{pythontex} o \texttt{matplotlib2tikz}/
+        \texttt{tikzplotlib}): generás los datos o el propio gráfico en Python y
+        los traés al PDF. Útil para datos reales y cálculos pesados (ver
+        \emph{Programación}).
+\end{itemize}
+En ambos casos, como ejecutan programas externos, necesitan \texttt{-shell-escape}
+(ver \emph{Flujo e instalación}).
+
+% =====================================================================
+\section{Diagramas: conmutativos y árboles}
+% =====================================================================
+\paragraph{Diagramas conmutativos (\texttt{tikz-cd}).} Objetos y flechas, típicos
+de álgebra y teoría de categorías. Cada flecha es \C{arrow[\textit{dir},
+"\textit{etiqueta}"]} con \textit{dir} $\in$ \texttt{r/l/u/d}; una comilla
+\texttt{'} pone la etiqueta del otro lado:
+\begin{lstlisting}
+\[ \begin{tikzcd}
+  A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\
+  C \arrow[r, "k"']               & D
+\end{tikzcd} \]
+\end{lstlisting}
+\produce
+\[ \begin{tikzcd}
+  A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\
+  C \arrow[r, "k"']               & D
+\end{tikzcd} \]
+El diagrama \enquote{conmuta} si todos los caminos entre dos objetos coinciden
+(acá, $h\circ f = k\circ g$).
+
+\paragraph{Árboles (\texttt{forest}).} Para árboles (de derivación, taxonomías,
+árboles binarios) el paquete \pkg{forest} usa una sintaxis de corchetes anidados:
+\begin{lstlisting}
+\begin{forest}
+  [Raíz [Izq [A][B]] [Der [C][D]]]
+\end{forest}
+\end{lstlisting}
+\produce
+\begin{center}
+\begin{forest}
+  for tree={draw, rounded corners, fill=blue!8, s sep=8pt, l sep=14pt, font=\small}
+  [Raíz [Izq [A][B]] [Der [C][D]]]
+\end{forest}
+\end{center}
+
+% =====================================================================
+\section{Velocidad: externalizar figuras}
+% =====================================================================
+Cada figura TikZ/\pkg{pgfplots} se \textbf{recalcula} en cada compilación; con
+muchas (o con 3D y \texttt{samples} alto), el documento se vuelve lento. La
+\textbf{externalización} guarda cada figura como un PDF y la reutiliza mientras no
+la cambies:
+\begin{lstlisting}
+\usepgfplotslibrary{external}
+\tikzexternalize[prefix=figuras/]   % requiere compilar con -shell-escape
+\end{lstlisting}
+La primera compilación tarda igual; las siguientes, mucho menos (solo redibuja lo
+que cambió). Alternativa sin \texttt{-shell-escape}: dibujar cada figura en un
+archivo aparte con la clase \texttt{standalone} y luego \C{includegraphics} del PDF.
+
+% =====================================================================
+\section{Buenas prácticas}
+% =====================================================================
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \textbf{Vectorial} (TikZ/\pkg{pgfplots}/PDF) salvo fotos.
+  \item Toda figura en \texttt{figure} con \C{caption}+\C{label}; citá con
+        \C{cref}, nunca el número a mano.
+  \item \textbf{Fijá} \texttt{\textbackslash pgfplotsset\{compat=1.18\}}:
+        reproducibilidad entre versiones.
+  \item Definí \textbf{estilos} reutilizables (\C{pgfplotsset\{.../.style=\{\dots\}\}})
+        en vez de repetir opciones (DRY).
+  \item Subí \texttt{samples} si la curva se ve quebrada; bajalo si compila lento.
+  \item \texttt{axis cs:} para anotar en coordenadas de la función, no en cm.
+  \item Con muchas figuras o 3D, \textbf{externalizá}.
+\end{itemize}
+
+% =====================================================================
+\section*{Ver también}
+% =====================================================================
+\addcontentsline{toc}{section}{Ver también}
+\begin{itemize}[noitemsep,leftmargin=*]
+  \item \emph{Matemática} — escribir las fórmulas que etiquetan los gráficos.
+  \item \emph{Estándares} — preámbulo y \texttt{compat} de \pkg{pgfplots}.
+  \item \emph{Programación} — generar datos/gráficos con Python o Lua.
+  \item \emph{Flujo e instalación} — \texttt{-shell-escape} y externalización.
+  \item Manuales: \texttt{texdoc pgfplots}, \texttt{texdoc pgf} (TikZ),
+        \texttt{texdoc tikz-cd}, \texttt{texdoc forest}.
+\end{itemize}
+
+\end{document}
