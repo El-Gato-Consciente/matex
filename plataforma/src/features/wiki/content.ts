@@ -100,7 +100,7 @@ export const wikiGroups: readonly WikiGroup[] = [
               {
                 title: 'Escribí',
                 markdown:
-                  'Como en cualquier editor. Para títulos, listas y negrita está **Formato**; para fórmulas, teoremas, tablas y gráficos, **Insertar**.',
+                  'Como en cualquier editor. Para títulos, listas y negrita está **Formato**; para fórmulas, teoremas, tablas y gráficos, **Insertar**, o escribí `/` en el texto.',
               },
               {
                 title: 'Mirá la vista previa',
@@ -131,7 +131,18 @@ export const wikiGroups: readonly WikiGroup[] = [
             id: 'vista-previa',
             caption: 'La vista previa: PDF (compilado), HTML (en vivo), LaTeX y AST. Las cuatro son el mismo documento.',
           },
-          { kind: 'prose', markdown: 'Arriba del documento hay dos menús:' },
+          {
+            kind: 'prose',
+            markdown:
+              'Escribís sobre una **hoja**, con la portada arriba: el título se edita ahí mismo, y al hacer clic en los autores o el resumen se abre la ventana **Portada**.',
+          },
+          {
+            kind: 'callout',
+            tone: 'tip',
+            markdown:
+              '**Escribí `/`** al principio de un renglón (o después de un espacio) y aparece el menú para insertar: seguí tipeando para filtrar —`/teo` → Teorema, `/graf` → Gráfico de funciones— y Enter para insertarlo.',
+          },
+          { kind: 'prose', markdown: 'Arriba del documento hay dos menús, con lo mismo que el `/`:' },
           {
             kind: 'cards',
             items: [
@@ -434,6 +445,7 @@ export const wikiGroups: readonly WikiGroup[] = [
           {
             kind: 'keys',
             items: [
+              { keys: ['/'], desc: 'Menú para insertar cualquier cosa (seguí tipeando para filtrar).' },
               { keys: ['$$'], desc: 'Fórmula en línea.' },
               { keys: ['@'], desc: 'Referencia cruzada.' },
               { keys: ['#'], desc: 'Cita.' },

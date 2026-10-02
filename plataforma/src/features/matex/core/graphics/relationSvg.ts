@@ -75,6 +75,8 @@ export const PLOT_VIEW = { w: 340, h: 220, pad: 8 } as const
 const PW = PLOT_VIEW.w
 const PH = PLOT_VIEW.h
 const PPAD = PLOT_VIEW.pad
+/** Ancho aproximado de un carácter de las marcas de los ejes (`.matex-plot-tick`: 7,5 px). */
+const TICK_CHAR_W = 4.3
 
 /** Rango Y automático (con 8% de margen) a partir de valores finitos; `[-1,1]` si no hay. */
 function autoRangeFrom(ys: readonly number[]): [number, number] {
@@ -470,19 +472,32 @@ export function plotToSvg(specIn: PlotSpec, view?: PlotView): string {
     const numLbl = (v: number): string => String(Number(v.toFixed(6))).replace('-', '−')
     if (!spec.piTicks) {
       const y0 = dymin <= 0 && dymax >= 0 ? sy(0) : H - pad
+      // Si el eje X va pegado al borde de abajo, los números irían fuera del viewBox: van arriba.
+      const tickY = y0 + 11 <= H ? y0 + 11 : y0 - 5
       for (const tx of niceTicks(dxmin, dxmax)) {
         if (Math.abs(tx) < 1e-9) continue // el 0 lo comparten ambos ejes
         const X = sx(tx)
         line(X, y0 - 2.5, X, y0 + 2.5, 'matex-plot-axis')
-        parts.push(svgTag('text', { x: X.toFixed(1), y: (y0 + 11).toFixed(1), 'text-anchor': 'middle', class: 'matex-plot-tick' }, numLbl(tx)))
+        parts.push(svgTag('text', { x: X.toFixed(1), y: tickY.toFixed(1), 'text-anchor': 'middle', class: 'matex-plot-tick' }, numLbl(tx)))
       }
     }
     const x0 = dxmin <= 0 && dxmax >= 0 ? sx(0) : pad
-    for (const ty of niceTicks(dymin, dymax)) {
-      if (Math.abs(ty) < 1e-9) continue
-      const Y = sy(ty)
+    const yLabels = niceTicks(dymin, dymax)
+      .filter((ty) => Math.abs(ty) >= 1e-9)
+      .map((ty) => ({ Y: sy(ty), label: numLbl(ty) }))
+    // Con el eje Y pegado al borde izquierdo (dominio desde 0), los números a su izquierda
+    // quedaban recortados («1.5» se veía «5»): si el más largo no entra, van a la derecha del eje.
+    const widest = Math.max(0, ...yLabels.map((t) => t.label.length)) * TICK_CHAR_W
+    const yInside = x0 - 4 - widest < 0
+    for (const { Y, label } of yLabels) {
       line(x0 - 2.5, Y, x0 + 2.5, Y, 'matex-plot-axis')
-      parts.push(svgTag('text', { x: (x0 - 4).toFixed(1), y: (Y + 3).toFixed(1), 'text-anchor': 'end', class: 'matex-plot-tick' }, numLbl(ty)))
+      parts.push(
+        svgTag(
+          'text',
+          { x: (yInside ? x0 + 4 : x0 - 4).toFixed(1), y: (Y + 3).toFixed(1), 'text-anchor': yInside ? 'start' : 'end', class: 'matex-plot-tick' },
+          label,
+        ),
+      )
     }
   }
 

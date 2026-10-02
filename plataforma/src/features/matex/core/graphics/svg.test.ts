@@ -96,3 +96,19 @@ describe('chartToSvg (familias A1/A2, puro)', () => {
     expect(chartToSvg({ ...cats, form: 'line' })).toContain('<polyline')
   })
 })
+
+describe('marcas de los ejes dentro del dibujo', () => {
+  // Con el dominio desde 0 el eje Y va pegado al borde izquierdo: sus números a la izquierda
+  // quedaban fuera del viewBox y se recortaban («1.5» se leía «5»).
+  it('con el eje Y en el borde, los números del eje Y van del lado de adentro', () => {
+    const svg = plotToSvg({ functions: [{ expr: 'sqrt(x)' }], domain: [0, 4] } as PlotSpec)
+    const yTicks = [...svg.matchAll(/<text x="([\d.]+)"[^>]*text-anchor="(start|end)"[^>]*class="matex-plot-tick"/g)]
+    expect(yTicks.length).toBeGreaterThan(0)
+    for (const [, , anchor] of yTicks) expect(anchor).toBe('start')
+  })
+
+  it('con el eje Y en el medio, los números siguen a su izquierda', () => {
+    const svg = plotToSvg({ functions: [{ expr: 'x' }], domain: [-4, 4] } as PlotSpec)
+    expect(svg).toMatch(/text-anchor="end"[^>]*class="matex-plot-tick"/)
+  })
+})

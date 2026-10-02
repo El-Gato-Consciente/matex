@@ -23,6 +23,17 @@ describe('plantillas Matex (ME-23)', () => {
     expect(compileToHtml(ast)).toContain('<article class="mx-doc')
   })
 
+  // Un título de nivel 2 sin uno de nivel 1 antes sale numerado «0.1» (una subsección sin
+  // sección madre). Pasó en Informe/TP y en Resolución de práctica.
+  it.each(withMatex.map((t) => [t.id, t] as const))('«%s»: los títulos no saltean niveles', (_id, template) => {
+    let previous = 0
+    for (const block of template.matex!.content) {
+      if (block.type !== 'heading') continue
+      expect(block.level, `«${_id}»: título de nivel ${block.level} después de uno de nivel ${previous}`).toBeLessThanOrEqual(previous + 1)
+      previous = block.level
+    }
+  })
+
   it('la plantilla de presentación compila a beamer con frames', () => {
     const pres = withMatex.find((t) => t.matex?.meta?.family?.kind === 'presentation')
     expect(pres).toBeDefined()

@@ -20,7 +20,7 @@ export const resolucionMatex: MatexDoc = {
   version: 4,
   meta: { title: 'Resolución de práctica', author: 'Tu nombre', date: '' },
   content: [
-    { type: 'heading', level: 2, content: [t('Ejercicio 1')] },
+    { type: 'heading', level: 1, content: [t('Ejercicio 1')] },
     {
       type: 'callout',
       variant: 'note',
@@ -85,16 +85,16 @@ export const informeMatex: MatexDoc = {
   version: 4,
   meta: { title: 'Informe / TP', author: 'Tu nombre', institution: 'Cátedra', date: '', abstract: 'Resumen breve de qué se hizo y qué se encontró.' },
   content: [
-    { type: 'heading', level: 2, content: [t('Introducción')] },
+    { type: 'heading', level: 1, content: [t('Introducción')] },
     p(t('Planteá acá el problema y por qué importa.')),
-    { type: 'heading', level: 2, content: [t('Desarrollo')] },
+    { type: 'heading', level: 1, content: [t('Desarrollo')] },
     p(t('Describí el método. Podés intercalar fórmulas como '), m('T = 2\\pi\\sqrt{L/g}'), t(' en el texto.')),
     {
       type: 'figure',
       caption: 'Reemplazá por tu gráfico o imagen.',
       items: [{ kind: 'plot', spec: { functions: [{ expr: 'sqrt(x)' }], domain: [0, 4], grid: true } }],
     },
-    { type: 'heading', level: 2, content: [t('Conclusiones')] },
+    { type: 'heading', level: 1, content: [t('Conclusiones')] },
     { type: 'bulletList', items: [li('Primer hallazgo.'), li('Segundo hallazgo.')] },
   ],
 }

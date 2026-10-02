@@ -75,6 +75,9 @@ import { DistEditor } from './DistEditor'
 import { DiagramEditor } from './DiagramEditor'
 import { TreeEditor } from './TreeEditor'
 import { Modal } from '@/components/Modal'
+import { CoverHeader } from './CoverHeader'
+import { SlashMenu, type SlashAnchor } from './SlashMenu'
+import { filterInsertItems, INSERT_GROUPS, type InsertItem } from './insertItems'
 import { autoKey, emitBibtex } from '../core'
 import type { Author, BibEntry, CalloutVariant, ChartForm, ChartSpec, DiagramSpec, DistForm, DistSpec, DocKind, DocMeta, FigureItem, PlotSpec, TableAlign, TheoremVariant, TreeSpec } from '../core'
 
@@ -211,6 +214,10 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
   const downloadBundle = () => dl.downloadBundle(name, ast, imageFiles, textFiles)
   const downloadTex = () => dl.downloadTex(name, latex, compiledFiles)
 
+  // Menú «/»: el teclado lo atiende el editor (el foco nunca sale del texto). El handler vive
+  // en un ref porque `editorProps` se fija al crear el editor y necesita ver el estado al día.
+  const slashKeyRef = useRef<(event: KeyboardEvent) => boolean>(() => false)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -261,8 +268,50 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
         }
       }),
     onSelectionUpdate: () => bumpSelection((n) => n + 1),
-    editorProps: { attributes: { class: 'matex-prose' } },
+    editorProps: {
+      attributes: { class: 'matex-prose' },
+      handleKeyDown: (_view, event) => slashKeyRef.current(event),
+    },
   })
+
+  // ── Menú «/» ──────────────────────────────────────────────────────────────
+  // Se abre al escribir `/` al principio de un renglón o después de un espacio, y lo que se
+  // tipea después filtra. Esc lo cierra hasta que la búsqueda cambie de lugar.
+  const [slash, setSlash] = useState<{ from: number; to: number; query: string; anchor: SlashAnchor } | null>(null)
+  const [slashActive, setSlashActive] = useState(0)
+  const slashDismissedAt = useRef<number | null>(null)
+  useEffect(() => {
+    if (!editor) return
+    const detect = () => {
+      const { selection } = editor.state
+      const $from = selection.$from
+      const match =
+        selection.empty && $from.parent.isTextblock && !$from.parent.type.spec.code
+          ? /(?:^|\s)\/([\p{L}\d]*)$/u.exec($from.parent.textBetween(0, $from.parentOffset, undefined, '\ufffc'))
+          : null
+      if (!match) {
+        slashDismissedAt.current = null
+        setSlash(null)
+        return
+      }
+      const query = match[1] ?? ''
+      const from = selection.from - query.length - 1
+      if (slashDismissedAt.current === from) {
+        setSlash(null)
+        return
+      }
+      const coords = editor.view.coordsAtPos(from)
+      setSlash((previous) => {
+        if (previous?.query !== query) setSlashActive(0)
+        return { from, to: selection.from, query, anchor: { left: coords.left, top: coords.top, bottom: coords.bottom } }
+      })
+    }
+    editor.on('transaction', detect)
+    return () => {
+      editor.off('transaction', detect)
+    }
+  }, [editor])
+
 
   // Autosave del AST (fuente de verdad), con debounce.
   useEffect(() => {
@@ -812,6 +861,71 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
     updateActivePart({ width })
   }
 
+  // ── Qué se puede insertar: UNA lista para el menú Insertar y para el menú «/» ─────────────
+  const insertItems: InsertItem[] = editor
+    ? [
+        { id: 'math-inline', group: 'Matemática', glyph: 'x²', label: 'Fórmula en línea', description: 'Dentro del párrafo', hint: '$$', keywords: 'ecuacion math inline', run: () => insertAtom('mathInline') },
+        { id: 'math-display', group: 'Matemática', glyph: '∑', label: 'Fórmula en bloque', description: 'Centrada, en su propio renglón', keywords: 'ecuacion display', run: () => insertAtom('mathDisplay') },
+        { id: 'derivation', group: 'Matemática', glyph: '≡', label: 'Derivación', description: 'Ecuaciones alineadas y numerables', keywords: 'align alineadas ecuaciones', run: insertDerivation },
+        { id: 'reasoning', group: 'Matemática', glyph: '⇒', label: 'Razonamiento', description: 'Cada paso con su justificación', keywords: 'dos columnas pasos', run: insertReasoning },
+        { id: 'theorem', group: 'Bloques', glyph: 'T', label: 'Teorema', description: 'Enunciado numerado (o lema, corolario…)', keywords: 'lema proposicion corolario', run: () => insertTheorem('theorem') },
+        { id: 'definition', group: 'Bloques', glyph: 'D', label: 'Definición', description: 'Un concepto, numerado', run: () => insertTheorem('definition') },
+        { id: 'proof', group: 'Bloques', glyph: '∎', label: 'Demostración', description: 'Termina con ∎', keywords: 'prueba', run: () => insertTheorem('proof') },
+        { id: 'callout', group: 'Bloques', glyph: '!', label: 'Caja / Nota', description: 'Nota, consejo, cuidado o importante', keywords: 'callout aviso consejo', run: () => insertCallout('note') },
+        { id: 'table', group: 'Bloques', glyph: '▦', label: 'Tabla', description: 'Filas y columnas con encabezado', run: () => editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run() },
+        { id: 'code', group: 'Bloques', glyph: '</>', label: 'Bloque de código', description: 'Código con su lenguaje', keywords: 'codigo programa', run: insertCodeBlock },
+        { id: 'plot', group: 'Figuras', glyph: '∿', label: 'Gráfico de funciones', description: 'Curvas, parámetros, áreas', keywords: 'grafico funcion plot curva', run: insertPlot },
+        { id: 'bar', group: 'Figuras', glyph: '▮', label: 'Barras', description: 'Comparar categorías', keywords: 'grafico chart', run: () => insertChart('bar') },
+        { id: 'pie', group: 'Figuras', glyph: '◔', label: 'Torta', description: 'Repartir un total', keywords: 'grafico chart', run: () => insertChart('pie') },
+        { id: 'histogram', group: 'Figuras', glyph: '▃', label: 'Histograma', description: 'Ver una distribución', keywords: 'grafico estadistica', run: () => insertDist('histogram') },
+        { id: 'boxplot', group: 'Figuras', glyph: '⊟', label: 'Boxplot', description: 'La dispersión de los datos', keywords: 'caja bigotes estadistica', run: () => insertDist('boxplot') },
+        { id: 'diagram', group: 'Figuras', glyph: '⇄', label: 'Diagrama conmutativo', description: 'Objetos y flechas', keywords: 'flechas morfismos', run: insertDiagram },
+        { id: 'tree', group: 'Figuras', glyph: '⋔', label: 'Árbol', description: 'Una jerarquía', keywords: 'jerarquia', run: insertTree },
+        { id: 'image', group: 'Figuras', glyph: '▣', label: 'Imagen', description: 'Una imagen tuya', keywords: 'foto figura', run: insertFigure },
+        { id: 'ref', group: 'Referencias', glyph: '↗', label: 'Referencia cruzada', description: 'Nombrar un teorema, ecuación o figura', hint: '@', keywords: 'cref', run: () => insertAtom('ref') },
+        { id: 'cite', group: 'Referencias', glyph: '❝', label: 'Cita', description: 'Una obra de la bibliografía', hint: '#', keywords: 'bibliografia', run: () => insertAtom('cite') },
+        { id: 'footnote', group: 'Referencias', glyph: '¹', label: 'Nota al pie', description: 'Un comentario al pie de la página', run: () => insertAtom('footnote') },
+        ...(meta.docKind === 'report' || meta.docKind === 'book'
+          ? [{ id: 'part', group: 'Estructura' as const, glyph: 'Ⅰ', label: 'Parte', description: 'Agrupa capítulos', run: insertPart }]
+          : []),
+        { id: 'slide', group: 'Estructura', glyph: '▭', label: 'Diapositiva', description: 'Para presentaciones', keywords: 'presentacion beamer', run: insertSlide },
+        { id: 'columns', group: 'Estructura', glyph: '▥', label: 'Columnas', description: 'Contenido lado a lado', run: insertColumns },
+        { id: 'include', group: 'Avanzado', glyph: '⤓', label: 'Incluir archivo', description: 'Un .tex del proyecto', keywords: 'input tex', run: () => insertAtom('include') },
+        { id: 'raw', group: 'Avanzado', glyph: '\\', label: 'LaTeX crudo', description: 'Un fragmento escrito a mano', keywords: 'latex', run: () => insertAtom('rawLatex') },
+      ]
+    : []
+
+  const slashItems = slash ? filterInsertItems(insertItems, slash.query) : []
+
+  function pickSlashItem(item: InsertItem) {
+    if (!editor || !slash) return
+    // Primero se borra el «/búsqueda» que se tipeó; después se inserta donde quedó el cursor.
+    editor.chain().focus().deleteRange({ from: slash.from, to: slash.to }).run()
+    setSlash(null)
+    item.run()
+  }
+
+  slashKeyRef.current = (event) => {
+    if (!slash) return false
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const count = Math.max(slashItems.length, 1)
+      setSlashActive((index) => (index + (event.key === 'ArrowDown' ? 1 : count - 1)) % count)
+      return true
+    }
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      const item = slashItems[Math.min(slashActive, slashItems.length - 1)]
+      if (!item) return false
+      pickSlashItem(item)
+      return true
+    }
+    if (event.key === 'Escape') {
+      slashDismissedAt.current = slash.from
+      setSlash(null)
+      return true
+    }
+    return false
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Selector de imagen oculto (figuras): insertar o reemplazar según la acción. */}
@@ -866,57 +980,48 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
                   <DropdownMenu.Content
                     align="start"
                     sideOffset={6}
-                    className="z-50 w-52 rounded-lg border border-(--color-border) bg-(--color-surface) p-1.5 shadow-xl"
+                    className="z-50 max-h-[80vh] w-60 overflow-y-auto rounded-lg border border-(--color-border) bg-(--color-surface) p-1.5 shadow-xl"
                   >
-                    <InsItem onRun={() => insertAtom('mathInline')}>Fórmula en línea</InsItem>
-                    <InsItem onRun={() => insertAtom('mathDisplay')}>Fórmula en bloque</InsItem>
-                    <InsItem onRun={insertDerivation}>Derivación (ecuaciones alineadas)</InsItem>
-                    <InsItem onRun={insertReasoning}>Razonamiento (dos columnas)</InsItem>
-                    <DropdownMenu.Separator className="my-1 h-px bg-(--color-border)" />
-                    <InsItem onRun={() => insertTheorem('theorem')}>Teorema</InsItem>
-                    <InsItem onRun={() => insertTheorem('definition')}>Definición</InsItem>
-                    <InsItem onRun={() => insertTheorem('proof')}>Demostración</InsItem>
-                    <InsItem onRun={() => insertCallout('note')}>Caja / Nota</InsItem>
-                    <InsItem onRun={() => editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run()}>
-                      Tabla
-                    </InsItem>
-                    <DropdownMenu.Sub>
-                      <DropdownMenu.SubTrigger className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm text-(--color-ink) outline-none data-[highlighted]:bg-(--color-surface-muted) data-[state=open]:bg-(--color-surface-muted)">
-                        Figura
-                        <ChevronRight width={12} height={12} />
-                      </DropdownMenu.SubTrigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.SubContent
-                          sideOffset={2}
-                          className="z-50 w-56 rounded-lg border border-(--color-border) bg-(--color-surface) p-1.5 shadow-xl"
-                        >
-                          {/* Una figura es un contenedor de partes; se elige la parte por intención
-                              (con ≥2 partes = subfiguras). Barras/torta se suman acá (ME-26). */}
-                          <div className="px-2 pt-1 pb-1.5 text-[11px] text-(--color-ink-muted)">¿Qué querés mostrar?</div>
-                          <InsItem onRun={insertPlot}>Gráfico de funciones</InsItem>
-                          <InsItem onRun={() => insertChart('bar')}>Barras (comparar)</InsItem>
-                          <InsItem onRun={() => insertChart('pie')}>Torta (repartir)</InsItem>
-                          <InsItem onRun={() => insertDist('histogram')}>Histograma (distribución)</InsItem>
-                          <InsItem onRun={() => insertDist('boxplot')}>Caja / boxplot (dispersión)</InsItem>
-                          <InsItem onRun={insertDiagram}>Diagrama conmutativo (estructura)</InsItem>
-                          <InsItem onRun={insertTree}>Árbol / jerarquía (estructura)</InsItem>
-                          <InsItem onRun={insertFigure}>Imagen</InsItem>
-                        </DropdownMenu.SubContent>
-                      </DropdownMenu.Portal>
-                    </DropdownMenu.Sub>
-                    <InsItem onRun={insertCodeBlock}>Bloque de código</InsItem>
-                    <DropdownMenu.Separator className="my-1 h-px bg-(--color-border)" />
-                    <InsItem onRun={() => insertAtom('ref')}>Referencia (\cref)</InsItem>
-                    <InsItem onRun={() => insertAtom('cite')}>Cita (\parencite)</InsItem>
-                    <InsItem onRun={() => insertAtom('footnote')}>Nota al pie</InsItem>
-                    <InsItem onRun={() => insertAtom('include')}>Incluir archivo (\input)</InsItem>
-                    <InsItem onRun={() => insertAtom('rawLatex')}>LaTeX crudo</InsItem>
-                    <DropdownMenu.Separator className="my-1 h-px bg-(--color-border)" />
-                    {(meta.docKind === 'report' || meta.docKind === 'book') && (
-                      <InsItem onRun={insertPart}>Parte (\part)</InsItem>
-                    )}
-                    <InsItem onRun={insertSlide}>Diapositiva (presentación)</InsItem>
-                    <InsItem onRun={insertColumns}>Columnas</InsItem>
+                    {INSERT_GROUPS.map((group, groupIndex) => {
+                      const items = insertItems.filter((item) => item.group === group)
+                      if (items.length === 0) return null
+                      return (
+                        <div key={group}>
+                          {groupIndex > 0 && <DropdownMenu.Separator className="my-1 h-px bg-(--color-border)" />}
+                          {group === 'Figuras' ? (
+                            // Una figura se elige por intención (con ≥2 partes = subfiguras).
+                            <DropdownMenu.Sub>
+                              <DropdownMenu.SubTrigger className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm text-(--color-ink) outline-none data-[highlighted]:bg-(--color-surface-muted) data-[state=open]:bg-(--color-surface-muted)">
+                                <InsLabel glyph="◔">Figura o gráfico</InsLabel>
+                                <ChevronRight width={12} height={12} />
+                              </DropdownMenu.SubTrigger>
+                              <DropdownMenu.Portal>
+                                <DropdownMenu.SubContent
+                                  sideOffset={2}
+                                  className="z-50 w-60 rounded-lg border border-(--color-border) bg-(--color-surface) p-1.5 shadow-xl"
+                                >
+                                  <div className="px-2 pt-1 pb-1.5 text-[11px] text-(--color-ink-muted)">¿Qué querés mostrar?</div>
+                                  {items.map((item) => (
+                                    <InsItem key={item.id} onRun={item.run}>
+                                      <InsLabel glyph={item.glyph} hint={item.hint}>{item.label}</InsLabel>
+                                    </InsItem>
+                                  ))}
+                                </DropdownMenu.SubContent>
+                              </DropdownMenu.Portal>
+                            </DropdownMenu.Sub>
+                          ) : (
+                            items.map((item) => (
+                              <InsItem key={item.id} onRun={item.run}>
+                                <InsLabel glyph={item.glyph} hint={item.hint}>{item.label}</InsLabel>
+                              </InsItem>
+                            ))
+                          )}
+                        </div>
+                      )
+                    })}
+                    <div className="mt-1 border-t border-(--color-border) px-2 pt-1.5 pb-0.5 text-[11px] text-(--color-ink-muted)">
+                      Atajo: escribí <kbd className="rounded border border-(--color-border) px-1 font-mono">/</kbd> en el texto
+                    </div>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
@@ -1346,9 +1451,23 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
           {/* Lienzo + **inspector** a la derecha (aparece al seleccionar una figura con gráfico):
               editor contextual sin robar ancho al lienzo salvo cuando hace falta. */}
           <div className="flex h-full min-h-0">
-            <div className="h-full min-w-0 flex-1 overflow-auto">
-              <EditorContent editor={editor} />
+            <div className="matex-desk h-full min-w-0 flex-1 overflow-auto">
+              {/* La hoja: el documento se escribe sobre una página, con su portada arriba. */}
+              <div className="matex-sheet">
+                <CoverHeader meta={meta} onPatch={patchMeta} onEditCover={() => setPortadaOpen(true)} />
+                <EditorContent editor={editor} />
+              </div>
             </div>
+            {slash && (
+              <SlashMenu
+                items={slashItems}
+                query={slash.query}
+                active={Math.min(slashActive, Math.max(slashItems.length - 1, 0))}
+                anchor={slash.anchor}
+                onPick={pickSlashItem}
+                onHover={setSlashActive}
+              />
+            )}
             {inFigure && partHasInspector && figureItemActive && editor && (
               <aside style={{ width: inspectorW }} className="flex h-full shrink-0 border-l border-(--color-border)">
                 {/* Handle de redimensión (borde izquierdo del inspector). */}
@@ -1764,6 +1883,19 @@ function InsItem({ onRun, children }: { onRun: () => void; children: ReactNode }
     >
       {children}
     </DropdownMenu.Item>
+  )
+}
+
+/** Renglón de un ítem del menú Insertar: signo, nombre y, si tiene, su atajo. */
+function InsLabel({ glyph, hint, children }: { glyph: string; hint?: string | undefined; children: ReactNode }) {
+  return (
+    <span className="flex w-full items-center gap-2.5">
+      <span className="w-5 shrink-0 text-center text-[13px] text-(--color-ink-muted)" aria-hidden="true">
+        {glyph}
+      </span>
+      <span className="flex-1">{children}</span>
+      {hint && <kbd className="rounded border border-(--color-border) px-1 font-mono text-[10.5px] text-(--color-ink-muted)">{hint}</kbd>}
+    </span>
   )
 }
 
