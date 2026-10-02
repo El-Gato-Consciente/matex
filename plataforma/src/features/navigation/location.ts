@@ -15,7 +15,7 @@
 export type LessonView = 'learn' | 'example' | 'practice' | 'repaso'
 
 /** Secciones de la nav principal. Se **deriva** de la ubicación, no se guarda aparte. */
-export type Section = 'curso' | 'proyectos'
+export type Section = 'curso' | 'wiki' | 'proyectos'
 
 export type AppLocation =
   /** Una lección del curso. `lessonId: null` = «la primera» (la app resuelve cuál es). */
@@ -28,13 +28,23 @@ export type AppLocation =
   | { readonly kind: 'project'; readonly projectId: string }
   /** El visor de estudio de un ejemplar de la galería (fuente comentada + PDF). */
   | { readonly kind: 'exemplar'; readonly exemplarId: string }
+  /** Una página de la wiki «Cómo funciona». `pageId: null` = la primera. */
+  | { readonly kind: 'wiki'; readonly pageId: string | null }
 
-/** Ubicación inicial: el curso, desde el principio. */
-export const HOME: AppLocation = { kind: 'lesson', lessonId: null, view: 'learn' }
+/**
+ * Ubicación inicial y destino de lo que no se reconoce: Mis Proyectos. (El Curso está oculto
+ * de la nav por ahora, pero sus rutas siguen resolviendo para no romper links compartidos.)
+ */
+export const HOME: AppLocation = { kind: 'projects' }
+
+/** El curso desde el principio (la app resuelve cuál es la primera lección). */
+export const COURSE_START: AppLocation = { kind: 'lesson', lessonId: null, view: 'learn' }
 
 /** Qué pinta la nav principal para esta ubicación. */
 export function sectionOf(location: AppLocation): Section {
-  return location.kind === 'lesson' ? 'curso' : 'proyectos'
+  if (location.kind === 'lesson') return 'curso'
+  if (location.kind === 'wiki') return 'wiki'
+  return 'proyectos'
 }
 
 /** Segmento de URL de cada sub-vista de lección. `learn` es el default y no lleva segmento. */
@@ -64,6 +74,8 @@ export function locationToPath(location: AppLocation): string {
       return `/proyectos/${encodeURIComponent(location.projectId)}`
     case 'exemplar':
       return `/ejemplos/${encodeURIComponent(location.exemplarId)}`
+    case 'wiki':
+      return location.pageId ? `/como-funciona/${encodeURIComponent(location.pageId)}` : '/como-funciona'
   }
 }
 
@@ -82,7 +94,7 @@ export function parseLocation(pathname: string): AppLocation {
     .map((segment) => safeDecode(segment))
 
   if (first === 'curso') {
-    if (!second) return HOME
+    if (!second) return COURSE_START
     return { kind: 'lesson', lessonId: second, view: (third && VIEW_BY_SEGMENT.get(third)) || 'learn' }
   }
 
@@ -93,6 +105,8 @@ export function parseLocation(pathname: string): AppLocation {
   }
 
   if (first === 'ejemplos' && second) return { kind: 'exemplar', exemplarId: second }
+
+  if (first === 'como-funciona') return { kind: 'wiki', pageId: second ?? null }
 
   return HOME
 }

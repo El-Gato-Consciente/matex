@@ -1,5 +1,8 @@
 import { Markdown } from '@/components/Markdown'
+import { CheckBlock } from './CheckBlock'
 import { findLesson } from './content'
+import { DestinationsBlock } from './DestinationsBlock'
+import { PlaygroundBlock } from './PlaygroundBlock'
 import type { Capa, Lesson, LessonBlock } from './types'
 
 const CAPA_META: Record<Capa, { label: string; dot: string }> = {
@@ -37,7 +40,7 @@ export function LessonContent({ lesson }: { lesson: Lesson }) {
       {lesson.prerequisites.length > 0 && <Prerequisites ids={lesson.prerequisites} />}
 
       {lesson.content.map((block, index) => (
-        <ContentBlock key={index} block={block} />
+        <ContentBlock key={`${lesson.id}-${index}`} block={block} lesson={lesson} />
       ))}
 
       {lesson.files.length > 0 && <ProjectFiles lesson={lesson} />}
@@ -88,7 +91,7 @@ function Prerequisites({ ids }: { ids: readonly string[] }) {
   )
 }
 
-function ContentBlock({ block }: { block: LessonBlock }) {
+function ContentBlock({ block, lesson }: { block: LessonBlock; lesson: Lesson }) {
   switch (block.kind) {
     case 'prose':
       return (
@@ -129,6 +132,12 @@ function ContentBlock({ block }: { block: LessonBlock }) {
       )
     case 'callout':
       return <Callout tone={block.tone} markdown={block.markdown} />
+    case 'playground':
+      return <PlaygroundBlock caption={block.caption} body={block.body} />
+    case 'destinations':
+      return <DestinationsBlock title={block.title} items={block.items} />
+    case 'check':
+      return <CheckBlock lesson={lesson} title={block.title} />
   }
 }
 

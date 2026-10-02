@@ -37,11 +37,57 @@ const calloutBlock = z.object({
   markdown: z.string(),
 })
 
+/**
+ * Editor chico que **compila solo** mientras se escribe, con el PDF al lado. Se
+ * edita solo el cuerpo: el preámbulo lo pone `playgroundSource` (hoja chica).
+ */
+const playgroundBlock = z.object({
+  kind: z.literal('playground'),
+  /** Qué probar (Markdown corto, va arriba del editor). */
+  caption: z.string().optional(),
+  /** Contenido inicial entre `\begin{document}` y `\end{document}`. */
+  body: z.string(),
+})
+
+/** Secciones de la app a las que puede llevar un bloque de la lección. */
+export const lessonDestinationSchema = z.enum(['ejemplo', 'practica', 'repaso', 'nuevo', 'proyectos'])
+
+/** Tarjetas que **llevan** a otras partes de la app (en vez de describirlas). */
+const destinationsBlock = z.object({
+  kind: z.literal('destinations'),
+  title: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        to: lessonDestinationSchema,
+        title: z.string(),
+        /** Markdown corto: qué hay ahí. */
+        description: z.string(),
+        /** Texto del botón. */
+        cta: z.string(),
+      }),
+    )
+    .min(1),
+})
+
+/**
+ * Chequeo de comprensión **dentro de la lección**: usa las preguntas del banco del
+ * quiz de esta lección (una sola fuente de preguntas). Acertarlas todas completa la
+ * lección **si no tiene desafío** (con desafío, la completa el desafío).
+ */
+const checkBlock = z.object({
+  kind: z.literal('check'),
+  title: z.string().optional(),
+})
+
 export const lessonBlockSchema = z.discriminatedUnion('kind', [
   proseBlock,
   codeBlock,
   commandsBlock,
   calloutBlock,
+  playgroundBlock,
+  destinationsBlock,
+  checkBlock,
 ])
 
 export const challengeSchema = z.object({
@@ -97,6 +143,7 @@ export const levelSchema = z.object({
 
 export type Capa = Lesson['capa']
 export type LessonBlock = z.infer<typeof lessonBlockSchema>
+export type LessonDestination = z.infer<typeof lessonDestinationSchema>
 export type Challenge = z.infer<typeof challengeSchema>
 export type Lesson = z.infer<typeof lessonSchema>
 export type Level = z.infer<typeof levelSchema>

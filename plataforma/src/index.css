@@ -1144,3 +1144,183 @@ textarea.matex-atom-popover-field {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
+
+/* ── Logo: isotipo Σ→M + wordmark «MaTEX» (Matex = Ma + TeX) ─────────────── */
+/* La serif de KaTeX imita a Computer Modern (la letra de TeX): el wordmark la usa. */
+@font-face {
+  font-family: 'Matex Serif';
+  src: url('../node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2') format('woff2');
+  font-display: swap;
+  /* KaTeX_Main no trae letras acentuadas: «á», «é»… caen a la serif de respaldo
+     en vez de dibujarse con la tilde despegada. */
+  unicode-range: U+0020-007E, U+0391-03C9, U+2190-21FF, U+2200-22FF;
+}
+
+@layer components {
+  .matex-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    line-height: 1;
+  }
+  .matex-logo-mark {
+    width: 1.75em;
+    height: 1.75em;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+  /* La Σ girada 90° es la M. */
+  .matex-logo-glyph {
+    transform-box: view-box;
+    transform-origin: 16px 16px;
+    transform: rotate(90deg);
+  }
+  .matex-wordmark {
+    display: inline-flex;
+    align-items: baseline;
+    font-family: 'Matex Serif', 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
+    font-size: 1.3em;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    color: var(--color-ink);
+  }
+  .matex-wordmark > span {
+    display: inline-block;
+  }
+  /* La E baja con el mismo kerning que el logo de TeX. */
+  .matex-wordmark-e {
+    position: relative;
+    top: 0.22em;
+    margin-left: -0.1667em;
+    margin-right: -0.125em;
+  }
+
+  /* ── Intro (Splash) ── */
+  .matex-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .matex-splash-backdrop {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(55% 45% at 50% 48%, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 70%),
+      var(--color-surface-muted);
+  }
+  .matex-splash-logo {
+    position: relative;
+    font-size: clamp(34px, 9vw, 64px);
+  }
+
+  .matex-logo--animated .matex-logo-mark {
+    animation:
+      matex-pop 440ms cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      matex-glow 900ms 1000ms ease-out both;
+  }
+  .matex-logo--animated .matex-logo-glyph {
+    stroke-dasharray: 1;
+    animation:
+      matex-draw 520ms 140ms cubic-bezier(0.65, 0, 0.35, 1) both,
+      matex-turn 480ms 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .matex-logo--animated .matex-wordmark-ma {
+    animation: matex-slide 440ms 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .matex-logo--animated .matex-wordmark-t {
+    animation: matex-rise 380ms 980ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .matex-logo--animated .matex-wordmark-x {
+    animation: matex-rise 380ms 1050ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  /* La E cae a su lugar (abajo, como en TeX) con un rebote. */
+  .matex-logo--animated .matex-wordmark-e {
+    animation: matex-drop 640ms 1120ms linear both;
+  }
+}
+
+@keyframes matex-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes matex-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  40% {
+    filter: drop-shadow(0 0 0.45em color-mix(in srgb, var(--color-primary) 75%, transparent));
+  }
+}
+@keyframes matex-draw {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+@keyframes matex-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(90deg);
+  }
+}
+@keyframes matex-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-0.35em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes matex-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes matex-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-1.1em);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0.12em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  68% {
+    transform: translateY(-0.07em);
+  }
+  85% {
+    transform: translateY(0.025em);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

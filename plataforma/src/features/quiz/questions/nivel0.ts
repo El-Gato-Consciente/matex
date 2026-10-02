@@ -2,6 +2,44 @@ import type { Question } from '../types'
 
 export const nivel0Questions: Question[] = [
   {
+    id: 'q-l0-bienvenida-1',
+    lessonId: 'l0-bienvenida',
+    level: 0,
+    prompt: '¿Qué hace el compilador de LaTeX?',
+    answer: 'Convierte el texto con marcas en un PDF',
+    distractors: [
+      'Corrige la ortografía del texto escrito',
+      'Traduce el documento a formato Word',
+      'Acomoda el texto mientras lo escribís',
+    ],
+    explanation:
+      'En LaTeX escribís texto plano con marcas (\\section, \\emph, ecuaciones) y el compilador lo procesa para producir el PDF final. No es un editor visual: la forma la decide al compilar, no mientras tipeás.',
+  },
+  {
+    id: 'q-l0-bienvenida-2',
+    lessonId: 'l0-bienvenida',
+    level: 0,
+    prompt: '¿Quién creó TeX, el motor sobre el que se construyó LaTeX?',
+    answer: 'Donald Knuth',
+    distractors: ['Leslie Lamport', 'Alan Turing', 'Linus Torvalds'],
+    explanation:
+      'Knuth creó TeX en 1978, disconforme con la tipografía de sus libros. Leslie Lamport construyó LaTeX encima en 1984: por eso es el distractor más tentador.',
+  },
+  {
+    id: 'q-l0-bienvenida-3',
+    lessonId: 'l0-bienvenida',
+    level: 0,
+    prompt: '¿En qué tipo de trabajo se luce LaTeX frente a un procesador de texto?',
+    answer: 'Documentos largos con mucha matemática',
+    distractors: [
+      'Notas cortas editadas por varios a la vez',
+      'Planillas con cálculos y gráficos dinámicos',
+      'Cartas rápidas con formato visual al instante',
+    ],
+    explanation:
+      'LaTeX brilla con matemática y documentos largos y estructurados, donde numeración, índices y referencias se mantienen solos. Para colaborar en tiempo real o escribir algo corto y rápido, un procesador suele ser mejor opción.',
+  },
+  {
     id: 'q-l0-pensar-1',
     lessonId: 'l0-pensar-documento',
     level: 0,

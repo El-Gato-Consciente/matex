@@ -1,0 +1,403 @@
+/* ══ Wiki «Cómo funciona Matex» ═══════════════════════════════════════════════
+   Animaciones en CSS puro salvo el gráfico (JS). Convenciones:
+   - el estado BASE de cada elemento es el final/visible, y los keyframes parten
+     de oculto: con «reducir movimiento» (animation: none) se ve todo quieto;
+   - `.wiki-anim:not([data-playing])` pausa todo lo que está fuera de pantalla;
+   - las secuencias usan `--i` (índice) o `--d` (retardo) para escalonarse. */
+
+.wiki-serif {
+  font-family: 'Matex Serif', 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
+}
+
+/* ── Marco ─────────────────────────────────────────────────────────────────── */
+.wiki-anim-frame {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background:
+    radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--color-primary) 9%, transparent), transparent 70%),
+    var(--color-surface-muted);
+}
+.wiki-anim:not([data-playing]) *,
+.wiki-anim:not([data-playing]) {
+  animation-play-state: paused !important;
+}
+
+/* ── Trazos SVG compartidos ────────────────────────────────────────────────── */
+.wiki-svg-card {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+}
+.wiki-svg-mono {
+  font: 11px var(--font-mono);
+  fill: var(--color-ink-muted);
+}
+.wiki-svg-chip {
+  fill: color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+.wiki-svg-chip-text {
+  font: 600 11px ui-sans-serif, system-ui, sans-serif;
+  fill: #a5b4fc;
+}
+.wiki-svg-line {
+  fill: var(--color-border);
+}
+.wiki-svg-math {
+  font: italic 15px 'Matex Serif', Georgia, serif;
+  fill: var(--color-ink);
+}
+.wiki-svg-axis {
+  fill: none;
+  stroke: var(--color-ink-muted);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+.wiki-svg-curve {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.wiki-svg-wire {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+.wiki-svg-node-text {
+  font: 700 15px ui-sans-serif, system-ui, sans-serif;
+  fill: #fff;
+  letter-spacing: 0.04em;
+}
+.wiki-svg-title {
+  font: 700 15px ui-sans-serif, system-ui, sans-serif;
+  fill: var(--color-ink);
+}
+.wiki-svg-sub {
+  font: 11px ui-sans-serif, system-ui, sans-serif;
+  fill: var(--color-ink-muted);
+}
+.wiki-svg-icon {
+  fill: none;
+  stroke: #a5b4fc;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Tres salidas (ciclo 7 s) ──────────────────────────────────────────────── */
+.wiki-ts-row {
+  animation: wiki-ts-row 7s calc(var(--i) * 140ms) infinite both;
+}
+@keyframes wiki-ts-row {
+  0% { opacity: 0; transform: translateY(6px); }
+  8% { opacity: 1; transform: none; }
+  86% { opacity: 1; }
+  94%, 100% { opacity: 0; }
+}
+
+.wiki-ts-flow {
+  fill: none;
+  stroke: #c7d2fe;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 400;
+  filter: drop-shadow(0 0 4px #818cf8);
+}
+.wiki-ts-flow-in {
+  animation: wiki-ts-flow-in 7s infinite both;
+}
+@keyframes wiki-ts-flow-in {
+  0%, 17% { stroke-dashoffset: 0; opacity: 0; }
+  18% { opacity: 1; }
+  29% { stroke-dashoffset: -100; opacity: 1; }
+  30%, 100% { stroke-dashoffset: -100; opacity: 0; }
+}
+.wiki-ts-flow-out {
+  animation: wiki-ts-flow-out 7s calc(var(--i) * 160ms) infinite both;
+}
+@keyframes wiki-ts-flow-out {
+  0%, 33% { stroke-dashoffset: 0; opacity: 0; }
+  34% { opacity: 1; }
+  46% { stroke-dashoffset: -100; opacity: 1; }
+  47%, 100% { stroke-dashoffset: -100; opacity: 0; }
+}
+
+.wiki-ts-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wiki-ts-node 7s infinite both;
+}
+@keyframes wiki-ts-node {
+  0%, 28% { transform: none; }
+  32% { transform: scale(1.14); }
+  37%, 100% { transform: none; }
+}
+.wiki-ts-ring {
+  fill: none;
+  stroke: #818cf8;
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: wiki-ts-ring 7s infinite both;
+}
+@keyframes wiki-ts-ring {
+  0%, 29% { transform: scale(1); opacity: 0; }
+  30% { opacity: 0.8; }
+  44%, 100% { transform: scale(1.9); opacity: 0; }
+}
+
+.wiki-ts-out {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: wiki-ts-out 7s calc(var(--i) * 160ms) infinite both;
+}
+@keyframes wiki-ts-out {
+  0%, 43% { opacity: 0.18; transform: scale(0.94); filter: none; }
+  48% { opacity: 1; transform: scale(1.03); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-primary) 60%, transparent)); }
+  54% { transform: none; filter: none; }
+  86% { opacity: 1; }
+  94%, 100% { opacity: 0.18; transform: scale(0.94); }
+}
+
+/* ── Intención, no formato (ciclo 8 s) ─────────────────────────────────────── */
+.wiki-int-block {
+  animation: wiki-int-block 8s infinite both;
+}
+@keyframes wiki-int-block {
+  0% { box-shadow: 0 0 0 0 transparent; border-color: var(--color-border); }
+  6% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 25%, transparent); border-color: var(--color-primary); }
+  16%, 100% { box-shadow: 0 0 0 0 transparent; border-color: var(--color-border); }
+}
+.wiki-int-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--color-primary);
+  animation: wiki-blink 1s steps(1) infinite;
+}
+@keyframes wiki-blink {
+  50% { opacity: 0; }
+}
+.wiki-int-flow {
+  fill: none;
+  stroke: #c7d2fe;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 400;
+  animation: wiki-int-flow 8s infinite both;
+}
+@keyframes wiki-int-flow {
+  0%, 2% { stroke-dashoffset: 0; opacity: 0; }
+  3% { opacity: 1; }
+  12% { stroke-dashoffset: -100; opacity: 1; }
+  13%, 100% { stroke-dashoffset: -100; opacity: 0; }
+}
+.wiki-int-line {
+  display: block;
+  overflow: hidden;
+  white-space: pre;
+  width: calc(var(--n) * 1ch);
+  max-width: 100%;
+  animation: wiki-type 8s steps(var(--n)) var(--d) infinite backwards;
+}
+@keyframes wiki-type {
+  0% { width: 0; }
+  10% { width: calc(var(--n) * 1ch); }
+  84% { width: calc(var(--n) * 1ch); opacity: 1; }
+  90%, 100% { width: calc(var(--n) * 1ch); opacity: 0; }
+}
+
+/* ── El árbol (ciclo 7,5 s: 5 pasos de 1,5 s) ──────────────────────────────── */
+.wiki-tree-line {
+  border: 1px solid transparent;
+  animation: wiki-tree-line 7.5s calc(var(--i) * 1.5s) infinite;
+}
+@keyframes wiki-tree-line {
+  0%, 18% {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  }
+  22%, 100% { background: transparent; border-color: transparent; }
+}
+.wiki-tree-root rect,
+.wiki-tree-node rect {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+}
+.wiki-tree-root rect {
+  fill: color-mix(in srgb, var(--color-primary) 30%, var(--color-surface));
+  stroke: var(--color-primary);
+}
+.wiki-tree-root text,
+.wiki-tree-node text {
+  font: 10.5px var(--font-mono);
+  fill: var(--color-ink-muted);
+}
+.wiki-tree-root text {
+  fill: var(--color-ink);
+  font-weight: 700;
+}
+.wiki-tree-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wiki-tree-node 7.5s calc(var(--i) * 1.5s) infinite;
+}
+.wiki-tree-node--leaf {
+  opacity: 0.75;
+}
+@keyframes wiki-tree-node {
+  0%, 18% { transform: scale(1.08); filter: drop-shadow(0 0 6px #818cf8); }
+  22%, 100% { transform: none; filter: none; }
+}
+.wiki-tree-node rect {
+  animation: wiki-tree-rect 7.5s calc(var(--i) * 1.5s) infinite;
+}
+.wiki-tree-node text {
+  animation: wiki-tree-text 7.5s calc(var(--i) * 1.5s) infinite;
+}
+@keyframes wiki-tree-rect {
+  0%, 18% { stroke: var(--color-primary); fill: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface)); }
+  22%, 100% { stroke: var(--color-border); fill: var(--color-surface); }
+}
+@keyframes wiki-tree-text {
+  0%, 18% { fill: var(--color-ink); }
+  22%, 100% { fill: var(--color-ink-muted); }
+}
+
+/* ── Gráfico (JS mueve la curva; CSS dibuja los ejes al entrar) ────────────── */
+.wiki-plot-grid path {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+.wiki-plot-axes {
+  fill: none;
+  stroke: var(--color-ink-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 1;
+  animation: wiki-draw 900ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes wiki-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+.wiki-plot-tick {
+  font: 11px 'Matex Serif', Georgia, serif;
+  fill: var(--color-ink-muted);
+}
+.wiki-plot-area {
+  fill: color-mix(in srgb, #fbbf24 22%, transparent);
+  stroke: none;
+}
+.wiki-plot-derivative {
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 1.8;
+  stroke-dasharray: 6 5;
+  opacity: 0.85;
+}
+.wiki-plot-curve {
+  fill: none;
+  stroke: #818cf8;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, #818cf8 50%, transparent));
+}
+.wiki-plot-tangent {
+  stroke: #f472b6;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.wiki-plot-point {
+  fill: #f472b6;
+  stroke: var(--color-surface-muted);
+  stroke-width: 2;
+}
+.wiki-plot-label {
+  font: italic 14px 'Matex Serif', Georgia, serif;
+  fill: #c7d2fe;
+}
+.wiki-plot-label--derivative {
+  fill: #6ee7b7;
+}
+.wiki-plot-label--area {
+  fill: #fcd34d;
+  font-size: 18px;
+}
+
+/* ── Fases (diseño, vista previa): 4 fases por ciclo ───────────────────────── */
+.wiki-phase {
+  opacity: 0;
+  animation: wiki-phase-1 var(--cycle, 12s) linear var(--d, 0s) infinite;
+}
+@keyframes wiki-phase-1 {
+  0% { opacity: 0; }
+  2%, 23% { opacity: 1; }
+  25%, 100% { opacity: 0; }
+}
+@keyframes wiki-phase-2 {
+  0% { opacity: 0; }
+  2%, 48% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.wiki-vp-indicator {
+  animation: wiki-vp-indicator 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes wiki-vp-indicator {
+  0%, 23% { transform: translateX(0); }
+  25%, 48% { transform: translateX(100%); }
+  50%, 73% { transform: translateX(200%); }
+  75%, 98% { transform: translateX(300%); }
+  100% { transform: translateX(0); }
+}
+
+/* ── Lector: entrada de página y revelado al scrollear ─────────────────────── */
+.wiki-page-in {
+  animation: wiki-page-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes wiki-page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.wiki-reveal {
+  transition:
+    opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wiki-reveal:not([data-revealed]) {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.wiki-step {
+  animation: wiki-page-in 480ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i) * 110ms) both;
+}
+
+/* ── Reducir movimiento: todo quieto, en su estado final ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .wiki-anim *,
+  .wiki-page-in,
+  .wiki-step {
+    animation: none !important;
+  }
+  .wiki-reveal:not([data-revealed]) {
+    opacity: 1;
+    transform: none;
+  }
+  .wiki-phase {
+    opacity: 0;
+  }
+  .wiki-phase--first {
+    opacity: 1;
+  }
+  .wiki-ts-ring {
+    opacity: 0;
+  }
+  .wiki-ts-flow,
+  .wiki-int-flow {
+    opacity: 0;
+  }
+}

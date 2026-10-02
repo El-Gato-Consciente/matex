@@ -18,54 +18,79 @@ export const nivel0 = {
         {
           kind: 'prose',
           markdown:
-            'Te damos la **bienvenida**. Esta plataforma te acompaña a **aprender y usar LaTeX**, el sistema con el que se escriben los documentos científicos y técnicos del mundo. Tiene **dos mitades que se complementan: aprender y producir.**',
+            'Te damos la **bienvenida**. Acá vas a **aprender y usar LaTeX**, el sistema con el que se escriben los documentos científicos y técnicos del mundo. La idea es simple: en vez de acomodar todo a mano, escribís **texto con marcas** (“esto es una sección”, “esto es una ecuación”) y un programa —el **compilador**— lo convierte en un PDF con calidad de imprenta.',
+        },
+        {
+          kind: 'playground',
+          caption:
+            'Esto es LaTeX de verdad. Cambiá `\\pi` por `\\theta`, escribí tu nombre en el título o agregá otra ecuación: el PDF de la derecha se actualiza solo.',
+          body: [
+            '\\section*{Hola, \\LaTeX}',
+            'Escribís \\emph{qué} es cada cosa y \\LaTeX{} se ocupa',
+            'de que se vea bien. La identidad de Euler:',
+            '\\[ e^{i\\pi} + 1 = 0 \\]',
+          ].join('\n'),
         },
         {
           kind: 'prose',
           markdown:
-            'Las dos mitades:\n\n- **Curso** — la ruta de lecciones. Cada una tiene tres vistas: **Aprender** (la explicación), **Ejemplo** (un documento completo que compilás y explorás) y **Practicar** (completás código y se autocorrige), más un modo **Repasar** con preguntas espaciadas.\n- **Galería** — documentos modelo reales y completos, uno por cada tipo: monografía, tesina, *paper*, apunte, presentación *beamer*, libro, informe KOMA, carta, examen, CV y póster. Para ver cómo se arma cada uno con buenas prácticas y, con **“Usar como base”**, copiar cualquiera para arrancar un proyecto.\n- **Mis Proyectos** — tu **taller**: creás documentos desde cero o desde una plantilla, trabajás con **varios archivos** (e imágenes), compilás, y descargás el PDF o todo el proyecto en `.zip`. Todo se organiza en carpetas.',
+            'Fijate que nunca elegiste una fuente, un tamaño ni un margen: marcaste **qué** es cada cosa (`\\section*` es un título, `\\emph` es énfasis, `\\[ … \\]` es una ecuación aparte) y el **cómo** lo resolvió LaTeX. Esa separación entre contenido y forma es la idea central de todo el curso.',
         },
         {
           kind: 'prose',
           markdown:
-            'En una frase: en el **Curso** aprendés, y en **Galería + Mis Proyectos** producís lo tuyo. No hace falta terminar el curso para empezar a escribir: podés ir y volver entre aprender y producir cuando quieras.',
+            '**De dónde viene.** En **1978**, el matemático **Donald Knuth** estaba tan disconforme con cómo se veían sus libros que creó **TeX**, un motor tipográfico obsesivamente cuidadoso. En **1984**, **Leslie Lamport** construyó **LaTeX** encima, con comandos de alto nivel (secciones, listas, referencias) para que cualquiera pudiera usarlo. Cuatro décadas después, sigue siendo el estándar.',
         },
         {
           kind: 'prose',
           markdown:
-            '**¿Qué es LaTeX?** Es un *sistema de composición de documentos*. En vez de acomodar todo a mano como en un procesador de texto, escribís **texto plano con marcas** (“esto es una sección”, “esto es una ecuación”) y un programa —el **compilador**— produce un PDF con calidad de imprenta.',
+            '**¿Por qué aprenderlo?** Porque es el **estándar de facto** en matemática, física, computación e ingeniería. Las tesis, los *papers*, los libros de texto y repositorios como **arXiv** se escriben mayoritariamente en LaTeX, y muchas revistas lo piden como formato de envío.',
         },
         {
           kind: 'prose',
           markdown:
-            'Nació de una frustración: en **1978**, el matemático **Donald Knuth** estaba tan disconforme con cómo se veían sus libros que creó **TeX**, un motor tipográfico obsesivamente cuidadoso. En **1984**, **Leslie Lamport** construyó **LaTeX** encima, con comandos de alto nivel (secciones, listas, referencias) para que cualquiera pudiera usarlo. Cuatro décadas después, sigue siendo el estándar.',
-        },
-        {
-          kind: 'prose',
-          markdown:
-            '**¿Por qué aprenderlo?** Porque es el **estándar de facto** en matemática, física, computación e ingeniería. Las tesis, los *papers*, los libros de texto y repositorios como **arXiv** se escriben mayoritariamente en LaTeX, y muchas revistas lo piden como formato de envío. Es una herramienta profesional que probablemente te acompañe durante toda la carrera.',
-        },
-        {
-          kind: 'prose',
-          markdown:
-            '**¿LaTeX o un procesador de texto?** No es una rivalidad: son herramientas pensadas para trabajos distintos, y elegir la adecuada es parte del oficio.\n\n- Un **procesador** (Word, Google Docs, LibreOffice) es excelente para escribir rápido viendo el resultado al instante, **colaborar en tiempo real**, y usar comentarios y control de cambios con personas no técnicas. Ideal para textos cortos y trabajo de oficina.\n- **LaTeX** se luce cuando el contenido pesa más que el maquetado: **matemática** con calidad editorial, **documentos largos y estructurados** (informes, tesis, libros) donde índices, numeración y referencias se mantienen solos, **reproducibilidad** (es texto plano: se versiona con `git` y compila igual en cualquier máquina y dentro de años) y un **control tipográfico** fino. Además es libre y gratuito.',
-        },
-        {
-          kind: 'prose',
-          markdown:
-            'Para lo que vas a hacer en la carrera —resolver y comunicar matemática, escribir informes y, más adelante, una tesis o un *paper*— LaTeX es la opción más sólida, y de ahí que sea el estándar en las ciencias exactas. Como toda herramienta potente, tiene un **costo de entrada**: una curva de aprendizaje. Este curso existe para que esa curva sea corta. *(Si te interesa el panorama más amplio, **Typst** es una alternativa moderna que comparte la idea de “texto que se compila”; lo mencionamos para que sepas que el campo también evoluciona.)*',
+            '**¿LaTeX o un procesador de texto?** No es una rivalidad: son herramientas para trabajos distintos, y elegir la adecuada es parte del oficio.\n\n- Un **procesador** (Word, Google Docs, LibreOffice) es excelente para escribir rápido viendo el resultado al instante, **colaborar en tiempo real** y usar comentarios y control de cambios con personas no técnicas.\n- **LaTeX** se luce cuando el contenido pesa más que el maquetado: **matemática** con calidad editorial, **documentos largos y estructurados** (informes, tesis, libros) donde índices, numeración y referencias se mantienen solos, **reproducibilidad** (es texto plano: se versiona con `git` y compila igual dentro de años) y un **control tipográfico** fino. Además es libre y gratuito.',
         },
         {
           kind: 'callout',
           tone: 'tip',
           markdown:
-            'La filosofía del curso, en una frase: **primero el significado, después la forma, y la carpintería solo cuando hace falta**. Con el nivel básico (Niveles 0 y 1) ya vas a producir documentos de calidad por tu cuenta — a eso le llamamos *supervivencia*.',
+            'La filosofía del curso, en una frase: **primero el significado, después la forma, y la carpintería solo cuando hace falta**. Con el nivel básico (Niveles 0 y 1) ya vas a producir documentos de calidad por tu cuenta — a eso le llamamos *supervivencia*. *(Si te interesa el panorama más amplio, **Typst** es una alternativa moderna con la misma idea de “texto que se compila”.)*',
         },
+        { kind: 'check' },
         {
-          kind: 'callout',
-          tone: 'note',
-          markdown:
-            'Para empezar, tocá **Ver el ejemplo** acá abajo y mirá LaTeX en acción; después seguí con **Practicar**. Cuando quieras explorar documentos completos, pasá por la **Galería**, y cuando quieras escribir lo tuyo, andá a **Mis Proyectos**.',
+          kind: 'destinations',
+          title: 'Por dónde seguir',
+          items: [
+            {
+              to: 'ejemplo',
+              title: 'Curso',
+              description:
+                'La ruta de lecciones. Cada una tiene **Aprender**, **Ejemplo** (un documento completo que compilás) y **Practicar** (se autocorrige), más **Repasar** con preguntas espaciadas.',
+              cta: 'Ver el ejemplo de esta lección',
+            },
+            {
+              to: 'proyectos',
+              title: 'Mis Proyectos',
+              description:
+                'Tu **taller**: documentos con varios archivos e imágenes, organizados en carpetas. Compilás y descargás el PDF o todo en `.zip`. No hace falta terminar el curso para empezar.',
+              cta: 'Ir a Mis Proyectos',
+            },
+            {
+              to: 'nuevo',
+              title: 'Galería y plantillas',
+              description:
+                'Documentos modelo completos —monografía, tesina, *paper*, *beamer*, libro, carta, examen, CV, póster— para estudiar por dentro o **usar como base** de un proyecto nuevo.',
+              cta: 'Explorar la galería',
+            },
+            {
+              to: 'repaso',
+              title: 'Repasar',
+              description:
+                'Preguntas cortas que vuelven justo cuando estás por olvidarlas (repaso espaciado). Las de arriba ya quedaron agendadas.',
+              cta: 'Abrir el repaso',
+            },
+          ],
         },
       ],
       example: [

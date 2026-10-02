@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  COURSE_START,
   HOME,
   locationToPath,
   parseLocation,
@@ -8,7 +9,7 @@ import {
 } from './location'
 
 const CASES: ReadonlyArray<readonly [string, AppLocation]> = [
-  ['/curso', HOME],
+  ['/curso', COURSE_START],
   ['/curso/l0-1', { kind: 'lesson', lessonId: 'l0-1', view: 'learn' }],
   ['/curso/l0-1/ejemplo', { kind: 'lesson', lessonId: 'l0-1', view: 'example' }],
   ['/curso/l0-1/practicar', { kind: 'lesson', lessonId: 'l0-1', view: 'practice' }],
@@ -17,6 +18,8 @@ const CASES: ReadonlyArray<readonly [string, AppLocation]> = [
   ['/proyectos/nuevo', { kind: 'newDocument' }],
   ['/proyectos/2a1c-uuid', { kind: 'project', projectId: '2a1c-uuid' }],
   ['/ejemplos/ex-paper-biseccion', { kind: 'exemplar', exemplarId: 'ex-paper-biseccion' }],
+  ['/como-funciona', { kind: 'wiki', pageId: null }],
+  ['/como-funciona/graficos', { kind: 'wiki', pageId: 'graficos' }],
 ]
 
 describe('parseLocation', () => {
@@ -24,8 +27,9 @@ describe('parseLocation', () => {
     expect(parseLocation(path)).toEqual(expected)
   })
 
-  it('cae en HOME ante una ruta desconocida (link viejo, URL tipeada a mano)', () => {
-    for (const path of ['/', '', '/cualquiera', '/curso/', '/ejemplos']) {
+  it('cae en HOME (Mis Proyectos) ante una ruta desconocida (link viejo, URL tipeada a mano)', () => {
+    expect(HOME.kind).toBe('projects')
+    for (const path of ['/', '', '/cualquiera', '/ejemplos']) {
       expect(parseLocation(path).kind).toBe(HOME.kind)
     }
   })
@@ -72,8 +76,9 @@ describe('locationToPath', () => {
 })
 
 describe('sectionOf', () => {
-  it('las lecciones son «curso» y todo lo demás «proyectos»', () => {
+  it('las lecciones son «curso», la wiki es «wiki» y todo lo demás «proyectos»', () => {
     expect(sectionOf({ kind: 'lesson', lessonId: null, view: 'learn' })).toBe('curso')
+    expect(sectionOf({ kind: 'wiki', pageId: null })).toBe('wiki')
     expect(sectionOf({ kind: 'projects' })).toBe('proyectos')
     expect(sectionOf({ kind: 'newDocument' })).toBe('proyectos')
     expect(sectionOf({ kind: 'project', projectId: 'x' })).toBe('proyectos')

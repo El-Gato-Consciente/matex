@@ -29,6 +29,7 @@ import { compileToLatex } from '../src/features/matex/core/compile'
 import { emitBibtex } from '../src/features/matex/core/bibtex'
 import type { MatexDoc } from '../src/features/matex/core/ast'
 import { levels } from '../src/features/lessons/content'
+import { playgroundInput } from '../src/features/lessons/playground'
 import { exemplars } from '../src/features/showcase/data'
 import { templates } from '../src/features/templates/data'
 import { filesInput, singleFileInput, type CompileFile } from '../src/features/compiler/types'
@@ -41,7 +42,7 @@ import {
   type Target,
 } from './lib/verify-runner'
 
-/** Lecciones: el ejemplo y la solución del desafío, con sus archivos acompañantes. */
+/** Lecciones: el ejemplo, la solución del desafío (con sus archivos acompañantes) y los playgrounds. */
 function lessonTargets(): Target[] {
   const targets: Target[] = []
   for (const level of levels) {
@@ -57,6 +58,11 @@ function lessonTargets(): Target[] {
           input: filesInput(lesson.mainFile, source, extra),
         })
       }
+      // El cuerpo inicial de cada playground, envuelto en su preámbulo (como lo ve el alumno).
+      lesson.content.forEach((block, index) => {
+        if (block.kind !== 'playground') return
+        targets.push({ name: `${lesson.id} · playground ${index}`, input: playgroundInput(block.body) })
+      })
     }
   }
   return targets

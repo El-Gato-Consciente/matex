@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { allQuestions } from './index'
-import { findLesson } from '../../lessons/content/index'
+import { allLessons, findLesson } from '../../lessons/content/index'
 
 /**
  * QA del banco de quiz (puro): que cada pregunta sea jugable y que los
@@ -23,6 +23,14 @@ describe('banco de preguntas', () => {
       const lesson = findLesson(q.lessonId)
       expect(lesson, `${q.id} → lección '${q.lessonId}'`).toBeDefined()
       expect(q.level, `${q.id}: level no coincide con la lección`).toBe(lesson!.level)
+    }
+  })
+
+  it('cada lección con bloque `check` tiene preguntas en el banco', () => {
+    for (const lesson of allLessons) {
+      if (!lesson.content.some((block) => block.kind === 'check')) continue
+      const count = allQuestions.filter((q) => q.lessonId === lesson.id).length
+      expect(count, `${lesson.id} tiene un bloque check sin preguntas`).toBeGreaterThan(0)
     }
   })
 

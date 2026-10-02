@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDown, ChevronLeft, ChevronRight } from '@/components/icons'
+import { Logo } from '@/components/Logo'
 import { downloadBlob } from '@/lib/files'
 import { buildProjectZip, readProjectZip } from '@/lib/projectZip'
 import { createCompiler } from '@/features/compiler/createCompiler'
 import { allLessons, findLesson, firstLesson, levels } from '@/features/lessons/content'
 import { CourseWorkspace } from '@/features/lessons/CourseWorkspace'
+import { LessonHostProvider, type LessonHost } from '@/features/lessons/LessonHost'
+import type { LessonDestination } from '@/features/lessons/types'
 import { LessonReader } from '@/features/lessons/LessonReader'
 import { LessonSwitcher } from '@/features/lessons/LessonSwitcher'
 import { HeaderSlotProvider, HeaderSlotTarget } from '@/features/workspace/HeaderSlot'
@@ -13,7 +16,7 @@ import { MatexWorkspace } from '@/features/matex/editor/MatexWorkspace'
 import { compileToLatex, MATEX_AST_VERSION, parseMatexDoc, type MatexDoc } from '@/features/matex/core'
 import { readMatexBundle } from '@/features/matex/bundle'
 import {
-  HOME,
+  COURSE_START,
   sectionOf,
   type AppLocation,
   type LessonView,
@@ -21,6 +24,7 @@ import {
 } from '@/features/navigation/location'
 import { useAppLocation } from '@/features/navigation/useAppLocation'
 import { LocalProgressStore } from '@/features/progress/LocalProgressStore'
+import { markWelcomed, shouldWelcome } from '@/features/progress/welcome'
 import { LocalReviewStore } from '@/features/srs/LocalReviewStore'
 import { allQuestions } from '@/features/quiz/pool'
 import { QuizSession } from '@/features/quiz/QuizSession'
@@ -33,6 +37,7 @@ import { mainContent } from '@/features/documents/types'
 import { exemplars, findExemplar } from '@/features/showcase/data'
 import type { Exemplar } from '@/features/showcase/types'
 import { ShowcaseViewer } from '@/features/showcase/ShowcaseViewer'
+import { WikiView } from '@/features/wiki/WikiView'
 
 /** Documento de ejemplo para probar el editor visual Matex (beta). */
 const MATEX_SAMPLE: MatexDoc = {
@@ -87,6 +92,18 @@ export default function App() {
 
   const [location, navigate] = useAppLocation()
 
+  // La primera visita a la raíz va a «Cómo funciona» (la wiki); después, la raíz es Mis
+  // Proyectos. Antes de pintar, para que no parpadee la galería. Un link directo se respeta.
+  useLayoutEffect(() => {
+    const isRoot = window.location.pathname === '/'
+    if (isRoot && shouldWelcome({ completedLessons: progress.all().length, projects: projectStore.list().length })) {
+      navigate({ kind: 'wiki', pageId: null }, { replace: true })
+    }
+    markWelcomed()
+    // Solo al montar: es la primera entrada al sitio, no cada navegación.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [completedIds, setCompletedIds] = useState<ReadonlySet<string>>(
     () => new Set(progress.all().map((entry) => entry.lessonId)),
   )
@@ -103,7 +120,7 @@ export default function App() {
 
   // Volver al Curso desde Mis Proyectos retoma la última lección visitada. No va en la URL: es
   // memoria de la sesión, como la posición del scroll, no un lugar al que se pueda linkear.
-  const lastLesson = useRef<AppLocation>(HOME)
+  const lastLesson = useRef<AppLocation>(COURSE_START)
   useEffect(() => {
     if (location.kind === 'lesson') lastLesson.current = location
   }, [location])
@@ -137,9 +154,36 @@ export default function App() {
     navigate({ kind: 'lesson', lessonId: lesson.id, view: nextView })
   }
 
-  function handleChallengePassed(lessonId: string) {
+  function completeLesson(lessonId: string) {
     progress.markCompleted(lessonId)
     setCompletedIds((previous) => new Set(previous).add(lessonId))
+  }
+
+  /** Destinos de los bloques `destinations` de una lección. */
+  function navigateFromLesson(to: LessonDestination) {
+    switch (to) {
+      case 'ejemplo':
+        return changeLessonView('example')
+      case 'practica':
+        return changeLessonView('practice')
+      case 'repaso':
+        return changeLessonView('repaso')
+      case 'proyectos':
+        return navigate({ kind: 'projects' })
+      case 'nuevo':
+        return navigate({ kind: 'newDocument' })
+    }
+  }
+
+  const lessonHost: LessonHost = {
+    compiler,
+    reviewStore,
+    navigate: navigateFromLesson,
+    onAnswered: refreshDueCount,
+    // Con desafío, la lección la completa el desafío; sin él, el chequeo.
+    onCheckPassed: (lessonId) => {
+      if (!findLesson(lessonId)?.challenge) completeLesson(lessonId)
+    },
   }
 
   // ── Galería ───────────────────────────────────────────────────────────────
@@ -344,20 +388,20 @@ export default function App() {
     if (selectedFolderId === id) setSelectedFolderId(parentId)
   }
 
-  /** Cambia de sección: al Curso se vuelve donde estabas; a Proyectos, a la lista. */
+  /** Cambia de sección: al Curso se vuelve donde estabas; a la wiki, a su portada; a Proyectos, a la lista. */
   function goSection(next: Section) {
-    navigate(next === 'curso' ? lastLesson.current : { kind: 'projects' })
+    if (next === 'curso') navigate(lastLesson.current)
+    else if (next === 'wiki') navigate({ kind: 'wiki', pageId: null })
+    else navigate({ kind: 'projects' })
   }
 
   return (
     <HeaderSlotProvider>
+    <LessonHostProvider value={lessonHost}>
     <div className="flex h-full flex-col">
       <header className="flex shrink-0 items-center gap-3 border-b border-(--color-border) bg-(--color-surface) px-4 py-2.5">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-7 place-items-center rounded-md bg-(--color-primary) text-sm font-bold text-(--color-primary-ink)">
-            M
-          </span>
-          <span className="hidden text-base font-semibold tracking-tight sm:inline">Matex</span>
+        <div className="flex items-center text-base">
+          <Logo anchor wordmarkClassName="hidden sm:inline-flex" />
         </div>
 
         <PrimaryNav section={section} onChange={goSection} />
@@ -395,7 +439,16 @@ export default function App() {
         <HeaderSlotTarget className="flex min-w-0 flex-1 items-center justify-end gap-2" />
       </header>
 
-      {location.kind === 'lesson' ? (
+      {location.kind === 'wiki' ? (
+        <main className="min-h-0 flex-1 bg-(--color-surface)">
+          <WikiView
+            pageId={location.pageId}
+            onSelectPage={(pageId) => navigate({ kind: 'wiki', pageId })}
+            onStartMatex={createMatex}
+            onGoProjects={() => navigate({ kind: 'projects' })}
+          />
+        </main>
+      ) : location.kind === 'lesson' ? (
         location.view === 'learn' ? (
           <main className="min-h-0 flex-1 bg-(--color-surface)">
             <LessonReader
@@ -423,7 +476,7 @@ export default function App() {
               lesson={lesson}
               view={location.view}
               compiler={compiler}
-              onChallengePassed={handleChallengePassed}
+              onChallengePassed={completeLesson}
               onGoLearn={() => changeLessonView('learn')}
               onGoExample={() => changeLessonView('example')}
               onGoPractice={() => changeLessonView('practice')}
@@ -494,6 +547,7 @@ export default function App() {
         </main>
       )}
     </div>
+    </LessonHostProvider>
     </HeaderSlotProvider>
   )
 }
@@ -503,8 +557,12 @@ interface PrimaryNavProps {
   onChange: (section: Section) => void
 }
 
+/** El Curso está oculto por ahora: su código y sus rutas siguen vivos; volver a mostrarlo es poner `true`. */
+const COURSE_VISIBLE = false
+
 const NAV_ITEMS: ReadonlyArray<{ value: Section; label: string }> = [
-  { value: 'curso', label: 'Curso' },
+  ...(COURSE_VISIBLE ? [{ value: 'curso' as const, label: 'Curso' }] : []),
+  { value: 'wiki', label: 'Cómo funciona' },
   { value: 'proyectos', label: 'Mis Proyectos' },
 ]
 
