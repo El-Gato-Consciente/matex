@@ -10,6 +10,7 @@ import { diagramToSvg } from './graphics/diagramSvg'
 import { treeToSvg } from './graphics/treeSvg'
 import { PLOT_RUNTIME_JS } from './plotRuntime.generated'
 import { distributePosterBlocks, posterColumns } from './poster'
+import { accentCss } from './policy/accent'
 import { createDocNumbering } from './policy/numbering'
 import { cvMeta, documentFamily, examMeta, letterMeta, posterMeta } from './family'
 import type {
@@ -803,9 +804,7 @@ html, body { margin: 0; background: var(--mx-bg); }
 .mx-deck-nav { position: sticky; bottom: 0; text-align: center; padding: .5rem; font-size: .8em; color: var(--mx-muted); }
 /* Póster: bloques en recuadros. */
 /* Diseño semántico (LE-02): el acento es una variable; la familia de diseño, tipografía y filetes. */
-.mx-accent-blue { --mx-accent:#1a5fb4; } .mx-accent-green { --mx-accent:#2a9d3a; } .mx-accent-orange { --mx-accent:#c96a12; }
-.mx-accent-red { --mx-accent:#c01c28; } .mx-accent-purple { --mx-accent:#7239a8; } .mx-accent-grey { --mx-accent:#5a5a5a; }
-.mx-accent-black { --mx-accent:#1a1a1a; }
+${accentCss()}
 .mx-style-modern { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; }
 .mx-style-modern .mx-title { font-weight: 600; letter-spacing: -.01em; }
 .mx-style-modern .mx-heading { color: var(--mx-accent); }

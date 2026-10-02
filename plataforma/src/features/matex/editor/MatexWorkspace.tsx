@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from 'react'
@@ -76,6 +77,9 @@ import { DiagramEditor } from './DiagramEditor'
 import { TreeEditor } from './TreeEditor'
 import { Modal } from '@/components/Modal'
 import { CoverHeader } from './CoverHeader'
+import { MiniSheet } from '@/features/documents/MiniSheet'
+import { docOutline } from '@/features/documents/projectOutline'
+import { accentHex } from '../core/policy/accent'
 import { SlashMenu, type SlashAnchor } from './SlashMenu'
 import { filterInsertItems, INSERT_GROUPS, type InsertItem } from './insertItems'
 import { autoKey, emitBibtex } from '../core'
@@ -1453,7 +1457,11 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
           <div className="flex h-full min-h-0">
             <div className="matex-desk h-full min-w-0 flex-1 overflow-auto">
               {/* La hoja: el documento se escribe sobre una página, con su portada arriba. */}
-              <div className="matex-sheet">
+              {/* La hoja toma el diseño y el acento del documento: se escribe viendo cómo va a salir. */}
+              <div
+                className={`matex-sheet matex-sheet--${meta.style ?? 'standard'}`}
+                style={{ '--doc-accent': accentHex(meta.accent) } as CSSProperties}
+              >
                 <CoverHeader meta={meta} onPatch={patchMeta} onEditCover={() => setPortadaOpen(true)} />
                 <EditorContent editor={editor} />
               </div>
@@ -1595,8 +1603,13 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
 
       {/* Configuración estructural del documento (ME-15): consolida clase, márgenes, índice y
           portada-en-página-propia, antes repartidos entre Portada y el modelo (AST). */}
-      <Modal open={docCfgOpen} onClose={() => setDocCfgOpen(false)} title="Documento" width="max-w-md">
-        <DocumentSettings meta={meta} onPatch={patchMeta} onApplyDocClass={applyDocClass} />
+      <Modal open={docCfgOpen} onClose={() => setDocCfgOpen(false)} title="Documento" width="max-w-2xl">
+        <DocumentSettings
+          meta={meta}
+          onPatch={patchMeta}
+          onApplyDocClass={applyDocClass}
+          preview={<MiniSheet outline={docOutline(ast, name || 'Documento')} />}
+        />
       </Modal>
 
       <Modal open={bibOpen} onClose={() => setBibOpen(false)} title="Bibliografía" width="max-w-2xl">

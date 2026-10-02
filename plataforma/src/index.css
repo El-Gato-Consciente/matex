@@ -1452,3 +1452,65 @@ textarea.matex-atom-popover-field {
     animation: none;
   }
 }
+
+/* ── Miniaturas de la galería de proyectos ──────────────────────────────────── */
+.mini-sheet {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .mini-sheet {
+  transform: translateY(-3px);
+}
+.mini-sheet--serif {
+  font-family: 'Matex Serif', 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini-sheet {
+    transition: none;
+  }
+}
+
+/* ── La hoja sigue el diseño del documento (Estándar / Clásico / Moderno + acento) ───── */
+/* Mismo criterio que el HTML exportado (.mx-style-*): se escribe viendo cómo va a salir.
+   Sobre la hoja oscura el acento se aclara para que se lea (un acento negro no se vería). */
+.matex-sheet {
+  --doc-accent-ui: color-mix(in srgb, var(--doc-accent, #2a9d3a) 60%, white);
+}
+.matex-sheet--standard .matex-prose,
+.matex-sheet--classic .matex-prose,
+.matex-sheet--standard .matex-cover,
+.matex-sheet--classic .matex-cover {
+  font-family: 'Matex Serif', 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
+}
+.matex-sheet--standard .matex-prose,
+.matex-sheet--classic .matex-prose {
+  font-size: 16.5px;
+}
+.matex-sheet .matex-theorem {
+  border-left-color: var(--doc-accent-ui);
+  background: color-mix(in srgb, var(--doc-accent-ui) 6%, transparent);
+}
+
+.matex-sheet--classic .matex-cover {
+  border-bottom: 2px solid var(--doc-accent-ui);
+}
+.matex-sheet--classic .matex-cover-title {
+  font-variant: small-caps;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.matex-sheet--classic .matex-prose h1,
+.matex-sheet--classic .matex-prose h2 {
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.matex-sheet--modern .matex-cover-title,
+.matex-sheet--modern .matex-prose h1,
+.matex-sheet--modern .matex-prose h2,
+.matex-sheet--modern .matex-prose h3 {
+  color: var(--doc-accent-ui);
+}
+.matex-sheet--modern .matex-cover-title {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}

@@ -13,25 +13,25 @@ function setup(meta: DocMeta = {}) {
   return { onPatch, onApplyDocClass }
 }
 
-/** El `<select>` de familia (el primero del modal). */
-const familySelect = () => screen.getByRole('combobox', { name: /Familia/i })
+/** Los mosaicos de familia son botones con su nombre. */
+const familyTile = (name: string) => screen.getByRole('button', { name })
 
 describe('DocumentSettings · elección de familia (ME-47)', () => {
   it('elegir una familia setea `meta.family` con su metadata vacía', () => {
     const { onPatch } = setup()
-    fireEvent.change(familySelect(), { target: { value: 'letter' } })
+    fireEvent.click(familyTile('Carta'))
     expect(onPatch).toHaveBeenCalledWith({ family: { kind: 'letter', letter: {} } })
   })
 
   it('volver a "documento normal" borra la familia', () => {
     const { onPatch } = setup({ family: { kind: 'cv', cv: {} } })
-    fireEvent.change(familySelect(), { target: { value: 'document' } })
+    fireEvent.click(familyTile('Documento'))
     expect(onPatch).toHaveBeenCalledWith({ family: undefined })
   })
 
   it('presentación no tiene metadata (solo el kind)', () => {
     const { onPatch } = setup()
-    fireEvent.change(familySelect(), { target: { value: 'presentation' } })
+    fireEvent.click(familyTile('Presentación'))
     expect(onPatch).toHaveBeenCalledWith({ family: { kind: 'presentation' } })
   })
 })
@@ -65,5 +65,37 @@ describe('DocumentSettings · edición de campos de familia (ME-47, el reporte d
   it('una carta NO muestra el toggle de dos columnas (tiene su propio layout)', () => {
     setup({ family: { kind: 'letter', letter: {} } })
     expect(screen.queryByRole('checkbox', { name: /Dos columnas/i })).toBeNull()
+  })
+})
+
+describe('DocumentSettings · diseño visual', () => {
+  it('la familia elegida queda marcada', () => {
+    setup({ family: { kind: 'cv', cv: {} } })
+    expect(familyTile('CV').getAttribute('aria-pressed')).toBe('true')
+    expect(familyTile('Carta').getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('el acento se elige con su círculo, y «Del diseño» lo borra', () => {
+    const { onPatch } = setup({ accent: 'blue' })
+    fireEvent.click(screen.getByRole('button', { name: 'Naranja' }))
+    expect(onPatch).toHaveBeenCalledWith({ accent: 'orange' })
+    fireEvent.click(screen.getByRole('button', { name: 'Del diseño' }))
+    expect(onPatch).toHaveBeenCalledWith({ accent: undefined })
+  })
+
+  it('Estándar es el diseño por defecto (no se guarda)', () => {
+    const { onPatch } = setup({ style: 'modern' })
+    fireEvent.click(screen.getByRole('button', { name: /Clásico/ }))
+    expect(onPatch).toHaveBeenCalledWith({ style: 'classic' })
+    fireEvent.click(screen.getByRole('button', { name: /Estándar/ }))
+    expect(onPatch).toHaveBeenCalledWith({ style: undefined })
+  })
+
+  it('márgenes y estructura', () => {
+    const { onPatch, onApplyDocClass } = setup()
+    fireEvent.click(screen.getByRole('button', { name: 'Estrecho' }))
+    expect(onPatch).toHaveBeenCalledWith({ margin: '2cm' })
+    fireEvent.click(screen.getByRole('button', { name: /Informe/ }))
+    expect(onApplyDocClass).toHaveBeenCalledWith('report', false)
   })
 })
