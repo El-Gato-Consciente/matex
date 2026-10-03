@@ -42,6 +42,9 @@ import { AccountMenu } from '@/features/account/AccountMenu'
 import { useAccount } from '@/features/account/account'
 import { useSync } from '@/features/sync/useSync'
 import { isProjectFile } from '@/features/sync/projectFile'
+import { HttpShareApi } from '@/features/share/ShareApi'
+import { SharedView } from '@/features/share/SharedView'
+import type { SharedMatex } from '@/features/share/sharedContent'
 
 /** Documento de ejemplo para probar el editor visual Matex (beta). */
 const MATEX_SAMPLE: MatexDoc = {
@@ -129,6 +132,14 @@ export default function App() {
     },
   })
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+
+  // Compartir por link. Abrir un link no necesita sesión; crearlo, sí.
+  const apiBaseUrl = import.meta.env.VITE_COMPILE_API_URL
+  const shareApi = useMemo(
+    () => (apiBaseUrl ? new HttpShareApi({ baseUrl: apiBaseUrl, getToken: account.getToken }) : null),
+    [apiBaseUrl, account.getToken],
+  )
+  const signedIn = account.status === 'signed-in'
 
   const section = sectionOf(location)
   const lessonView: LessonView = location.kind === 'lesson' ? location.view : 'learn'
@@ -360,6 +371,20 @@ export default function App() {
     )
   }
 
+  /** «Importar a mis proyectos» desde un link compartido: una copia propia, independiente del original. */
+  function importShared(name: string, shared: SharedMatex) {
+    openProject(
+      projectStore.create({
+        name,
+        kind: 'matex',
+        ast: shared.ast,
+        files: [{ path: 'main.tex', content: compileToLatex(shared.ast), encoding: 'utf8' as const }, ...shared.files],
+        mainFile: 'main.tex',
+        folderId: null,
+      }).id,
+    )
+  }
+
   function renameDocument(id: string) {
     const current = projectStore.get(id)
     const name = window.prompt('Nuevo nombre del proyecto:', current?.name ?? '')
@@ -495,7 +520,21 @@ export default function App() {
         <AccountMenu sync={sync} />
       </header>
 
-      {location.kind === 'wiki' ? (
+      {location.kind === 'shared' ? (
+        <main className="min-h-0 flex-1">
+          {shareApi ? (
+            <SharedView
+              key={location.shareId}
+              shareId={location.shareId}
+              api={shareApi}
+              onImport={importShared}
+              onGoProjects={() => navigate({ kind: 'projects' })}
+            />
+          ) : (
+            <p className="p-8 text-center text-sm text-(--color-ink-muted)">Los links compartidos no están disponibles en esta versión del sitio.</p>
+          )}
+        </main>
+      ) : location.kind === 'wiki' ? (
         <main className="min-h-0 flex-1 bg-(--color-surface)">
           <WikiView
             pageId={location.pageId}
@@ -560,6 +599,12 @@ export default function App() {
                 compiler={compiler}
                 store={projectStore}
                 onClose={closeDocument}
+                cloud={
+                  signedIn
+                    ? { syncing: sync.status === 'syncing', isSynced: () => sync.isSynced(activeProject.id), failed: sync.status === 'error' }
+                    : undefined
+                }
+                share={{ api: shareApi, signedIn, renderSignInButton: account.renderSignInButton }}
               />
             ) : (
               <DocumentWorkspace

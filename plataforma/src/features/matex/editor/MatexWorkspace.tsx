@@ -13,7 +13,7 @@ import {
 import { Panel, PanelGroup, type ImperativePanelHandle } from 'react-resizable-panels'
 import { EditorContent, useEditor } from '@tiptap/react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Pencil } from '@/components/icons'
+import { ChevronDown, ChevronLeft, ChevronRight, Link, PanelLeft, Pencil } from '@/components/icons'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { HeaderSlotContent } from '@/features/workspace/HeaderSlot'
@@ -49,6 +49,11 @@ import { TreeEditor } from './TreeEditor'
 import { Modal } from '@/components/Modal'
 import { CoverHeader } from './CoverHeader'
 import { matexEditorExtensions } from './editorExtensions'
+import { SaveStatus } from '@/features/workspace/SaveStatus'
+import type { CloudSave } from '@/features/workspace/saveDescription'
+import { ShareDialog } from '@/features/share/ShareDialog'
+import type { ShareApi, ShareKind } from '@/features/share/ShareApi'
+import { sharedMtexBlob } from '@/features/share/sharedContent'
 import { MiniSheet } from '@/features/documents/MiniSheet'
 import { docOutline } from '@/features/documents/projectOutline'
 import { accentHex } from '../core/policy/accent'
@@ -112,6 +117,26 @@ interface MatexWorkspaceProps {
   compiler: LatexCompiler
   store: ProjectStore
   onClose: () => void
+  /** Estado de la nube para este documento (`undefined` = sin sesión): alimenta el indicador de guardado. */
+  cloud?: CloudSaveSource | undefined
+  /** Compartir por link. Sin esto, el botón no aparece. */
+  share?: ShareHost | undefined
+}
+
+/**
+ * La nube, vista desde el editor. `isSynced` es una función y no un valor: el editor guarda
+ * localmente sin que la app se entere, así que la pregunta se hace en cada render de acá (si no,
+ * el indicador diría «en la nube» hasta la próxima pasada de sincronización).
+ */
+export interface CloudSaveSource extends Omit<CloudSave, 'synced'> {
+  readonly isSynced: () => boolean
+}
+
+/** Lo que el editor necesita de la app para compartir (la API y la sesión viven en `App`). */
+export interface ShareHost {
+  readonly api: ShareApi | null
+  readonly signedIn: boolean
+  readonly renderSignInButton: (element: HTMLElement) => void
 }
 
 /**
@@ -119,7 +144,7 @@ interface MatexWorkspaceProps {
  * de verdad) + PDF, con toggle al LaTeX generado. Autosava el AST y compila el
  * LaTeX derivado con la pipeline existente. `matex-core` no sabe que TipTap existe.
  */
-export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorkspaceProps) {
+export function MatexWorkspace({ project, compiler, store, onClose, cloud, share }: MatexWorkspaceProps) {
   const isNarrow = useMediaQuery('(max-width: 860px)')
   const direction = isNarrow ? 'vertical' : 'horizontal'
 
@@ -268,11 +293,28 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
   }, [editor])
 
 
-  // Autosave del AST (fuente de verdad), con debounce.
+  // Autosave del AST (fuente de verdad), con debounce. Abrir un documento no es un cambio: no
+  // se guarda (ni se marca como «con cambios sin subir») hasta que se edita.
+  const [localSaved, setLocalSaved] = useState(true)
+  const pendingSave = useRef<MatexDoc | null>(null)
   useEffect(() => {
-    const timer = setTimeout(() => store.updateAst(project.id, ast), 600)
+    if (ast === initialDoc) return
+    pendingSave.current = ast
+    setLocalSaved(false)
+    const timer = setTimeout(() => {
+      store.updateAst(project.id, ast)
+      pendingSave.current = null
+      setLocalSaved(true)
+    }, 600)
     return () => clearTimeout(timer)
-  }, [ast, project.id, store])
+  }, [ast, initialDoc, project.id, store])
+  // Cerrar el documento antes de que venza el debounce no pierde lo último que se escribió.
+  useEffect(
+    () => () => {
+      if (pendingSave.current) store.updateAst(project.id, pendingSave.current)
+    },
+    [project.id, store],
+  )
 
   // La **biblioteca** (`references`) vive a nivel documento, fuera de ProseMirror. La
   // exponemos a los node views (cita/marcador) vía un provider de claves (bridge estable) y
@@ -313,7 +355,20 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
     compile: handleCompile,
     requestPdfDownload,
     downloadVariantPdf,
+    compileVariant,
   } = useMatexCompile({ latex, compiledFiles, compiler, store, projectId: project.id, docName: name })
+
+  // Compartir: la copia que se publica es el documento como está AHORA (no lo último que se
+  // sincronizó): el `.mtex` con sus recursos, o el PDF (el vigente si está al día; si no, se compila).
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareContent = async (kind: ShareKind): Promise<Blob> => {
+    if (kind === 'mtex') {
+      return sharedMtexBlob({ ...project, name: dl.documentBaseName(name), ast, mainFile: 'main.tex', files: [{ path: 'main.tex', content: latex }, ...compiledFiles] })
+    }
+    const bytes = pdf && !outputStale ? pdf : await compileVariant(latex)
+    if (!bytes) throw new Error('El documento no compila: revisá el log de compilación antes de compartir el PDF.')
+    return new Blob([bytes as BlobPart], { type: 'application/pdf' })
+  }
 
   // Examen: la versión del docente (con soluciones) es otra **emisión** del mismo documento; no se
   // guarda en el AST ni cambia la vista previa (que sigue siendo la del alumno).
@@ -921,9 +976,10 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
             type="button"
             onClick={onClose}
             title="Volver a Mis Proyectos"
+            aria-label="Volver a Mis Proyectos"
             className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-(--color-ink-muted) hover:bg-(--color-surface-muted) hover:text-(--color-ink)"
           >
-            <ChevronLeft width={14} height={14} /> Mis Proyectos
+            <ChevronLeft width={14} height={14} /> <span className="hidden 2xl:inline">Mis Proyectos</span>
           </button>
           <label className="inline-flex items-center gap-1 text-(--color-ink-muted)">
             <Pencil width={13} height={13} />
@@ -931,7 +987,15 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={commitName}
-              aria-label="Nombre del documento"
+              aria-label="Título del documento"
+              name="matex-doc-title"
+              // No es un dato personal: sin esto LastPass y compañía lo toman por el campo
+              // «nombre» de un formulario y le cuelgan su ícono de autocompletar.
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore
+              data-bwignore
+              data-form-type="other"
               className="w-40 rounded bg-transparent px-1 py-0.5 text-sm text-(--color-ink) outline-none hover:bg-(--color-surface-muted) focus:bg-(--color-surface-muted)"
             />
           </label>
@@ -1030,6 +1094,7 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
         <div className="flex shrink-0 items-center gap-2">
           {/* Estado + Compilar en el header: siempre visible (también en Foco) y única
               fuente de verdad, consistente con el workspace de proyectos LaTeX. */}
+          <SaveStatus localSaved={localSaved} cloud={cloud && { syncing: cloud.syncing, failed: cloud.failed, synced: cloud.isSynced() }} />
           <CompileStatus
             compiling={compiling}
             stale={outputStale}
@@ -1055,8 +1120,30 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
               { label: imageFiles.length > 0 ? 'LaTeX (.zip)' : 'LaTeX (.tex)', onClick: () => void downloadTex() },
             ]}
           />
+          {share && (
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              title="Compartir por link"
+              aria-label="Compartir por link"
+              className="inline-flex items-center gap-1.5 rounded-md border border-(--color-border) px-3 py-1 text-xs hover:bg-(--color-surface-muted)"
+            >
+              <Link width={14} height={14} /> <span className="hidden 2xl:inline">Compartir</span>
+            </button>
+          )}
         </div>
       </HeaderSlotContent>
+      {share && (
+        <ShareDialog
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          project={{ id: project.id, name: dl.documentBaseName(name) }}
+          api={share.api}
+          signedIn={share.signedIn}
+          renderSignInButton={share.renderSignInButton}
+          getContent={shareContent}
+        />
+      )}
 
       {/* Barra contextual de **altura fija** (siempre presente): su contenido cambia
           según dónde esté el cursor, pero la altura no → el lienzo no salta. */}

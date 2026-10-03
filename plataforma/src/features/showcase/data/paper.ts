@@ -27,7 +27,7 @@ const paperMatex: MatexDoc = {
     { key: 'quarteroni2007', type: 'book', author: 'A. Quarteroni, R. Sacco y F. Saleri', title: 'Numerical Mathematics', publisher: 'Springer', year: '2007' },
   ],
   content: [
-    { type: 'heading', level: 2, content: [t('Introducción')] },
+    { type: 'heading', level: 1, content: [t('Introducción')] },
     {
       type: 'paragraph',
       content: [
@@ -85,7 +85,7 @@ const paperMatex: MatexDoc = {
         },
       ],
     },
-    { type: 'heading', level: 2, content: [t('Ejemplo numérico')] },
+    { type: 'heading', level: 1, content: [t('Ejemplo numérico')] },
     {
       type: 'paragraph',
       content: [t('Aplicamos el método a '), m('f(x)=x^2-2'), t(' en '), m('[1,2]'), t(', cuya raíz positiva es '), m('\\sqrt{2}\\approx 1.4142'), t('.')],

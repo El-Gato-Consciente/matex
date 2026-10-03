@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { getSchema } from '@tiptap/core'
+import { exemplars } from '@/features/showcase/data'
 import { templates } from '@/features/templates/data'
 import type { MatexDoc } from '../core'
 import { matexEditorExtensions } from './editorExtensions'
 import { astToTiptap } from './mapping'
 
 /**
- * **Toda plantilla abre en el editor visual.** Si el mapping produce algo que el esquema de TipTap
+ * **Toda plantilla y todo ejemplo abre en el editor visual.** Si el mapping produce algo que el esquema de TipTap
  * no acepta (un nodo no registrado, un texto vacío), el editor abre el documento **vacío** y el
  * primer cambio lo pisa. Pasó con examen, CV y póster: el modelo y las plantillas los tenían, el
  * editor no. Se valida contra el MISMO esquema que usa `MatexWorkspace`.
@@ -15,7 +16,9 @@ const schema = getSchema(matexEditorExtensions({ resolveSrc: () => null }))
 const opens = (doc: MatexDoc) => schema.nodeFromJSON(astToTiptap(doc)).check()
 
 describe('esquema del editor visual', () => {
-  it.each(templates.filter((t) => t.matex).map((t) => [t.id, t.matex!] as const))('«%s» abre sin contenido inválido', (_id, doc) => {
+  const documents = [...templates, ...exemplars].filter((d) => d.matex).map((d) => [d.id, d.matex!] as const)
+
+  it.each(documents)('«%s» abre sin contenido inválido', (_id, doc) => {
     expect(() => opens(doc)).not.toThrow()
   })
 

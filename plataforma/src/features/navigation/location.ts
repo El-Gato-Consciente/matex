@@ -30,6 +30,8 @@ export type AppLocation =
   | { readonly kind: 'exemplar'; readonly exemplarId: string }
   /** Una página de la wiki «Cómo funciona». `pageId: null` = la primera. */
   | { readonly kind: 'wiki'; readonly pageId: string | null }
+  /** Un documento compartido por link (lo abre cualquiera, sin cuenta). */
+  | { readonly kind: 'shared'; readonly shareId: string }
 
 /**
  * Ubicación inicial y destino de lo que no se reconoce: Mis Proyectos. (El Curso está oculto
@@ -76,6 +78,8 @@ export function locationToPath(location: AppLocation): string {
       return `/ejemplos/${encodeURIComponent(location.exemplarId)}`
     case 'wiki':
       return location.pageId ? `/como-funciona/${encodeURIComponent(location.pageId)}` : '/como-funciona'
+    case 'shared':
+      return `/compartido/${encodeURIComponent(location.shareId)}`
   }
 }
 
@@ -107,6 +111,8 @@ export function parseLocation(pathname: string): AppLocation {
   if (first === 'ejemplos' && second) return { kind: 'exemplar', exemplarId: second }
 
   if (first === 'como-funciona') return { kind: 'wiki', pageId: second ?? null }
+
+  if (first === 'compartido' && second) return { kind: 'shared', shareId: second }
 
   return HOME
 }

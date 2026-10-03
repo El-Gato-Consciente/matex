@@ -26,6 +26,8 @@ export interface Sync {
   setPrefs(prefs: StoragePrefs, moveFrom?: ContentStorage): void
   /** Dónde vive un proyecto (`undefined` si todavía no se sincronizó). */
   storageOf(projectId: string): ContentStorage | undefined
+  /** ¿La copia de la nube es la misma que la guardada en este navegador? */
+  isSynced(projectId: string): boolean
   /** ¿Tiene una mudanza pendiente? */
   isMoving(projectId: string): boolean
   moveProject(projectId: string, to: ContentStorage): void
@@ -183,6 +185,10 @@ export function useSync({ account, store, apiBaseUrl, googleClientId, isBusy, on
       void run()
     },
     storageOf: (projectId) => (user ? state.get(user, projectId)?.storage : undefined),
+    isSynced: (projectId) => {
+      const entry = user ? state.get(user, projectId) : undefined
+      return entry !== undefined && entry.syncedUpdatedAt === store.get(projectId)?.updatedAt
+    },
     isMoving: (projectId) => (user ? state.pendingMove(user, projectId) !== undefined : false),
     moveProject: (projectId, to) => {
       if (!user) return

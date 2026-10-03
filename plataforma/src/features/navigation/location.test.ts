@@ -20,6 +20,7 @@ const CASES: ReadonlyArray<readonly [string, AppLocation]> = [
   ['/ejemplos/ex-paper-biseccion', { kind: 'exemplar', exemplarId: 'ex-paper-biseccion' }],
   ['/como-funciona', { kind: 'wiki', pageId: null }],
   ['/como-funciona/graficos', { kind: 'wiki', pageId: 'graficos' }],
+  ['/compartido/Ab3_x-9', { kind: 'shared', shareId: 'Ab3_x-9' }],
 ]
 
 describe('parseLocation', () => {

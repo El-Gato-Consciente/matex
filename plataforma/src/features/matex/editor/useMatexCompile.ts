@@ -44,6 +44,11 @@ export interface MatexCompileState {
    * documento. Si falla, el error queda en el log como cualquier compilación.
    */
   readonly downloadVariantPdf: (variantLatex: string, fileName: string) => Promise<void>
+  /**
+   * El PDF de `variantLatex`, o `null` si no compila (el error queda en el log). Igual que
+   * `downloadVariantPdf`, no toca la vista previa ni el `.tex` guardado.
+   */
+  readonly compileVariant: (variantLatex: string) => Promise<Uint8Array | null>
 }
 
 export function useMatexCompile({ latex, compiledFiles, compiler, store, projectId, docName }: UseMatexCompileArgs): MatexCompileState {
@@ -86,13 +91,14 @@ export function useMatexCompile({ latex, compiledFiles, compiler, store, project
     if (pdf && !outputStale) downloadPdf(pdf, docName || 'documento')
   }, [compiling, pdf, outputStale, docName])
 
-  const downloadVariantPdf = useCallback(
-    async (variantLatex: string, fileName: string) => {
+  const compileVariant = useCallback(
+    async (variantLatex: string) => {
       setCompiling(true)
       try {
         const res = await safeCompile(compiler, filesInput('main.tex', variantLatex, compiledFiles))
-        if (res.ok) downloadPdf(res.pdf, fileName)
-        else setResult(res)
+        if (res.ok) return res.pdf
+        setResult(res)
+        return null
       } finally {
         setCompiling(false)
       }
@@ -100,5 +106,13 @@ export function useMatexCompile({ latex, compiledFiles, compiler, store, project
     [compiler, compiledFiles],
   )
 
-  return { result, compiling, pdf, compiled: compiledLatex !== null, outputStale, compile, requestPdfDownload, downloadVariantPdf }
+  const downloadVariantPdf = useCallback(
+    async (variantLatex: string, fileName: string) => {
+      const bytes = await compileVariant(variantLatex)
+      if (bytes) downloadPdf(bytes, fileName)
+    },
+    [compileVariant],
+  )
+
+  return { result, compiling, pdf, compiled: compiledLatex !== null, outputStale, compile, requestPdfDownload, downloadVariantPdf, compileVariant }
 }

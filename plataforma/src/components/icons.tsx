@@ -96,6 +96,13 @@ export const Copy = (props: SVGProps<SVGSVGElement>) => (
   </Icon>
 )
 
+export const Link = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+    <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+  </Icon>
+)
+
 export const Plus = (props: SVGProps<SVGSVGElement>) => (
   <Icon {...props}>
     <path d="M12 5v14M5 12h14" />
