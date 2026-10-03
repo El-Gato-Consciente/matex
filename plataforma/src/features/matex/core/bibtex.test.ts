@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BibEntry } from './ast'
-import { autoKey, emitBibtex, parseBibtex } from './bibtex'
+import { autoKey, emitBibtex, normalizeAuthors, parseBibtex } from './bibtex'
 import { parseMatexDoc } from './parse'
 
 describe('bibtex — emitir desde la estructura', () => {
@@ -15,6 +15,34 @@ describe('bibtex — emitir desde la estructura', () => {
 
   it('clave vacía → usa la clave automática (apellido+año)', () => {
     expect(emitBibtex([{ key: '', type: 'article', author: 'Lamport, Leslie', year: '1994' }])).toContain('@article{lamport1994,')
+  })
+
+  // BibTeX separa autores solo con ` and `: escritos «a mano» salían desordenados en el PDF
+  // («R. Sacco y F. Saleri A. Quarteroni»).
+  it.each([
+    ['A. Quarteroni, R. Sacco y F. Saleri', 'A. Quarteroni and R. Sacco and F. Saleri'],
+    ['R. L. Burden y J. D. Faires', 'R. L. Burden and J. D. Faires'],
+    ['Ana Pérez & Juan Gómez', 'Ana Pérez and Juan Gómez'],
+    ['Borges, Jorge Luis; Bioy Casares, Adolfo', 'Borges, Jorge Luis and Bioy Casares, Adolfo'],
+    ['García Márquez, Gabriel y Borges, Jorge Luis', 'García Márquez, Gabriel and Borges, Jorge Luis'],
+  ])('autores escritos a mano: «%s» → «%s»', (written, bibtex) => {
+    expect(normalizeAuthors(written)).toBe(bibtex)
+  })
+
+  it.each([
+    'Knuth, Donald E.',
+    'Knuth, Donald E. and Lamport, Leslie',
+    'Ortega y Gasset, José', // una sola persona: «Ortega» solo no es un nombre completo
+    'A. Quarteroni, R. Sacco, F. Saleri', // sin «y»: ambiguo, no se adivina
+    '{Organización Mundial de la Salud y otros}', // entre llaves = literal
+  ])('lo que ya está bien o es ambiguo no se toca: «%s»', (author) => {
+    expect(normalizeAuthors(author)).toBe(author)
+  })
+
+  it('emitBibtex normaliza solo el campo author', () => {
+    const out = emitBibtex([{ key: 'k', type: 'book', author: 'Ana Pérez y Juan Gómez', title: 'Rojo y negro' }])
+    expect(out).toContain('author = {Ana Pérez and Juan Gómez}')
+    expect(out).toContain('title = {Rojo y negro}')
   })
 })
 

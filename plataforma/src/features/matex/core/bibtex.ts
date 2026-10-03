@@ -42,12 +42,41 @@ export function autoKey(entry: { author?: string | undefined; year?: string | un
   return `${name}${year}` || 'ref'
 }
 
+/** ¿Parece un nombre completo? (dos palabras o más, o ya en forma «Apellido, Nombre»). */
+const isFullName = (name: string): boolean => name.includes(',') || name.trim().split(/\s+/).length >= 2
+
+/**
+ * Lista de autores **como la escribe una persona** → la forma que entiende BibTeX
+ * (`A and B and C`). BibTeX separa autores SOLO con ` and `, y lee una coma como
+ * «Apellido, Nombre»: «A. Quarteroni, R. Sacco y F. Saleri» le parece UN autor de apellido
+ * «A. Quarteroni», y sale impreso «R. Sacco y F. Saleri A. Quarteroni».
+ *
+ * Solo se toca lo que no es ambiguo:
+ *  - Si ya trae ` and `, está en forma BibTeX: no se toca.
+ *  - ` y `, ` & ` y `;` separan autores, pero solo si cada lado es un nombre completo
+ *    («Ortega y Gasset, José» es una persona: «Ortega» solo no es un nombre completo).
+ *  - Adentro de esa lista, las comas separan autores solo si todos los tramos son nombres
+ *    completos («A. Quarteroni, R. Sacco»); «Knuth, Donald E.» queda como está.
+ */
+export function normalizeAuthors(raw: string): string {
+  const value = raw.trim()
+  if (/\s+and\s+/i.test(value) || value.includes('{')) return value
+  const parts = value.split(/\s+y\s+|\s*&\s*|\s*;\s*/).map((part) => part.trim()).filter(Boolean)
+  if (parts.length < 2 || !parts.every(isFullName)) return value
+  const authors = parts.flatMap((part) => {
+    const pieces = part.split(/\s*,\s*/)
+    return pieces.length > 1 && pieces.every((piece) => piece.split(/\s+/).length >= 2) ? pieces : [part]
+  })
+  return authors.join(' and ')
+}
+
 /** Una entrada estructurada → bloque `@type{key, campo = {valor}, …}`. */
 function emitEntry(entry: BibEntry): string {
   const key = entry.key.trim() || autoKey(entry)
   const lines = BIB_FIELDS.flatMap((f) => {
     const v = entry[f]
-    return typeof v === 'string' && v.trim() ? [`  ${f} = {${v.trim()}}`] : []
+    if (typeof v !== 'string' || !v.trim()) return []
+    return [`  ${f} = {${f === 'author' ? normalizeAuthors(v) : v.trim()}}`]
   })
   return `@${entry.type}{${key},\n${lines.join(',\n')}${lines.length > 0 ? ',' : ''}\n}`
 }
