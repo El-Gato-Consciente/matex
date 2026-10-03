@@ -443,9 +443,21 @@ export default function App() {
     <LessonHostProvider value={lessonHost}>
     <div className="flex h-full flex-col">
       <header className="flex shrink-0 items-center gap-3 border-b border-(--color-border) bg-(--color-surface) px-4 py-2.5">
-        <div className="flex items-center text-base">
+        {/* El logo lleva a Mis Proyectos. Es un link de verdad: Ctrl/⌘+clic o la rueda abren
+            otra pestaña; el clic común navega sin recargar. */}
+        <a
+          href="/proyectos"
+          aria-label="Ir a Mis Proyectos"
+          title="Mis Proyectos"
+          onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+            event.preventDefault()
+            navigate({ kind: 'projects' })
+          }}
+          className="flex items-center rounded-md text-base outline-offset-4 transition-opacity hover:opacity-85"
+        >
           <Logo anchor wordmarkClassName="hidden sm:inline-flex" />
-        </div>
+        </a>
 
         <PrimaryNav section={section} onChange={goSection} />
 
