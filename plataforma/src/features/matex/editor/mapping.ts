@@ -78,6 +78,16 @@ function variantOrDefault(value: unknown): TheoremVariant {
 
 // ── AST → TipTap ────────────────────────────────────────────────────────────
 
+/**
+ * Inlines → ProseMirror, **sin textos vacíos**: el modelo los tolera (p. ej. un `p(t(''))` de
+ * plantilla), pero ProseMirror no («Empty text nodes are not allowed») y TipTap, ante contenido
+ * inválido, abre el documento VACÍO — y el autosave lo pisaba. Un párrafo sin texto queda como
+ * párrafo vacío, que es válido.
+ */
+function inlinesToPm(nodes: readonly InlineNode[]): PmNode[] {
+  return nodes.filter((node) => node.type !== 'text' || node.text !== '').map(inlineToPm)
+}
+
 function inlineToPm(node: InlineNode): PmNode {
   if (node.type === 'mathInline') return { type: 'mathInline', attrs: { tex: node.tex } }
   if (node.type === 'ref') return { type: 'ref', attrs: { target: node.target } }
@@ -93,17 +103,17 @@ function blockToPm(node: BlockNode): PmNode {
       return {
         type: 'part',
         attrs: { id: node.id ?? null, label: node.label ?? null },
-        content: node.content.map(inlineToPm),
+        content: inlinesToPm(node.content),
       }
     case 'heading':
       return {
         type: 'heading',
         attrs: { level: node.level, id: node.id ?? null, label: node.label ?? null },
-        content: node.content.map(inlineToPm),
+        content: inlinesToPm(node.content),
       }
     case 'paragraph':
       return node.content.length > 0
-        ? { type: 'paragraph', content: node.content.map(inlineToPm) }
+        ? { type: 'paragraph', content: inlinesToPm(node.content) }
         : { type: 'paragraph' }
     case 'bulletList':
       return { type: 'bulletList', content: node.items.map(itemToPm) }
@@ -152,7 +162,7 @@ function blockToPm(node: BlockNode): PmNode {
               attrs: { align: a && a !== 'left' ? a : null },
               content:
                 cell.content.length > 0
-                  ? [{ type: 'paragraph', content: cell.content.map(inlineToPm) }]
+                  ? [{ type: 'paragraph', content: inlinesToPm(cell.content) }]
                   : [{ type: 'paragraph' }],
             }
           }),
@@ -196,10 +206,16 @@ function blockToPm(node: BlockNode): PmNode {
         attrs: { period: node.period ?? null, role: node.role ?? null, org: node.org ?? null, place: node.place ?? null, detail: node.detail ?? null },
       }
     case 'examQuestion':
+      // La solución es un sub-bloque editable (`examSolution`) al final de la pregunta.
       return {
         type: 'examQuestion',
-        attrs: { points: node.points ?? null, solution: node.solution ?? null },
-        content: node.content.map(blockToPm),
+        attrs: { points: node.points ?? null },
+        content: [
+          ...node.content.map(blockToPm),
+          ...(node.solution && node.solution.length > 0
+            ? [{ type: 'examSolution', content: node.solution.map(blockToPm) }]
+            : []),
+        ],
       }
     case 'columns':
       return {
@@ -404,8 +420,17 @@ function pmToBlock(node: PmNode): BlockNode | null {
     }
     case 'examQuestion': {
       const pts = numOrUndef(node.attrs?.points)
-      const sol = Array.isArray(node.attrs?.solution) ? (node.attrs.solution as BlockNode[]) : undefined
-      return { type: 'examQuestion', ...(pts != null ? { points: pts } : {}), ...(sol ? { solution: sol } : {}), content: pmBlocks(node.content) }
+      const children = node.content ?? []
+      const solutionNode = children.find((child) => child.type === 'examSolution')
+      // Compat: documentos editados antes de que la solución fuera sub-bloque la traían como atributo.
+      const legacy = Array.isArray(node.attrs?.solution) ? (node.attrs.solution as BlockNode[]) : undefined
+      const sol = solutionNode ? pmBlocks(solutionNode.content) : legacy
+      return {
+        type: 'examQuestion',
+        ...(pts != null ? { points: pts } : {}),
+        ...(sol && sol.length > 0 ? { solution: sol } : {}),
+        content: pmBlocks(children.filter((child) => child.type !== 'examSolution')),
+      }
     }
     case 'columns':
       return {

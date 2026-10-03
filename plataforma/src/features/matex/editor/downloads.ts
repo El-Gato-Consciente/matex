@@ -23,15 +23,19 @@ export function latexNeedsBundle(compiledFiles: readonly ProjectFile[]): boolean
   return compiledFiles.length > 0
 }
 
+/** Sufijo de los archivos de la versión «con soluciones» de un examen. */
+export const SOLUTIONS_SUFFIX = ' (soluciones)'
+
 /** `.mtex` pelado (solo el AST): comparte la estructura sin imágenes. */
 export function downloadAst(name: string, ast: MatexDoc): void {
   downloadFile(`${documentBaseName(name)}.mtex`, serializeMatexDoc(ast))
 }
 
 /** Página web autocontenida (LE-03): `.html` con MathML + SVG + CSS inline; tema `auto`. */
-export function downloadHtml(name: string, ast: MatexDoc, images: Record<string, string>): void {
-  const out = compileToHtml(ast, { images, theme: 'auto' })
-  downloadBlob(new Blob([out], { type: 'text/html;charset=utf-8' }), `${documentBaseName(name)}.html`)
+export function downloadHtml(name: string, ast: MatexDoc, images: Record<string, string>, showSolutions = false): void {
+  const out = compileToHtml(ast, { images, theme: 'auto', showSolutions })
+  const suffix = showSolutions ? SOLUTIONS_SUFFIX : ''
+  downloadBlob(new Blob([out], { type: 'text/html;charset=utf-8' }), `${documentBaseName(name)}${suffix}.html`)
 }
 
 /** Bundle portable del proyecto: `.mtex` + imágenes (todo viaja junto). */

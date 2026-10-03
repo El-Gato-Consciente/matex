@@ -57,7 +57,7 @@ export function DownloadControl({ pdf, downloadName, extra = [], onPdf, pdfNote,
         <DropdownMenu.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-48 rounded-lg border border-(--color-border) bg-(--color-surface) p-1.5 shadow-xl"
+          className="z-50 w-56 rounded-lg border border-(--color-border) bg-(--color-surface) p-1.5 shadow-xl"
         >
           <DropdownMenu.Item
             disabled={pdfDisabled}

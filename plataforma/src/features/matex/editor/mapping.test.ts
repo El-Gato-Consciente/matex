@@ -360,3 +360,46 @@ describe('mapping AST↔TipTap', () => {
     expect(ast.content).toEqual([{ type: 'paragraph', content: [{ type: 'text', text: 'ok' }] }])
   })
 })
+
+describe('bloques de familia (examen · CV · póster)', () => {
+  const p = (text: string) => ({ type: 'paragraph' as const, content: [{ type: 'text' as const, text }] })
+
+  it('pregunta de examen: enunciado, puntaje y solución ida y vuelta', () => {
+    const exam: MatexDoc = {
+      type: 'doc',
+      version: 4,
+      content: [{ type: 'examQuestion', points: 2.5, content: [p('Derivá x²')], solution: [p('2x')] }],
+    }
+    const pm = astToTiptap(exam)
+    // La solución viaja como sub-bloque editable, al final de la pregunta.
+    expect(pm.content?.[0]?.content?.at(-1)?.type).toBe('examSolution')
+    expect(tiptapToAst(pm).content).toEqual(exam.content)
+  })
+
+  it('una pregunta sin solución no inventa una', () => {
+    const exam: MatexDoc = { type: 'doc', version: 4, content: [{ type: 'examQuestion', content: [p('¿?')] }] }
+    expect(tiptapToAst(astToTiptap(exam)).content).toEqual(exam.content)
+  })
+
+  it('compat: una solución guardada como atributo (formato anterior) no se pierde', () => {
+    const legacy = {
+      type: 'doc',
+      content: [{ type: 'examQuestion', attrs: { points: 1, solution: [p('vieja')] }, content: [p('Enunciado')] }],
+    }
+    expect(tiptapToAst(legacy as never).content).toEqual([
+      { type: 'examQuestion', points: 1, solution: [p('vieja')], content: [p('Enunciado')] },
+    ])
+  })
+
+  it('entrada de CV y bloque de póster ida y vuelta', () => {
+    const d: MatexDoc = {
+      type: 'doc',
+      version: 4,
+      content: [
+        { type: 'cvEntry', period: '2020–2024', role: 'Ayudante', org: 'UBA', place: 'CABA', detail: 'Análisis I' },
+        { type: 'posterBlock', title: 'Método', column: 2, content: [p('Monte Carlo')] },
+      ],
+    }
+    expect(tiptapToAst(astToTiptap(d)).content).toEqual(d.content)
+  })
+})

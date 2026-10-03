@@ -1,4 +1,4 @@
-import type { Editor } from '@tiptap/core'
+import type { Editor, JSONContent } from '@tiptap/core'
 import type { CalloutVariant, ChartForm, DistForm, TheoremVariant } from '../core'
 import { defaultChartSpec, defaultDiagramSpec, defaultDistSpec, defaultTreeSpec } from './defaultSpecs'
 
@@ -41,6 +41,42 @@ export function insertCodeBlock(editor: Editor | null): void {
 
 export function insertSlide(editor: Editor | null): void {
   editor?.chain().focus().insertContent({ type: 'slide', attrs: { title: null, reveal: false }, content: [{ type: 'paragraph' }] }).run()
+}
+
+/**
+ * Inserta un bloque de familia **como hermano** del bloque del mismo tipo que contiene al cursor
+ * (justo después), no adentro: con el cursor en la solución de la pregunta 3, «Pregunta» crea la 4,
+ * no una pregunta anidada en la solución. Fuera de uno de esos bloques, inserta en el cursor.
+ */
+function insertFamilyBlock(editor: Editor | null, content: JSONContent & { type: string }): void {
+  if (!editor) return
+  const { $from } = editor.state.selection
+  for (let depth = $from.depth; depth > 0; depth--) {
+    if ($from.node(depth).type.name !== content.type) continue
+    const after = $from.after(depth)
+    editor
+      .chain()
+      .insertContentAt(after, content)
+      .focus(after + 2)
+      .run()
+    return
+  }
+  editor.chain().focus().insertContent(content).run()
+}
+
+/** Pregunta de examen (familia examen): enunciado vacío, sin puntaje ni solución. */
+export function insertExamQuestion(editor: Editor | null): void {
+  insertFamilyBlock(editor, { type: 'examQuestion', attrs: { points: null }, content: [{ type: 'paragraph' }] })
+}
+
+/** Entrada de CV (familia CV): una línea de la trayectoria, con los campos vacíos. */
+export function insertCvEntry(editor: Editor | null): void {
+  insertFamilyBlock(editor, { type: 'cvEntry' })
+}
+
+/** Bloque de póster (familia póster): un recuadro con título, en la columna que toque. */
+export function insertPosterBlock(editor: Editor | null): void {
+  insertFamilyBlock(editor, { type: 'posterBlock', attrs: { title: null, column: null }, content: [{ type: 'paragraph' }] })
 }
 
 /** Parte (`\part`, ME-46): la división por encima del capítulo (solo report/book). */

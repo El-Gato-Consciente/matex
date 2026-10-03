@@ -116,4 +116,25 @@ describe('useMatexCompile', () => {
     expect(view.result.current.compiling).toBe(false)
     expect(view.result.current.pdf).toBeNull()
   })
+
+  it('otra versión (examen con soluciones): compila y baja, sin tocar la vista previa ni el .tex guardado', async () => {
+    const { view, compiler, store } = setup()
+    await act(async () => {
+      await view.result.current.downloadVariantPdf('latex con printanswers', 'mi-doc (soluciones)')
+    })
+    expect(compiler.calls).toHaveLength(1)
+    expect(downloadPdf).toHaveBeenCalledWith(PDF, 'mi-doc (soluciones)')
+    expect(view.result.current.compiled).toBe(false) // la vista previa sigue sin compilar
+    expect(store.files).toHaveLength(0) // no persiste el .tex de la variante
+  })
+
+  it('si la versión con soluciones falla, el error queda en el log y no baja nada', async () => {
+    const { view } = setup({ compiler: fakeCompiler({ ok: false, log: '! Undefined control sequence' } as CompileResult) })
+    await act(async () => {
+      await view.result.current.downloadVariantPdf('x', 'y')
+    })
+    expect(downloadPdf).not.toHaveBeenCalled()
+    expect(view.result.current.result?.ok).toBe(false)
+    expect(view.result.current.compiling).toBe(false)
+  })
 })

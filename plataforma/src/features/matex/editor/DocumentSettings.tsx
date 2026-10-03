@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { documentFamily, letterMeta, examMeta, cvMeta, posterMeta, type AccentColor, type DocFamily, type DocKind, type DocMeta, type DocStyle, type LetterMeta } from '../core'
+import { documentFamily, letterMeta, examMeta, cvMeta, posterMeta, type AccentColor, type BaseFontSize, type DocFamily, type DocKind, type DocMeta, type DocStyle, type LetterMeta, type PaperSize } from '../core'
 import { ACCENT_HEX, accentHex, DEFAULT_ACCENT_HEX } from '../core/policy/accent'
 
 /**
@@ -65,7 +65,12 @@ export function DocumentSettings({ meta, onPatch, onApplyDocClass, preview }: Do
         {/* Campos propios de la familia elegida (ME-47). */}
         {family === 'letter' && <LetterFields letter={letterMeta(meta) ?? {}} onPatch={patchLetter} />}
         {family === 'exam' && (
-          <FieldArea label="Consigna del examen" value={examMeta(meta)?.instructions ?? ''} onChange={(v) => onPatch({ family: { kind: 'exam', exam: { instructions: v || undefined } } })} />
+          <div className="flex flex-col gap-1">
+            <FieldArea label="Consigna del examen" value={examMeta(meta)?.instructions ?? ''} onChange={(v) => onPatch({ family: { kind: 'exam', exam: { instructions: v || undefined } } })} />
+            <p className="text-[10.5px] text-(--color-ink-muted)">
+              La versión del docente se baja desde <strong className="text-(--color-ink)">Descargar → PDF con soluciones</strong>.
+            </p>
+          </div>
         )}
         {family === 'cv' && (
           <div className="flex flex-col gap-2 border-l-2 border-(--color-border) pl-2">
@@ -140,6 +145,27 @@ export function DocumentSettings({ meta, onPatch, onApplyDocClass, preview }: Do
             ))}
           </div>
         </Section>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Section label="Papel">
+            <Segmented
+              value={meta.paperSize ?? 'a4'}
+              options={[
+                { value: 'a4', label: 'A4', hint: '21 × 29,7 cm' },
+                { value: 'letter', label: 'Carta', hint: '8,5 × 11 in' },
+              ]}
+              // A4 es el default del compilador: no se guarda (el modelo solo lleva lo que se eligió).
+              onChange={(v) => onPatch({ paperSize: v === 'a4' ? undefined : (v as PaperSize) })}
+            />
+          </Section>
+          <Section label="Tamaño de letra">
+            <Segmented
+              value={String(meta.baseFontSize ?? 11)}
+              options={['10', '11', '12'].map((n) => ({ value: n, label: `${n} pt` }))}
+              onChange={(v) => onPatch({ baseFontSize: v === '11' ? undefined : (Number(v) as BaseFontSize) })}
+            />
+          </Section>
+        </div>
 
         <div className="flex flex-col gap-1 border-t border-(--color-border) pt-3">
           <Toggle checked={meta.toc ?? false} onChange={(checked) => onPatch({ toc: checked })}>

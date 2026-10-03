@@ -1481,9 +1481,14 @@ textarea.matex-atom-popover-field {
 .matex-sheet--classic .matex-cover {
   font-family: 'Matex Serif', 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
 }
+/* `--doc-font-scale` = tamaño de letra del documento / 11 pt (Documento → Tamaño de letra):
+   el lienzo acompaña la proporción del PDF sin imitar su tamaño absoluto. */
 .matex-sheet--standard .matex-prose,
 .matex-sheet--classic .matex-prose {
-  font-size: 16.5px;
+  font-size: calc(16.5px * var(--doc-font-scale, 1));
+}
+.matex-sheet--modern .matex-prose {
+  font-size: calc(1rem * var(--doc-font-scale, 1));
 }
 .matex-sheet .matex-theorem {
   border-left-color: var(--doc-accent-ui);
@@ -1513,4 +1518,142 @@ textarea.matex-atom-popover-field {
 .matex-sheet--modern .matex-cover-title {
   font-weight: 700;
   letter-spacing: -0.015em;
+}
+
+/* ── Bloques de familia en el editor: pregunta de examen · entrada de CV · bloque de póster ── */
+.matex-prose {
+  counter-reset: exam-question;
+}
+.matex-family-block {
+  margin: 0.9rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.matex-family-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.85rem;
+}
+.matex-family-badge {
+  flex: none;
+  color: var(--color-ink-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.matex-family-spacer {
+  flex: 1;
+}
+.matex-family-field {
+  min-width: 0;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.82rem;
+  outline: none;
+}
+.matex-family-field:focus {
+  border-color: var(--color-primary);
+}
+.matex-family-title {
+  flex: 1;
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.matex-family-title:focus {
+  background: var(--color-surface);
+}
+.matex-family-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-ink-muted);
+}
+.matex-family-action {
+  flex: none;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+}
+.matex-family-action:hover {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+.matex-family-body {
+  padding: 0.4rem 0.8rem;
+}
+
+/* Examen: numeración automática y puntaje. */
+.matex-exam-question {
+  counter-increment: exam-question;
+  border-left: 3px solid var(--doc-accent-ui, var(--color-primary));
+}
+.matex-exam-number::before {
+  content: 'Pregunta ' counter(exam-question);
+}
+.matex-exam-points {
+  width: 4.2rem;
+  text-align: right;
+}
+.matex-exam-solution {
+  margin: 0.6rem 0 0.3rem;
+  border: 1px dashed color-mix(in srgb, var(--color-success) 60%, var(--color-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-success) 5%, transparent);
+}
+.matex-exam-solution-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0.6rem;
+  color: color-mix(in srgb, var(--color-success) 80%, var(--color-ink));
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.matex-exam-solution-body {
+  padding: 0 0.8rem 0.3rem;
+}
+
+/* CV: los cinco campos en grilla (el detalle ocupa todo el ancho). */
+.matex-cv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.8rem 0.7rem;
+}
+.matex-cv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.matex-cv-field--wide {
+  grid-column: 1 / -1;
+}
+.matex-cv-label {
+  color: var(--color-ink-muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+}
+.matex-cv-entry.ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* Póster: recuadro con el acento del documento. */
+.matex-poster-block {
+  border-top: 3px solid var(--doc-accent-ui, var(--color-primary));
 }

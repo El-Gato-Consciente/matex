@@ -12,7 +12,6 @@ import {
 } from 'react'
 import { Panel, PanelGroup, type ImperativePanelHandle } from 'react-resizable-panels'
 import { EditorContent, useEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Pencil } from '@/components/icons'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -35,35 +34,7 @@ import { PlotEditor } from './PlotEditor'
 import { MatexFiles } from './MatexFiles'
 import { createMathPalette, insertActiveMath } from './mathPalette'
 import { astToTiptap, tiptapToAst, type PmNode } from './mapping'
-import { MatexNumbering } from './numbering'
-import {
-  Callout,
-  Cite,
-  Column,
-  Columns,
-  Derivation,
-  Reasoning,
-  ReasoningRow,
-  ReasoningCell,
-  Figure,
-  Footnote,
-  Include,
-  MATEX_BIB_EVENT,
-  MatexBlockAttrs,
-  MatexKeymap,
-  MatexTable,
-  MathDisplay,
-  MathInline,
-  Part,
-  RawLatex,
-  Ref,
-  setBibKeysProvider,
-  Slide,
-  TableCell,
-  TableHeader,
-  TableRow,
-  Theorem,
-} from './nodes'
+import { MATEX_BIB_EVENT, setBibKeysProvider } from './nodes'
 import { useMatexCompile } from './useMatexCompile'
 import { buildDataUrls, IMG_ACCEPT, isTextResourceName, MAX_IMAGE_BYTES, safeAssetName, uniqueName, usedFigureSrcs } from './assets'
 import * as dl from './downloads'
@@ -77,12 +48,13 @@ import { DiagramEditor } from './DiagramEditor'
 import { TreeEditor } from './TreeEditor'
 import { Modal } from '@/components/Modal'
 import { CoverHeader } from './CoverHeader'
+import { matexEditorExtensions } from './editorExtensions'
 import { MiniSheet } from '@/features/documents/MiniSheet'
 import { docOutline } from '@/features/documents/projectOutline'
 import { accentHex } from '../core/policy/accent'
 import { SlashMenu, type SlashAnchor } from './SlashMenu'
 import { filterInsertItems, INSERT_GROUPS, type InsertItem } from './insertItems'
-import { autoKey, emitBibtex } from '../core'
+import { autoKey, documentFamily, emitBibtex } from '../core'
 import type { Author, BibEntry, CalloutVariant, ChartForm, ChartSpec, DiagramSpec, DistForm, DistSpec, DocKind, DocMeta, FigureItem, PlotSpec, TableAlign, TheoremVariant, TreeSpec } from '../core'
 
 const PdfPreview = lazy(() =>
@@ -222,47 +194,26 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
   // en un ref porque `editorProps` se fija al crear el editor y necesita ver el estado al día.
   const slashKeyRef = useRef<(event: KeyboardEvent) => boolean>(() => false)
 
+  // Si el editor no puede representar el documento (un nodo que no conoce, un texto vacío…),
+  // TipTap lo abriría VACÍO y el primer cambio pisaría el modelo guardado con eso. Ante contenido
+  // inválido: solo lectura y sin tocar el AST — la vista previa sigue mostrando el documento entero.
+  const contentInvalid = useRef(false)
+  const [contentProblem, setContentProblem] = useState<string | null>(null)
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        blockquote: false,
-        // `codeBlock` habilitado: nodo Matex `codeBlock` (ver mapping + compile con `listings`).
-        horizontalRule: false,
-        strike: false,
-        hardBreak: false,
-      }),
-      MathInline,
-      MathDisplay,
-      Derivation,
-      Part,
-      Reasoning,
-      ReasoningRow,
-      ReasoningCell,
-      RawLatex,
-      Ref,
-      Cite,
-      Footnote,
-      Include,
-      Callout,
-      Slide,
-      Columns,
-      Column,
-      Theorem,
-      MatexTable,
-      TableRow,
-      TableHeader,
-      TableCell,
-      // El resolver lee `assetsRef.current` (ref estable) → siempre ve los assets al día.
-      Figure.configure({ resolveSrc: (src) => assetsRef.current[src] ?? null }),
-      MatexBlockAttrs,
-      MatexKeymap,
-      MatexNumbering,
-    ],
+    // El resolver lee `assetsRef.current` (ref estable) → siempre ve los assets al día.
+    extensions: matexEditorExtensions({ resolveSrc: (src) => assetsRef.current[src] ?? null }),
     content: astToTiptap(initialDoc),
+    enableContentCheck: true,
+    onContentError: ({ editor, error }) => {
+      contentInvalid.current = true
+      editor.setEditable(false)
+      setContentProblem(error.message)
+    },
     // El AST del editor solo lleva `content`; `meta` (portada) y `references` (biblioteca)
     // son nivel documento y viven fuera de TipTap → los preservamos entre cambios.
     onUpdate: ({ editor }) =>
+      contentInvalid.current ||
       setAst((prev) => {
         const next = tiptapToAst(editor.getJSON() as unknown as PmNode)
         return {
@@ -361,7 +312,17 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
     outputStale,
     compile: handleCompile,
     requestPdfDownload,
+    downloadVariantPdf,
   } = useMatexCompile({ latex, compiledFiles, compiler, store, projectId: project.id, docName: name })
+
+  // Examen: la versión del docente (con soluciones) es otra **emisión** del mismo documento; no se
+  // guarda en el AST ni cambia la vista previa (que sigue siendo la del alumno).
+  const isExam = documentFamily(meta) === 'exam'
+  const downloadSolutionsPdf = () =>
+    void downloadVariantPdf(
+      compileToLatex(ast, { bibFile: 'refs.bib', showSolutions: true }),
+      `${dl.documentBaseName(name)}${dl.SOLUTIONS_SUFFIX}`,
+    )
 
   function toggleOutput() {
     const panel = outputPanelRef.current
@@ -528,6 +489,9 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
   const insertSlide = () => ins.insertSlide(editor)
   /** Inserta una **parte** (`\part`, ME-46): la división por encima del capítulo (solo report/book). */
   const insertPart = () => ins.insertPart(editor)
+  const insertExamQuestion = () => ins.insertExamQuestion(editor)
+  const insertCvEntry = () => ins.insertCvEntry(editor)
+  const insertPosterBlock = () => ins.insertPosterBlock(editor)
   /** Inserta un bloque de **dos columnas** (cada una con un párrafo vacío). */
   const insertColumns = () => ins.insertColumns(editor)
 
@@ -892,6 +856,16 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
         ...(meta.docKind === 'report' || meta.docKind === 'book'
           ? [{ id: 'part', group: 'Estructura' as const, glyph: 'Ⅰ', label: 'Parte', description: 'Agrupa capítulos', run: insertPart }]
           : []),
+        // Los bloques de cada familia aparecen solo en su familia (en otra no tienen salida).
+        ...(documentFamily(meta) === 'exam'
+          ? [{ id: 'exam-question', group: 'Estructura' as const, glyph: '?', label: 'Pregunta', description: 'Enunciado, puntaje y solución', keywords: 'examen ejercicio parcial', run: insertExamQuestion }]
+          : []),
+        ...(documentFamily(meta) === 'cv'
+          ? [{ id: 'cv-entry', group: 'Estructura' as const, glyph: '◷', label: 'Entrada de CV', description: 'Período, rol, institución', keywords: 'curriculum trayectoria experiencia', run: insertCvEntry }]
+          : []),
+        ...(documentFamily(meta) === 'poster'
+          ? [{ id: 'poster-block', group: 'Estructura' as const, glyph: '▣', label: 'Bloque de póster', description: 'Un recuadro con título', keywords: 'poster recuadro', run: insertPosterBlock }]
+          : []),
         { id: 'slide', group: 'Estructura', glyph: '▭', label: 'Diapositiva', description: 'Para presentaciones', keywords: 'presentacion beamer', run: insertSlide },
         { id: 'columns', group: 'Estructura', glyph: '▥', label: 'Columnas', description: 'Contenido lado a lado', run: insertColumns },
         { id: 'include', group: 'Avanzado', glyph: '⤓', label: 'Incluir archivo', description: 'Un .tex del proyecto', keywords: 'input tex', run: () => insertAtom('include') },
@@ -1069,6 +1043,12 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
             pdfEnabled
             pdfNote={outputStale ? 'recompila y baja' : !compiled ? 'compila y baja' : undefined}
             extra={[
+              ...(isExam
+                ? [
+                    { label: 'PDF con soluciones', onClick: downloadSolutionsPdf },
+                    { label: 'Página web con soluciones', onClick: () => dl.downloadHtml(name, ast, dataUrls, true) },
+                  ]
+                : []),
               { label: 'Página web (.html)', onClick: downloadHtml },
               { label: 'Proyecto Matex (.zip)', onClick: () => void downloadBundle() },
               { label: 'Matex — solo AST (.mtex)', onClick: downloadAst },
@@ -1458,9 +1438,17 @@ export function MatexWorkspace({ project, compiler, store, onClose }: MatexWorks
             <div className="matex-desk h-full min-w-0 flex-1 overflow-auto">
               {/* La hoja: el documento se escribe sobre una página, con su portada arriba. */}
               {/* La hoja toma el diseño y el acento del documento: se escribe viendo cómo va a salir. */}
+              {contentProblem && (
+                <div role="alert" className="mx-auto mt-6 max-w-[50rem] rounded-lg border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                  <strong>Este documento tiene contenido que el editor visual no reconoce.</strong> Para no perder
+                  nada, quedó en solo lectura y no se guardan cambios. La vista previa lo muestra completo, y podés
+                  descargarlo como <code>.mtex</code> desde «Descargar».
+                  <span className="mt-1 block text-xs opacity-75">Detalle técnico: {contentProblem}</span>
+                </div>
+              )}
               <div
                 className={`matex-sheet matex-sheet--${meta.style ?? 'standard'}`}
-                style={{ '--doc-accent': accentHex(meta.accent) } as CSSProperties}
+                style={{ '--doc-accent': accentHex(meta.accent), '--doc-font-scale': (meta.baseFontSize ?? 11) / 11 } as CSSProperties}
               >
                 <CoverHeader meta={meta} onPatch={patchMeta} onEditCover={() => setPortadaOpen(true)} />
                 <EditorContent editor={editor} />

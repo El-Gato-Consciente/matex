@@ -38,6 +38,12 @@ export interface MatexCompileState {
   readonly compile: () => Promise<void>
   /** Descarga el PDF **al día**: si está fresco baja los bytes; si no, recompila y baja al terminar. */
   readonly requestPdfDownload: () => void
+  /**
+   * Compila y descarga **otra versión** del mismo documento (p. ej. el examen con soluciones) sin
+   * tocar la vista previa ni el `.tex` guardado: es una ocasión de emisión, no un cambio del
+   * documento. Si falla, el error queda en el log como cualquier compilación.
+   */
+  readonly downloadVariantPdf: (variantLatex: string, fileName: string) => Promise<void>
 }
 
 export function useMatexCompile({ latex, compiledFiles, compiler, store, projectId, docName }: UseMatexCompileArgs): MatexCompileState {
@@ -80,5 +86,19 @@ export function useMatexCompile({ latex, compiledFiles, compiler, store, project
     if (pdf && !outputStale) downloadPdf(pdf, docName || 'documento')
   }, [compiling, pdf, outputStale, docName])
 
-  return { result, compiling, pdf, compiled: compiledLatex !== null, outputStale, compile, requestPdfDownload }
+  const downloadVariantPdf = useCallback(
+    async (variantLatex: string, fileName: string) => {
+      setCompiling(true)
+      try {
+        const res = await safeCompile(compiler, filesInput('main.tex', variantLatex, compiledFiles))
+        if (res.ok) downloadPdf(res.pdf, fileName)
+        else setResult(res)
+      } finally {
+        setCompiling(false)
+      }
+    },
+    [compiler, compiledFiles],
+  )
+
+  return { result, compiling, pdf, compiled: compiledLatex !== null, outputStale, compile, requestPdfDownload, downloadVariantPdf }
 }

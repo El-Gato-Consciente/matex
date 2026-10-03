@@ -99,3 +99,17 @@ describe('DocumentSettings · diseño visual', () => {
     expect(onApplyDocClass).toHaveBeenCalledWith('report', false)
   })
 })
+
+describe('DocumentSettings · papel y tamaño de letra', () => {
+  it('Carta y 12 pt se guardan; A4 y 11 pt son el default y no', () => {
+    const { onPatch } = setup({ paperSize: 'letter', baseFontSize: 12 })
+    expect(screen.getByRole('button', { name: /^Carta 8/ }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: '12 pt' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: /^A4/ }))
+    expect(onPatch).toHaveBeenCalledWith({ paperSize: undefined })
+    fireEvent.click(screen.getByRole('button', { name: '11 pt' }))
+    expect(onPatch).toHaveBeenCalledWith({ baseFontSize: undefined })
+    fireEvent.click(screen.getByRole('button', { name: '10 pt' }))
+    expect(onPatch).toHaveBeenCalledWith({ baseFontSize: 10 })
+  })
+})
