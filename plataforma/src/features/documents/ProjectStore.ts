@@ -19,6 +19,11 @@ export interface ProjectStore {
   remove(id: string): void
   /** Mueve el proyecto a una carpeta (`null` = raíz). */
   moveProject(id: string, folderId: string | null): void
+  /**
+   * Guarda el proyecto **tal cual** (mismo id y fechas): lo usa la sincronización para traer
+   * lo que llega de la nube. Lo que no tiene forma de proyecto se ignora (devuelve `false`).
+   */
+  put(project: unknown): boolean
 
   // ── Carpetas ──
   listFolders(): Folder[]
@@ -28,4 +33,6 @@ export interface ProjectStore {
   removeFolder(id: string): void
   /** Reparenta una carpeta (`null` = raíz); ignora movimientos que crearían ciclos. */
   moveFolder(id: string, parentId: string | null): void
+  /** Reemplaza el árbol de carpetas entero (sincronización). Lo inválido se descarta. */
+  replaceFolders(folders: readonly unknown[]): void
 }

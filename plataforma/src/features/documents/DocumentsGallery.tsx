@@ -2,6 +2,8 @@ import { useMemo, useRef } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Copy, Download, MoreHorizontal, Pencil, Plus, Trash, Upload } from '@/components/icons'
 import { relativeTime } from '@/lib/relativeTime'
+import { CloudGlyph, DriveGlyph } from '@/features/sync/StorageSettings'
+import type { ContentStorage } from '@/features/sync/storagePrefs'
 import { FolderTree } from './FolderTree'
 import { MiniSheet } from './MiniSheet'
 import { MoveToMenu } from './MoveToMenu'
@@ -25,6 +27,14 @@ interface DocumentsGalleryProps {
   onDelete: (id: string) => void
   onDownloadZip: (id: string) => void
   onMove: (id: string, folderId: string | null) => void
+  /** Con sesión iniciada: dónde vive cada proyecto en la nube y cómo mudarlo. */
+  cloud?: GalleryCloud | undefined
+}
+
+export interface GalleryCloud {
+  storageOf(id: string): ContentStorage | undefined
+  isMoving(id: string): boolean
+  moveTo(id: string, to: ContentStorage): void
 }
 
 /**
@@ -49,6 +59,7 @@ export function DocumentsGallery({
   onDelete,
   onDownloadZip,
   onMove,
+  cloud,
 }: DocumentsGalleryProps) {
   const zipInputRef = useRef<HTMLInputElement>(null)
   const matexInputRef = useRef<HTMLInputElement>(null)
@@ -160,6 +171,7 @@ export function DocumentsGallery({
                   onDelete={() => onDelete(project.id)}
                   onDownloadZip={() => onDownloadZip(project.id)}
                   onMove={(folderId) => onMove(project.id, folderId)}
+                  cloud={cloud}
                 />
               ))}
             </ul>
@@ -179,12 +191,15 @@ interface ProjectCardProps {
   onDelete: () => void
   onDownloadZip: () => void
   onMove: (folderId: string | null) => void
+  cloud?: GalleryCloud | undefined
 }
 
-function ProjectCard({ project, folders, onOpen, onRename, onDuplicate, onDelete, onDownloadZip, onMove }: ProjectCardProps) {
+function ProjectCard({ project, folders, onOpen, onRename, onDuplicate, onDelete, onDownloadZip, onMove, cloud }: ProjectCardProps) {
   // El esqueleto solo cambia cuando cambia el proyecto (la lista se rearma al volver a la galería).
   const outline = useMemo(() => projectOutline(project), [project])
   const visual = project.kind === 'matex'
+  const storage = cloud?.storageOf(project.id)
+  const moving = cloud?.isMoving(project.id) ?? false
 
   return (
     <li className="group relative overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface) transition-[border-color,box-shadow] hover:border-(--color-primary)/60 hover:shadow-[0_12px_30px_-18px_rgb(0_0_0/0.9)]">
@@ -208,6 +223,15 @@ function ProjectCard({ project, folders, onOpen, onRename, onDuplicate, onDelete
             <time dateTime={project.updatedAt} title={new Date(project.updatedAt).toLocaleString()}>
               {relativeTime(project.updatedAt)}
             </time>
+            {storage && (
+              <span
+                className="ml-auto inline-flex items-center gap-1"
+                title={moving ? 'Mudándose…' : storage === 'drive' ? 'Guardado en tu Google Drive' : 'Guardado en Matex'}
+              >
+                {storage === 'drive' ? <DriveGlyph /> : <CloudGlyph />}
+                {moving && <span className="text-[10.5px]">moviendo…</span>}
+              </span>
+            )}
           </span>
         </div>
       </button>
@@ -232,6 +256,14 @@ function ProjectCard({ project, folders, onOpen, onRename, onDuplicate, onDelete
               <CardAction onSelect={onRename} icon={<Pencil width={14} height={14} />}>Renombrar</CardAction>
               <CardAction onSelect={onDuplicate} icon={<Copy width={14} height={14} />}>Duplicar</CardAction>
               <CardAction onSelect={onDownloadZip} icon={<Download width={14} height={14} />}>Descargar .zip</CardAction>
+              {cloud && storage && !moving && (
+                <CardAction
+                  onSelect={() => cloud.moveTo(project.id, storage === 'drive' ? 'matex' : 'drive')}
+                  icon={storage === 'drive' ? <CloudGlyph /> : <DriveGlyph />}
+                >
+                  {storage === 'drive' ? 'Mover a Matex' : 'Mover a Google Drive'}
+                </CardAction>
+              )}
               <DropdownMenu.Separator className="my-1 h-px bg-(--color-border)" />
               <CardAction onSelect={onDelete} icon={<Trash width={14} height={14} />} danger>
                 Eliminar

@@ -94,6 +94,14 @@ export class LocalProjectStore implements ProjectStore {
     if (this.projects.delete(id)) this.persist()
   }
 
+  put(project: unknown): boolean {
+    if (!isProject(project)) return false
+    const normalized = normalizeProject(project)
+    this.projects.set(normalized.id, normalized)
+    this.persist()
+    return true
+  }
+
   moveProject(id: string, folderId: string | null): void {
     const project = this.projects.get(id)
     if (!project) return
@@ -151,6 +159,12 @@ export class LocalProjectStore implements ProjectStore {
   }
 
   /** ¿`candidateId` está dentro del subárbol con raíz `ancestorId` (incluida)? */
+  replaceFolders(folders: readonly unknown[]): void {
+    this.folders.clear()
+    for (const folder of folders) if (isFolder(folder)) this.folders.set(folder.id, folder)
+    this.persist()
+  }
+
   private isInSubtree(candidateId: string, ancestorId: string): boolean {
     let current: Folder | undefined = this.folders.get(candidateId)
     while (current) {

@@ -16,6 +16,8 @@ env:
   # exige rebuild — no alcanza con invalidar CloudFront.
   # `RemoteCompiler` le concatena `/compile` → POST https://el-gato-consciente.com/api/compile
   VITE_COMPILE_API_URL: https://el-gato-consciente.com/api
+  # Cuenta del ecosistema (login con Google). No es secreto: viaja en el bundle por diseño.
+  VITE_GOOGLE_CLIENT_ID: 893132488903-to2psv8b9iipg4cnn2i3vkftfmbi33pm.apps.googleusercontent.com
 
 jobs:
   deploy:

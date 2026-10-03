@@ -38,6 +38,10 @@ import { exemplars, findExemplar } from '@/features/showcase/data'
 import type { Exemplar } from '@/features/showcase/types'
 import { ShowcaseViewer } from '@/features/showcase/ShowcaseViewer'
 import { WikiView } from '@/features/wiki/WikiView'
+import { AccountMenu } from '@/features/account/AccountMenu'
+import { useAccount } from '@/features/account/account'
+import { useSync } from '@/features/sync/useSync'
+import { isProjectFile } from '@/features/sync/projectFile'
 
 /** Documento de ejemplo para probar el editor visual Matex (beta). */
 const MATEX_SAMPLE: MatexDoc = {
@@ -109,6 +113,21 @@ export default function App() {
   )
   const [projects, setProjects] = useState(() => projectStore.list())
   const [folders, setFolders] = useState(() => projectStore.listFolders())
+
+  // Sincronización con la cuenta (opcional: sin sesión no hace nada). No le pisa el contenido al
+  // proyecto abierto en el editor; cuando trae cambios de otro equipo, la galería se relee.
+  const account = useAccount()
+  const sync = useSync({
+    account,
+    store: projectStore,
+    apiBaseUrl: import.meta.env.VITE_COMPILE_API_URL,
+    googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    isBusy: (projectId) => location.kind === 'project' && location.projectId === projectId,
+    onChange: () => {
+      setProjects(projectStore.list())
+      setFolders(projectStore.listFolders())
+    },
+  })
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
 
   const section = sectionOf(location)
@@ -300,8 +319,31 @@ export default function App() {
   /** Importa un documento **Matex** desde su AST (`.mtex`): valida y crea el proyecto. */
   async function importMatex(file: File) {
     let ast: MatexDoc
+    let json: unknown
     try {
-      ast = parseMatexDoc(JSON.parse(await file.text()))
+      json = JSON.parse(await file.text())
+    } catch {
+      window.alert('El archivo no es un documento Matex (.mtex) válido.')
+      return
+    }
+    // Un `.mtex` de proyecto (el que se guarda en Drive) trae el proyecto entero: se importa como
+    // copia nueva, con sus archivos e imágenes. Si no, es un `.mtex` suelto (solo el documento).
+    if (isProjectFile(json)) {
+      const source = json.project
+      openProject(
+        projectStore.create({
+          name: source.name,
+          kind: source.kind,
+          files: source.files,
+          mainFile: source.mainFile,
+          folderId: selectedFolderId,
+          ...(source.ast ? { ast: parseMatexDoc(source.ast) } : {}),
+        }).id,
+      )
+      return
+    }
+    try {
+      ast = parseMatexDoc(json)
     } catch {
       window.alert('El archivo no es un documento Matex (.mtex) válido.')
       return
@@ -359,6 +401,7 @@ export default function App() {
   function closeDocument() {
     setProjects(projectStore.list())
     navigate({ kind: 'projects' })
+    sync.syncNow() // al cerrar un documento es cuando más cambios hay para subir
   }
 
   // ── Carpetas ──────────────────────────────────────────────────────────────
@@ -437,6 +480,7 @@ export default function App() {
         {/* Destino ÚNICO de la toolbar contextual: Compilar/Descargar quedan a la
             derecha (cada Workspace los porta acá). */}
         <HeaderSlotTarget className="flex min-w-0 flex-1 items-center justify-end gap-2" />
+        <AccountMenu sync={sync} />
       </header>
 
       {location.kind === 'wiki' ? (
@@ -542,6 +586,11 @@ export default function App() {
               onDelete={deleteDocument}
               onDownloadZip={downloadProjectZip}
               onMove={moveProject}
+              cloud={
+                account.status === 'signed-in'
+                  ? { storageOf: sync.storageOf, isMoving: sync.isMoving, moveTo: sync.moveProject }
+                  : undefined
+              }
             />
           )}
         </main>
